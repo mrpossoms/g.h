@@ -3,6 +3,7 @@
 
 #define OGT_VOX_IMPLEMENTATION
 #define OGT_VOXEL_MESHIFY_IMPLEMENTATION
+#include <strings.h>
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
 
