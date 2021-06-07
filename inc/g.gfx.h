@@ -27,7 +27,6 @@
 #include <OpenGL/gl3.h>
 #endif
 
-#include <png.h>
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
 

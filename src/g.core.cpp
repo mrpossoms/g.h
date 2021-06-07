@@ -45,6 +45,9 @@ void g::core::start(const core::opts& opts)
 		}
 
 		glfwMakeContextCurrent(g::gfx::GLFW_WIN);
+
+		std::cerr << "GL renderer: " << glGetString(GL_RENDERER) << std::endl;
+
 	}
 
 	glEnable(GL_BLEND);

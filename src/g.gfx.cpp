@@ -1,4 +1,5 @@
 #include "g.gfx.h"
+#include <png.h>
 
 using namespace g::gfx;
 
