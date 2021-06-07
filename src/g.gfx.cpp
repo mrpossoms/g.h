@@ -263,6 +263,38 @@ framebuffer framebuffer_factory::create()
 	}
 
 	auto fb_stat = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+	switch(fb_stat)
+	{
+		case GL_FRAMEBUFFER_UNDEFINED:
+			std::cerr << "Target is the default framebuffer, but the default framebuffer does not exist.\n";
+			break;
+		case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+			std::cerr << "One or more of the framebuffer attachment points are framebuffer incomplete.\n";
+			break;
+		case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+			std::cerr << "The framebuffer does not have at least one image attached to it.\n";
+			break;
+		case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+			std::cerr << "the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for any color attachment point(s) named by GL_DRAWBUFFERi.\n";
+			break;
+		case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+			std::cerr << "GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.\n";
+			break;
+		case GL_FRAMEBUFFER_UNSUPPORTED:
+			std::cerr << "The combination of internal formats of the attached images violates an implementation-dependent set of restrictions.\n";
+			break;
+		case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+			std::cerr << "the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or, if the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.\n";
+			break;
+		case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+			std::cerr << "framebuffer attachment is layered, and any populated attachment is not layered, or if all populated color attachments are not from textures of the same target.\n";
+			break;
+		default:
+			std::cerr << "An unknown error ocurred.\n";
+			break;
+	}
+
 	assert(fb_stat == GL_FRAMEBUFFER_COMPLETE);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
