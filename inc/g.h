@@ -38,7 +38,7 @@ struct core
 			OPEN_GL,
 		};
 
-		struct api_version
+		struct render_api_version
 		{
 			unsigned int major, minor;
 		};
@@ -49,7 +49,7 @@ struct core
 			size_t width = 640;
 			size_t height = 480;
 			render_api api = render_api::OPEN_GL;
-			api_version api_version = { 3, 2 };
+			render_api_version api_version = { 3, 2 };
 		} gfx;
 
 		opts(const char* name, bool display, size_t width, size_t height)
