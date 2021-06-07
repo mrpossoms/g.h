@@ -33,11 +33,23 @@ struct core
 {
 	struct opts
 	{
+		enum class render_api
+		{
+			OPEN_GL,
+		};
+
+		struct api_version
+		{
+			unsigned int major, minor;
+		};
+
 		const char* name;
 		struct {
 			bool display = true;
 			size_t width = 640;
 			size_t height = 480;
+			render_api api = render_api::OPEN_GL;
+			api_version api_version = { 3, 2 };
 		} gfx;
 
 		opts(const char* name, bool display, size_t width, size_t height)
