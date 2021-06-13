@@ -401,7 +401,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 		GLchar *log_str = (GLchar *)malloc(log_length);
 		glGetShaderInfoLog(shader, log_length, &log_length, log_str);
 		std::cerr << "Shader compile log: " << log_length << std::endl << log_str << std::endl;
-		write(1, log_str, log_length);
+		std::cerr << log_str << std::endl;
 		free(log_str);
 	}
 
