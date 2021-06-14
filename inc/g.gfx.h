@@ -33,6 +33,7 @@
 #define G_TERM_GREEN "\033[0;32m"
 #define G_TERM_RED "\033[1;31m"
 #define G_TERM_YELLOW "\033[1;33m"
+#define G_TERM_BLUE "\033[1;34m"
 #define G_TERM_COLOR_OFF "\033[0m"
 
 using namespace xmath;
@@ -266,6 +267,8 @@ struct shader_factory
 			GLchar* src = new GLchar[size];
 			lseek(fd, 0, SEEK_SET);
 			read(fd, src, size);
+
+			std::cerr << G_TERM_BLUE << "Compiling: " << path << G_TERM_COLOR_OFF << std::endl;
 
 			shaders[ST] = compile_shader(ST, src, (GLsizei)size);
 
