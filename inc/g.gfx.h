@@ -312,7 +312,7 @@ namespace vertex
 			auto uv_size = sizeof(uv);
 
 			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)0);
-			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)p_size);
+			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)p_size);
 			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)(p_size + uv_size));
 		}
 	};
@@ -442,6 +442,51 @@ struct mesh_factory {
 		return p;
 	}
 
+	static mesh<vertex::pos_uv_norm> cube()
+	{
+		mesh<vertex::pos_uv_norm> p;
+		glGenBuffers(2, &p.vbo);
+
+		p.set_vertices({
+			// +x face
+			{{ 1,-1, 1}, {1, 1}, {1, 0, 0}},
+			{{ 1, 1, 1}, {0, 1}, {1, 0, 0}},
+			{{ 1, 1,-1}, {0, 0}, {1, 0, 0}},
+			{{ 1,-1,-1}, {1, 0}, {1, 0, 0}},
+
+			// -x face
+			{{-1,-1, 1}, {1, 1}, {-1, 0, 0}},
+			{{-1, 1, 1}, {0, 1}, {-1, 0, 0}},
+			{{-1, 1,-1}, {0, 0}, {-1, 0, 0}},
+			{{-1,-1,-1}, {1, 0}, {-1, 0, 0}},
+
+			// +y face
+			{{-1, 1, 1}, {1, 1}, {0, 1, 0}},
+			{{ 1, 1, 1}, {0, 1}, {0, 1, 0}},
+			{{ 1, 1,-1}, {0, 0}, {0, 1, 0}},
+			{{-1, 1,-1}, {1, 0}, {0, 1, 0}},
+
+			// -y face
+			{{-1,-1, 1}, {1, 1}, {0,-1, 0}},
+			{{ 1,-1, 1}, {0, 1}, {0,-1, 0}},
+			{{ 1,-1,-1}, {0, 0}, {0,-1, 0}},
+			{{-1,-1,-1}, {1, 0}, {0,-1, 0}},
+
+			// +z face
+			{{-1, 1, 1}, {1, 1}, {0, 0, 1}},
+			{{ 1, 1, 1}, {0, 1}, {0, 0, 1}},
+			{{ 1,-1, 1}, {0, 0}, {0, 0, 1}},
+			{{-1,-1, 1}, {1, 0}, {0, 0, 1}},
+			
+			// -z face
+			{{-1, 1,-1}, {1, 1}, {0, 0, -1}},
+			{{ 1, 1,-1}, {0, 1}, {0, 0, -1}},
+			{{ 1,-1,-1}, {0, 0}, {0, 0, -1}},
+			{{-1,-1,-1}, {1, 0}, {0, 0, -1}},
+		});
+
+		return p;
+	}
 
 	template<typename VERT>
 	static mesh<VERT> from_voxels(g::game::voxels_paletted& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> converter)
