@@ -374,10 +374,9 @@ struct mesh {
 
 	mesh& set_vertices(const V* verts, size_t count)
 	{
-		// assert(GL_TRUE == glIsBuffer(vbo));
-		vertex_count = count;
-		assert(gl_get_error());
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		assert(gl_get_error());
+		vertex_count = count;
 		assert(gl_get_error());
 		glBufferData(
 			GL_ARRAY_BUFFER,
@@ -397,11 +396,10 @@ struct mesh {
 
 	mesh& set_indices(const uint32_t* inds, size_t count)
 	{
-		assert(GL_TRUE == glIsBuffer(ibo));
-		index_count = count;
-		assert(gl_get_error());
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 		assert(gl_get_error());
+		assert(GL_TRUE == glIsBuffer(ibo));
+		index_count = count;
 		glBufferData(
 			GL_ELEMENT_ARRAY_BUFFER,
 			count * sizeof(uint32_t),
@@ -447,10 +445,9 @@ struct mesh_factory {
 
 	static mesh<vertex::pos_uv_norm> cube()
 	{
-		mesh<vertex::pos_uv_norm> p;
-		glGenBuffers(2, &p.vbo);
-
-		p.set_vertices({
+		mesh<vertex::pos_uv_norm> c;
+		glGenBuffers(1, &c.vbo);
+		c.set_vertices({
 			// +x face
 			{{ 1,-1, 1}, {1, 1}, {1, 0, 0}},
 			{{ 1, 1, 1}, {0, 1}, {1, 0, 0}},
@@ -488,7 +485,17 @@ struct mesh_factory {
 			{{-1,-1,-1}, {1, 0}, {0, 0, -1}},
 		});
 
-		return p;
+		glGenBuffers(1, &c.ibo);
+		c.set_indices({
+			(0) + 2, (0) + 3, (0) + 0, (0) + 1, (0) + 2, (0) + 0,
+			(4) + 0, (4) + 3, (4) + 2, (4) + 0, (4) + 2, (4) + 1,
+			(8) + 0, (8) + 3, (8) + 2, (8) + 0, (8) + 2, (8) + 1,
+			(12) + 2, (12) + 3, (12) + 0, (12) + 1, (12) + 2, (12) + 0,
+			(16) + 2, (16) + 3, (16) + 0, (16) + 1, (16) + 2, (16) + 0,
+			(20) + 0, (20) + 3, (20) + 2, (20) + 0, (20) + 2, (20) + 1,
+		});
+
+		return c;
 	}
 
 	template<typename VERT>
