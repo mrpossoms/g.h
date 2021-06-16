@@ -141,6 +141,7 @@ struct framebuffer
 	{
 		glViewport(0, 0, width, height);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		assert(gl_get_error());
 	}
 
 	void unbind_as_target()
@@ -197,7 +198,9 @@ struct shader {
 		template<typename MV>
 		usage attach_attributes(const shader& shader)
 		{
+			assert(gl_get_error());
 			MV::attributes(shader.program);
+			assert(gl_get_error());
 			return *this;
 		}
 
@@ -268,7 +271,7 @@ struct shader_factory
 			lseek(fd, 0, SEEK_SET);
 			read(fd, src, size);
 
-			std::cerr << G_TERM_BLUE << "Compiling: " << path << G_TERM_COLOR_OFF << std::endl;
+			std::cerr << "Compiling: " << path << "... ";
 
 			shaders[ST] = compile_shader(ST, src, (GLsizei)size);
 
@@ -413,10 +416,14 @@ struct mesh {
 
 	shader::usage using_shader (shader& shader)
 	{
+		assert(gl_get_error());
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		assert(gl_get_error());
+
 		if (index_count > 0)
 		{
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+			assert(gl_get_error());
 		}
 
 		shader.bind();
@@ -477,7 +484,7 @@ struct mesh_factory {
 			{{ 1, 1, 1}, {0, 1}, {0, 0, 1}},
 			{{ 1,-1, 1}, {0, 0}, {0, 0, 1}},
 			{{-1,-1, 1}, {1, 0}, {0, 0, 1}},
-			
+
 			// -z face
 			{{-1, 1,-1}, {1, 1}, {0, 0, -1}},
 			{{ 1, 1,-1}, {0, 1}, {0, 0, -1}},

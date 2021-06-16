@@ -47,10 +47,10 @@ void g::core::start(const core::opts& opts)
 		switch (opts.gfx.api)
 		{
 			case g::core::opts::render_api::OPEN_GL:
-				// glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, opts.gfx.api_version.major);
-				// glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, opts.gfx.api_version.minor);
-				// glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-				// glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+				glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, opts.gfx.api_version.major);
+				glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, opts.gfx.api_version.minor);
+				glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+				glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 				break;
 		}
 
@@ -72,11 +72,17 @@ void g::core::start(const core::opts& opts)
 	switch (opts.gfx.api)
 	{
 		case g::core::opts::render_api::OPEN_GL:
+		{
+			GLuint vao;
+			glGenVertexArrays(1, &vao);
+			glBindVertexArray(vao);
+
 			glEnable(GL_BLEND);
 			glEnable(GL_DEPTH_TEST);
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_BACK);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 			break;
 	}
 

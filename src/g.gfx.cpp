@@ -317,8 +317,10 @@ shader::usage::usage (shader& ref, size_t verts, size_t inds) : shader_ref(ref)
 
 shader::usage shader::usage::set_camera(const g::game::camera& cam)
 {
+	assert(gl_get_error());
 	this->set_uniform("u_view").mat4(cam.view());
 	this->set_uniform("u_proj").mat4(cam.projection());
+	assert(gl_get_error());
 	return *this;
 }
 
@@ -393,6 +395,16 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 
 	assert(gl_get_error());
 
+	// Check the compilation status
+	GLint status;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	if (status == GL_FALSE)
+	{
+		std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
+		std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
+	}
+	assert(gl_get_error());
+
 	// Print the compilation log if there's anything in there
 	GLint log_length;
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
@@ -400,27 +412,19 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 	{
 		GLchar *log_str = (GLchar *)malloc(log_length);
 		glGetShaderInfoLog(shader, log_length, &log_length, log_str);
-		std::cerr << "Shader compile log: " << log_length << std::endl << log_str << std::endl;
-		std::cerr << log_str << std::endl;
+		std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
 		free(log_str);
 	}
-
 	assert(gl_get_error());
 
-	// Check the status and exit on failure
-	GLint status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	// treat all shader compilation failure as fatal
 	if (status == GL_FALSE)
 	{
-		std::cerr << "Compiling failed: " << status << std::endl;
 		glDeleteShader(shader);
-
-		std::cerr << src << std::endl;
 		exit(-2);
 	}
 
-	assert(gl_get_error());
-	std::cerr << "OK" << std::endl;
+	std::cerr << G_TERM_GREEN << "OK" << G_TERM_COLOR_OFF << std::endl;
 
 	return shader;
 }
