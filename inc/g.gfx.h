@@ -126,6 +126,64 @@ struct texture_factory
 
 	texture_factory& repeating();
 
+	template<GLenum COLOR, GLenum STORAGE>
+	texture_factory& custom(std::function<void(unsigned int x, unsigned int y, char* pixel)> filler)
+	{
+		int components = 0;
+		int bytes_per_component;
+		void* pixels;
+
+		switch (COLOR)
+		{
+			case GL_RED:
+				components = 1;
+				break;
+			case GL_RG:
+				components = 2;
+				break;
+			case GL_RGB:
+			case GL_BGR:
+				components = 3;
+				break;
+			case GL_RGBA:
+	        case GL_BGRA:
+	        	components = 4;
+	        	break;
+		}
+
+
+		switch (STORAGE)
+		{
+			case GL_UNSIGNED_BYTE:
+			case GL_BYTE:
+				bytes_per_component = 1;
+				break;
+			case GL_UNSIGNED_SHORT:
+	        case GL_SHORT:
+	        	bytes_per_component = 2;
+	        	break;
+	        case GL_UNSIGNED_INT:
+	        case GL_INT:
+	        case GL_FLOAT:
+	        	bytes_per_component = 4;
+	        	break;
+		}
+
+		auto bytes_per_pixel = bytes_per_component * components;
+		auto bytes_per_row = bytes_per_pixel * width;
+		data = (char*)calloc(bytes_per_pixel, width * height);
+
+		for (int y = 0; y < height; y++)
+		{
+			for (int x = 0; x < width; x++)
+			{
+				filler(x, y, data + (x * bytes_per_pixel) + (y * bytes_per_row));
+			}
+		}
+
+		return *this;
+	}
+
 	texture create();
 };
 

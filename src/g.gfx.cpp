@@ -192,6 +192,7 @@ texture_factory& texture_factory::repeating()
 	return *this;
 }
 
+
 texture texture_factory::create()
 {
 	texture out;
