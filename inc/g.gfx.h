@@ -590,6 +590,7 @@ struct mesh_factory {
 
 		ogt_mesh_destroy(&empty_ctx, mesh);
 		delete[] verts;
+		delete[] inds;
 
 		return m;
 	}
