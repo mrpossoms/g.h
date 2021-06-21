@@ -172,6 +172,17 @@ struct bounded_list
 		return true;
 	}
 
+	T* add()
+	{
+		if (_size < CAP)
+		{
+			return &_list[_size++];
+		}
+
+
+		return nullptr;
+	}
+
 	/**
 	 * @brief Remove the last element from the list.
 	 * @return False if the list is empty, True otherwise.
@@ -275,7 +286,7 @@ struct bounded_list
 	inline T* item_ptr(size_t idx) { return &_list[idx]; }
 
 	inline T item(size_t idx) const { return _list[idx]; }
-private:
+// private:
 	T _list[CAP];
 	size_t _size;
 };

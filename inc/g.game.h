@@ -192,6 +192,29 @@ struct voxels
 		memcpy(v, ptr, sizeof(DAT) * w * h * d);
 	}
 
+	uint32_t hash()
+	{
+		auto data_len = width * height * depth * sizeof(DAT);
+		uint32_t* data = static_cast<uint32_t*>(v);
+		uint32_t h = 0;
+
+	    assert(data_len % 4 == 0);	
+	    const uint32_t m = 0x5bd1e995;
+	    while (data_len >= 4)
+	    {
+	        uint32_t k = data[0];
+	        k *= m;
+	        k ^= k >> (signed)24;
+	        k *= m;
+	        h *= m;
+	        h ^= k;
+	        data++;
+	        data_len -= 4;
+	    }
+
+	    return h;
+	}
+
 	vec<3> center_of_bounds()
 	{
 		return { (float)width / 2, (float)height / 2, (float)depth / 2};
