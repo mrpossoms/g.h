@@ -14,7 +14,7 @@ else
 ifeq ($(TARGET),wasm32-unknown-emscripten)
 	LINK +=-s USE_GLFW=3 -lglfw3 -lGL -lrt -lm -ldl
 else
-	LINK+=-lglfw3 -lGL -lrt -lm -ldl -lX11 -lXi -lXrandr -lXxf86vm -lXinerama -lXcursor
+	LINK+=-lglfw -lGL -lrt -lm -ldl -lX11 -lXi -lXrandr -lXxf86vm -lXinerama -lXcursor
 endif
 
 endif

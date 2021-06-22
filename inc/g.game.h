@@ -198,7 +198,6 @@ struct voxels
 		uint32_t* data = static_cast<uint32_t*>(v);
 		uint32_t h = 0;
 
-	    assert(data_len % 4 == 0);	
 	    const uint32_t m = 0x5bd1e995;
 	    while (data_len >= 4)
 	    {
