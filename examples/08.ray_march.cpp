@@ -35,8 +35,11 @@ struct volumetric : public g::core
 	
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-		plane.using_shader(assets.shader("basic_post.vs+raymarch.fs")).draw<GL_TRIANGLE_FAN>();
+		glDisable(GL_CULL_FACE);
+
+		plane.using_shader(assets.shader("basic_post.vs+raymarch.fs"))
+		     .set_camera(cam)
+		     .draw<GL_TRIANGLE_FAN>();
 	}
 };
 
