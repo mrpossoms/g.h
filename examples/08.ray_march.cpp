@@ -9,6 +9,7 @@ struct volumetric : public g::core
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
 	g::game::camera_perspective cam;
 	g::asset::store assets;
+	float t;
 
 	virtual bool initialize()
 	{
@@ -37,9 +38,23 @@ struct volumetric : public g::core
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glDisable(GL_CULL_FACE);
 
+		xmath::mat<4, 1> v = {
+			{0}, {0}, {1000}, {1}
+		};
+
+		auto p = cam.projection() * v;
+		p /= p[0][3];
+
+		auto u = cam.projection().invert() * p;
+		u /= u[0][3];
+
+
 		plane.using_shader(assets.shader("basic_post.vs+raymarch.fs"))
 		     .set_camera(cam)
+		     ["u_morph"].flt(0.5f * (cos(t) + 1.f))
 		     .draw<GL_TRIANGLE_FAN>();
+
+		t += dt;
 	}
 };
 

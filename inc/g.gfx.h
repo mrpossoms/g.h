@@ -305,6 +305,8 @@ struct shader {
 
 		usage vec3 (const vec<3>& v);
 
+		usage flt(float f);
+
 		usage int1(const int i);
 
 		usage texture(const texture& tex);

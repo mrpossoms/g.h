@@ -371,6 +371,13 @@ shader::usage shader::uniform_usage::vec3 (const vec<3>& v)
 	return parent_usage;
 }
 
+shader::usage shader::uniform_usage::flt (float f)
+{
+	glUniform1f(uni_loc, f);
+
+	return parent_usage;
+}
+
 shader::usage shader::uniform_usage::int1(const int i)
 {
 	glUniform1i(uni_loc, i);
