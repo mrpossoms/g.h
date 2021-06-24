@@ -52,6 +52,8 @@ struct camera : public view_point
 
 	vec<3> left() const { return orientation.rotate({-1, 0, 0}); }
 
+	vec<3> up() const { return orientation.rotate({0, 1, 0}); }
+
 	mat<4, 4>& look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
 	{
 		return _view = mat<4, 4>::look_at(position * -1.f, (subject + position).unit(), up);

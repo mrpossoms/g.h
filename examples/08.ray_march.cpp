@@ -15,6 +15,8 @@ struct volumetric : public g::core
 	{
 		plane = g::gfx::mesh_factory::plane();
 
+		cam.position = { 0, 1, 0 };
+
 		return true;
 	}
 
@@ -27,11 +29,11 @@ struct volumetric : public g::core
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * -dt;
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(-dt);
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(dt);
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(-dt);
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) return;
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.position += cam.up() * dt;
 
 	
 		glClearColor(0, 0, 0, 1);
@@ -42,16 +44,15 @@ struct volumetric : public g::core
 			{0}, {0}, {1000}, {1}
 		};
 
-		auto p = cam.projection() * v;
-		p /= p[0][3];
+		// auto p = cam.projection() * v;
+		// p /= p[0][3];
 
-		auto u = cam.projection().invert() * p;
-		u /= u[0][3];
+		// auto u = cam.projection().invert() * p;
+		// u /= u[0][3];
 
 
-		plane.using_shader(assets.shader("basic_post.vs+raymarch.fs"))
+		plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))
 		     .set_camera(cam)
-		     ["u_morph"].flt(0.5f * (cos(t) + 1.f))
 		     .draw<GL_TRIANGLE_FAN>();
 
 		t += dt;

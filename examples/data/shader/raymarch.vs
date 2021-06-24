@@ -16,9 +16,9 @@ uniform mat4 u_proj;
 void main(void)
 {
 	v_view_rotation = mat3(
-		normalize(u_view[0].xyz),
+		-normalize(u_view[0].xyz),
 		normalize(u_view[1].xyz),
-		normalize(u_view[2].xyz),
+		-normalize(u_view[2].xyz)
 	);
 
 	v_view_pos = -u_view[3].xyz;
