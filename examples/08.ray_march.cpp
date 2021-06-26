@@ -11,11 +11,37 @@ struct volumetric : public g::core
 	g::asset::store assets;
 	float t;
 
+	GLuint cube;
+
 	virtual bool initialize()
 	{
 		plane = g::gfx::mesh_factory::plane();
 
 		cam.position = { 0, 1, 0 };
+
+		glGenTextures(1, &cube);
+		glBindTexture(GL_TEXTURE_3D, cube);
+
+		float data[3][3][3];
+
+		for (unsigned i = 0; i < 3; i++)
+		for (unsigned j = 0; j < 3; j++)
+		for (unsigned k = 0; k < 3; k++)
+		{
+			if (0 == i && 0 == j && 0 == k) { data[i][j][k] = 0; }
+			else { data[i][j][k] = 1; }
+		}			
+
+		glTexImage3D(
+			GL_TEXTURE_3D,
+			0,
+			GL_RED,
+			3, 3, 3,
+			0,
+			GL_RED,
+			GL_FLOAT,
+			data
+		);
 
 		return true;
 	}
@@ -53,6 +79,7 @@ struct volumetric : public g::core
 
 		plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))
 		     .set_camera(cam)
+		     ["u_cube"].int1(cube)
 		     .draw<GL_TRIANGLE_FAN>();
 
 		t += dt;
