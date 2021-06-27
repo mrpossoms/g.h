@@ -28,7 +28,7 @@ struct volumetric : public g::core
 		for (unsigned j = 0; j < 3; j++)
 		for (unsigned k = 0; k < 3; k++)
 		{
-			if (0 == i && 0 == j && 0 == k) { data[i][j][k] = 0; }
+			if (0 == i && 0 == j && 0 == k) { data[i][j][k] = -1; }
 			else { data[i][j][k] = 1; }
 		}			
 
@@ -42,6 +42,12 @@ struct volumetric : public g::core
 			GL_FLOAT,
 			data
 		);
+
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 		return true;
 	}
@@ -76,10 +82,11 @@ struct volumetric : public g::core
 		// auto u = cam.projection().invert() * p;
 		// u /= u[0][3];
 
-
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_3D, cube);
 		plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))
 		     .set_camera(cam)
-		     ["u_cube"].int1(cube)
+		     ["u_cube"].int1(0)
 		     .draw<GL_TRIANGLE_FAN>();
 
 		t += dt;
