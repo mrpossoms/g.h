@@ -14,25 +14,48 @@ out vec4 color;
 
 uniform mat4 u_proj;
 uniform sampler3D u_cube;
+uniform int u_show;
+uniform float u_sub_step;
 
-float get_distance_cube(vec3 m, vec3 pos)
+
+struct step_t
 {
-	vec3 uvw = (m - pos) + vec3(0.3535);
+	float distance;
+	vec3 color;
+};
+
+
+step_t get_distance_cube(vec3 m, vec3 pos)
+{
+	const float r = sqrt(3.0) / 2.0; 
+
+	vec3 uvw = ((m - pos)) + vec3(0.5);
 	// return distance(m, pos) - 0.5;
-	float d = distance(m, pos) - 1.0;
-	if (d <= 1.0 + DIST_EPS)
+	float d = distance(m, pos) - r;
+	if (u_show == 1 && d <= DIST_EPS)
 	{
-		float r = texture(u_cube, uvw).r;
-		return r;// < 1.0 ? 0.0 : r;
+		float rd = texture(u_cube, uvw).r;
+		return step_t(rd * u_sub_step, uvw);// < 1.0 ? 0.0 : r;
 	}
 
-	return d;
+	return step_t(d, uvw);
 }
 
-float get_distance(vec3 march_pos)
+step_t get_distance(vec3 march_pos)
 {
 	// TODO
-	return min(min(march_pos.y, distance(march_pos, vec3(0.0, 0.5, 4.0)) - 0.5), get_distance_cube(march_pos, vec3(0.0, 2.0, -4.0)));
+	step_t cd = get_distance_cube(march_pos, vec3(0.0, 2.0, -4.0));
+	step_t pd = step_t(march_pos.y - 0.5, vec3(march_pos.y));
+	// step_t sd = step_t(distance(march_pos, vec3(0.0, 0.5, 4.0)) - 0.5, vec3(distance(march_pos, vec3(0.0, 0.5, 4.0)) - 0.5));
+	
+	if (cd.distance < pd.distance)
+	{
+		return cd;
+	}
+	else
+	{
+		return pd;
+	}
 }
 
 void main(void)
@@ -50,15 +73,15 @@ void main(void)
 	for (int t = 0; t < MAX_STEPS; t++)
 	{
 		vec3 p = o + d * net_dist;
-		float step_dist = get_distance(p);
+		step_t step = get_distance(p);
 
-		if (step_dist <= DIST_EPS)
+		if (step.distance <= DIST_EPS)
 		{
-			color = vec4(vec3(net_dist / 10.0), 1.0);
+			color = vec4((step.color + vec3(net_dist / 10.0)), 1.0);
 			break;
 		}
 
-		net_dist += step_dist; 
+		net_dist += step.distance; 
 	}
 
 	// color.xyz += texture(u_cube, vec3(v_uv, 0.5)).rgb;

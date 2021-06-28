@@ -9,7 +9,7 @@ struct volumetric : public g::core
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
 	g::game::camera_perspective cam;
 	g::asset::store assets;
-	float t;
+	float t, sub_step = 0.1f;
 
 	GLuint cube;
 
@@ -22,21 +22,23 @@ struct volumetric : public g::core
 		glGenTextures(1, &cube);
 		glBindTexture(GL_TEXTURE_3D, cube);
 
-		float data[3][3][3];
+		const unsigned w=3, h=3, d=3;
+		float data[w][h][d];
 
-		for (unsigned i = 0; i < 3; i++)
-		for (unsigned j = 0; j < 3; j++)
-		for (unsigned k = 0; k < 3; k++)
+		for (unsigned i = 0; i < w; i++)
+		for (unsigned j = 0; j < h; j++)
+		for (unsigned k = 0; k < d; k++)
 		{
-			if (0 == i && 0 == j && 0 == k) { data[i][j][k] = -1; }
-			else { data[i][j][k] = 1; }
+			// if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = -1.f; }
+			if ((i + j + k) % 2 == 0) { data[i][j][k] = -1.f; }
+			else { data[i][j][k] = 1.f; }
 		}			
 
 		glTexImage3D(
 			GL_TEXTURE_3D,
 			0,
 			GL_RED,
-			3, 3, 3,
+			w, h, d,
 			0,
 			GL_RED,
 			GL_FLOAT,
@@ -46,6 +48,9 @@ struct volumetric : public g::core
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
@@ -82,11 +87,18 @@ struct volumetric : public g::core
 		// auto u = cam.projection().invert() * p;
 		// u /= u[0][3];
 
+		int show = 0;
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Z)) { show = 1; }
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS) sub_step += 0.1f * dt;
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_MINUS) == GLFW_PRESS) sub_step -= 0.1f * dt;
+
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_3D, cube);
 		plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))
 		     .set_camera(cam)
 		     ["u_cube"].int1(0)
+		     ["u_show"].int1(show)
+		     ["u_sub_step"].flt(sub_step)
 		     .draw<GL_TRIANGLE_FAN>();
 
 		t += dt;
