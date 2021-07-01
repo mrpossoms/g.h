@@ -1,3 +1,4 @@
+
 #pragma once
 #define XMTYPE float
 #include <xmath.h>
@@ -358,6 +359,39 @@ struct shader_factory
 
 namespace vertex
 {
+	struct pos
+	{
+		vec<3> position;
+
+		static void attributes(GLuint prog)
+		{
+			auto pos_loc = glGetAttribLocation(prog, "a_position");
+
+			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
+		}
+	};
+
+	struct pos_uv
+	{
+		vec<3> position;
+		vec<2> uv;
+
+		static void attributes(GLuint prog)
+		{
+			auto pos_loc = glGetAttribLocation(prog, "a_position");
+			auto uv_loc = glGetAttribLocation(prog, "a_uv");
+
+			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+			if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
+
+			auto p_size = sizeof(position);
+
+			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv), (void*)0);
+			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv), (void*)p_size);
+		}
+	};
+
 	struct pos_uv_norm
 	{
 		vec<3> position;
@@ -405,19 +439,6 @@ namespace vertex
 			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)0);
 			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)(p_size));
 			if (color_loc > -1) glVertexAttribPointer(color_loc, 4, GL_UNSIGNED_BYTE, false, sizeof(pos_norm_color), (void*)(p_size + n_size));
-		}
-	};
-
-	struct pos
-	{
-		vec<3> position;
-
-		static void attributes(GLuint prog)
-		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
 		}
 	};
 }
@@ -508,6 +529,37 @@ struct mesh_factory {
 		});
 
 		return p;
+	}
+
+	static mesh<vertex::pos> slice_cube(unsigned slices)
+	{
+		mesh<vertex::pos> c;
+		std::vector<vertex::pos> verts;
+		std::vector<uint32_t> indices;
+		glGenBuffers(2, &c.vbo);
+
+		float dz = 2.f / static_cast<float>(slices);
+		for (;slices--;)
+		{
+			auto n = verts.size();
+			indices.push_back(n + 2);
+			indices.push_back(n + 3);
+			indices.push_back(n + 0);
+			indices.push_back(n + 1);
+			indices.push_back(n + 2);
+			indices.push_back(n + 0);
+
+			auto z = dz * slices;
+			verts.push_back({{-1, 1, -1 + z}});
+			verts.push_back({{ 1, 1, -1 + z}});
+			verts.push_back({{ 1,-1, -1 + z}});
+			verts.push_back({{-1,-1, -1 + z}});
+		}
+
+		c.set_vertices(verts);
+		c.set_indices(indices);
+
+		return c;
 	}
 
 	static mesh<vertex::pos_uv_norm> cube()
