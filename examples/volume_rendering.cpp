@@ -4,6 +4,9 @@
 using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
+const unsigned w=32, h=32, d=32;
+uint8_t* data;
+
 struct volumetric : public g::core
 {
     const std::string vs_src =
@@ -24,9 +27,15 @@ struct volumetric : public g::core
     "uniform sampler3D u_voxels;"
     "out vec4 color;"
     "void main (void) {"
+    "float v = texture(u_voxels, v_position).r;"
+    "if (v <= 0.0) { discard; }"
+    "const float dc = 0.001f;"
+    "float n_x = texture(u_voxels, v_position - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, v_position + vec3(dc, 0.0, 0.0)).r;"
+    "float n_y = texture(u_voxels, v_position - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_position + vec3(0.0, dc, 0.0)).r;"
+    "float n_z = texture(u_voxels, v_position - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_position + vec3(0.0, 0.0, dc)).r;"
+    "vec3 normal = vec3(n_x, n_y, n_z);"
+    "color = vec4(normal * 0.5 + vec3(0.5), 1.0);"
     // "color = texture(u_voxels, v_position);"
-    "color.rgb = v_position;"
-    "color.a = color.r;"
     "}";
 
     g::gfx::mesh<g::gfx::vertex::pos> slices;
@@ -38,7 +47,7 @@ struct volumetric : public g::core
 
     virtual bool initialize()
     {
-        slices = g::gfx::mesh_factory::slice_cube(2);
+        slices = g::gfx::mesh_factory::slice_cube(1000);
 
         basic_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
@@ -49,26 +58,44 @@ struct volumetric : public g::core
         glGenTextures(1, &voxels);
         glBindTexture(GL_TEXTURE_3D, voxels);
 
-        const unsigned w=3, h=3, d=3;
-        float data[w][h][d];
+        data = new uint8_t[w * h * d * 3];
+
+        auto bytes_per_plane = 3 * h * d;
+
+        int lut[999];
+
+        for (int i = 0; i < 999; i++)
+        {
+            lut[i] = rand();
+        }
 
         for (unsigned i = 0; i < w; i++)
         for (unsigned j = 0; j < h; j++)
         for (unsigned k = 0; k < d; k++)
         {
+            unsigned vi = i * bytes_per_plane + (j * d * 3) + (k * 3);
             // if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = 1.f; }
-            if ((i + j + k) % 2 == 0) { data[i][j][k] = 1.f; }
-            else { data[i][j][k] = 0.f; }
+            if ((i + j + k) % 2 == 0) { 
+                data[vi + 0] = lut[vi % 999] & 0xff;
+                data[vi + 1] = (lut[vi % 999] >> 8) & 0xff;
+                data[vi + 2] = (lut[vi % 999] >> 16) & 0xff;
+            }
+            else
+            { 
+                data[vi + 0] = 0;
+                data[vi + 1] = 0;
+                data[vi + 2] = 0;
+            }
         }
 
         glTexImage3D(
             GL_TEXTURE_3D,
             0,
-            GL_RED,
+            GL_RGB,
             w, h, d,
             0,
-            GL_RED,
-            GL_FLOAT,
+            GL_RGB,
+            GL_UNSIGNED_BYTE,
             data
         );
 
@@ -93,8 +120,8 @@ struct volumetric : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * -dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(-dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.position += cam.up() * dt;
@@ -119,9 +146,9 @@ struct volumetric : public g::core
         glBindTexture(GL_TEXTURE_3D, voxels);
         slices.using_shader(basic_shader)
              .set_camera(cam)
-             ["u_model"].mat4(mat4::translation({0, 0, 2}))
+             ["u_model"].mat4(mat4::translation({0, 0, -2}))
              ["u_voxels"].int1(0)
-             .draw<GL_TRIANGLE_FAN>();
+             .draw<GL_TRIANGLES>();
 
         t += dt;
     }
