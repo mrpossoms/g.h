@@ -25,8 +25,10 @@ struct volumetric : public g::core
     "#version 410\n"
     "in vec3 v_position;"
     "uniform sampler3D u_voxels;"
+    "uniform mat4 u_rotation;"
     "out vec4 color;"
     "void main (void) {"
+    "vec3 uvw = inverse(u_rotation) * vec4(v_position, 1.0);"
     "float v = texture(u_voxels, v_position).r;"
     "if (v <= 0.0) { discard; }"
     "const float dc = 0.001f;"
@@ -36,6 +38,7 @@ struct volumetric : public g::core
     "vec3 normal = vec3(n_x, n_y, n_z);"
     "color = vec4(normal * 0.5 + vec3(0.5), 1.0);"
     // "color = texture(u_voxels, v_position);"
+    "color = vec4(v_position, 1.0);"
     "}";
 
     g::gfx::mesh<g::gfx::vertex::pos> slices;
@@ -145,6 +148,7 @@ struct volumetric : public g::core
         auto O = (cam.position - vo).unit();
         auto u = xmath::vec<3>{0, 1, 0};//cam.up();
         auto l = xmath::vec<3>::cross(O, u);
+        u = xmath::vec<3>::cross(O, l);
 
         // xmath::mat<4, 4> R = {
         //     { l[0], u[0], O[0], 0 },
