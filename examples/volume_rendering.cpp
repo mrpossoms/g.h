@@ -4,7 +4,7 @@
 using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
-const unsigned w=32, h=32, d=32;
+const unsigned w=8, h=8, d=8;
 uint8_t* data;
 
 struct volumetric : public g::core
@@ -28,17 +28,17 @@ struct volumetric : public g::core
     "uniform mat4 u_rotation;"
     "out vec4 color;"
     "void main (void) {"
-    "vec3 uvw = inverse(u_rotation) * vec4(v_position, 1.0);"
-    "float v = texture(u_voxels, v_position).r;"
+    "vec3 uvw = (inverse(u_rotation) * vec4(v_position, 1.0)).xyz;"
+    "float v = texture(u_voxels, uvw).r;"
     "if (v <= 0.0) { discard; }"
     "const float dc = 0.001f;"
-    "float n_x = texture(u_voxels, v_position - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, v_position + vec3(dc, 0.0, 0.0)).r;"
-    "float n_y = texture(u_voxels, v_position - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_position + vec3(0.0, dc, 0.0)).r;"
-    "float n_z = texture(u_voxels, v_position - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_position + vec3(0.0, 0.0, dc)).r;"
+    "float n_x = texture(u_voxels, uvw - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, uvw + vec3(dc, 0.0, 0.0)).r;"
+    "float n_y = texture(u_voxels, uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, uvw + vec3(0.0, dc, 0.0)).r;"
+    "float n_z = texture(u_voxels, uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, uvw + vec3(0.0, 0.0, dc)).r;"
     "vec3 normal = vec3(n_x, n_y, n_z);"
     "color = vec4(normal * 0.5 + vec3(0.5), 1.0);"
-    // "color = texture(u_voxels, v_position);"
-    "color = vec4(v_position, 1.0);"
+    // "color = texture(u_voxels, uvw);"
+    "color = vec4(uvw, 1.0);"
     "}";
 
     g::gfx::mesh<g::gfx::vertex::pos> slices;
@@ -50,7 +50,7 @@ struct volumetric : public g::core
 
     virtual bool initialize()
     {
-        slices = g::gfx::mesh_factory::slice_cube(1000);
+        slices = g::gfx::mesh_factory::slice_cube(100);
 
         basic_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
@@ -78,13 +78,13 @@ struct volumetric : public g::core
         {
             unsigned vi = i * bytes_per_plane + (j * d * 3) + (k * 3);
             // if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = 1.f; }
-            if ((i + j + k) % 2 == 0) { 
+            if ((i + j + k) % 2 == 0) {
                 data[vi + 0] = lut[vi % 999] & 0xff;
                 data[vi + 1] = (lut[vi % 999] >> 8) & 0xff;
                 data[vi + 2] = (lut[vi % 999] >> 16) & 0xff;
             }
             else
-            { 
+            {
                 data[vi + 0] = 0;
                 data[vi + 1] = 0;
                 data[vi + 2] = 0;
