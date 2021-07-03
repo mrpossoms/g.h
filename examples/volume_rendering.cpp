@@ -53,7 +53,7 @@ struct volumetric : public g::core
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
                                                .create();
 
-        cam.position = { 0, 1, 0 };
+        cam.position = { 0, 1, 1 };
 
         glGenTextures(1, &voxels);
         glBindTexture(GL_TEXTURE_3D, voxels);
@@ -99,9 +99,9 @@ struct volumetric : public g::core
             data
         );
 
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
         // glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         // glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         // glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
@@ -140,13 +140,33 @@ struct volumetric : public g::core
 
         // auto u = cam.projection().invert() * p;
         // u /= u[0][3];
+        xmath::vec<3> vo = {0, 0, 0};
 
+        auto O = (cam.position - vo).unit();
+        auto u = xmath::vec<3>{0, 1, 0};//cam.up();
+        auto l = xmath::vec<3>::cross(O, u);
+
+        // xmath::mat<4, 4> R = {
+        //     { l[0], u[0], O[0], 0 },
+        //     { l[1], u[1], O[1], 0 },
+        //     { l[2], u[2], O[2], 0 },
+        //     { 0,    0,    0,    1 },
+        // };
+
+        auto R = xmath::mat<4, 4>::look_at(vo, O, u).invert();
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_3D, voxels);
+
         slices.using_shader(basic_shader)
              .set_camera(cam)
-             ["u_model"].mat4(mat4::translation({0, 0, -2}))
+             ["u_model"].mat4(mat4::translation(vo))
+             ["u_voxels"].int1(0)
+             .draw<GL_TRIANGLES>();
+
+        slices.using_shader(basic_shader)
+             .set_camera(cam)
+             ["u_model"].mat4(R)//mat4::translation(vo))
              ["u_voxels"].int1(0)
              .draw<GL_TRIANGLES>();
 

@@ -538,7 +538,8 @@ struct mesh_factory {
 		std::vector<uint32_t> indices;
 		glGenBuffers(2, &c.vbo);
 
-		float dz = 2.f / static_cast<float>(slices);
+		const auto h = 2 * sqrt(1.f / 2.f);
+		float dz = (4.f * h) / static_cast<float>(slices);
 		for (;slices--;)
 		{
 			auto n = verts.size();
@@ -550,10 +551,10 @@ struct mesh_factory {
 			indices.push_back(n + 0);
 
 			auto z = dz * slices;
-			verts.push_back({{-1, 1, -1 + z}});
-			verts.push_back({{ 1, 1, -1 + z}});
-			verts.push_back({{ 1,-1, -1 + z}});
-			verts.push_back({{-1,-1, -1 + z}});
+			verts.push_back({{-h, h, -h + z}});
+			verts.push_back({{ h, h, -h + z}});
+			verts.push_back({{ h,-h, -h + z}});
+			verts.push_back({{-h,-h, -h + z}});
 		}
 
 		c.set_vertices(verts);
