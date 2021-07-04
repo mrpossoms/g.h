@@ -15,30 +15,31 @@ struct volumetric : public g::core
     "uniform mat4 u_model;"
     "uniform mat4 u_view;"
     "uniform mat4 u_proj;"
+    "uniform mat4 u_rotation;"
     "out vec3 v_position;"
+    "out vec3 v_uvw;"
     "void main (void) {"
     "v_position = a_position * 0.5 + vec3(0.5);"
+    "v_uvw = (inverse(u_rotation) * vec4(a_position * 0.5, 1.0)).xyz + vec3(0.5);"
     "gl_Position = u_proj * u_view * u_model * vec4(a_position * 0.5, 1.0);"
     "}";
 
     const std::string fs_src =
     "#version 410\n"
-    "in vec3 v_position;"
+    "in vec3 v_uvw;"
     "uniform sampler3D u_voxels;"
-    "uniform mat4 u_rotation;"
     "out vec4 color;"
     "void main (void) {"
-    "vec3 uvw = (inverse(u_rotation) * vec4(v_position, 1.0)).xyz;"
-    "float v = texture(u_voxels, uvw).r;"
+    "float v = texture(u_voxels, v_uvw).r;"
     "if (v <= 0.0) { discard; }"
     "const float dc = 0.001f;"
-    "float n_x = texture(u_voxels, uvw - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, uvw + vec3(dc, 0.0, 0.0)).r;"
-    "float n_y = texture(u_voxels, uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, uvw + vec3(0.0, dc, 0.0)).r;"
-    "float n_z = texture(u_voxels, uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, uvw + vec3(0.0, 0.0, dc)).r;"
+    "float n_x = texture(u_voxels, v_uvw - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, v_uvw + vec3(dc, 0.0, 0.0)).r;"
+    "float n_y = texture(u_voxels, v_uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_uvw + vec3(0.0, dc, 0.0)).r;"
+    "float n_z = texture(u_voxels, v_uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_uvw + vec3(0.0, 0.0, dc)).r;"
     "vec3 normal = vec3(n_x, n_y, n_z);"
     "color = vec4(normal * 0.5 + vec3(0.5), 1.0);"
-    // "color = texture(u_voxels, uvw);"
-    "color = vec4(uvw, 1.0);"
+    // "color = texture(u_voxels, v_uvw);"
+    "color = vec4(v_uvw, 1.0);"
     "}";
 
     g::gfx::mesh<g::gfx::vertex::pos> slices;
@@ -50,7 +51,7 @@ struct volumetric : public g::core
 
     virtual bool initialize()
     {
-        slices = g::gfx::mesh_factory::slice_cube(100);
+        slices = g::gfx::mesh_factory::slice_cube(1000);
 
         basic_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
@@ -162,15 +163,17 @@ struct volumetric : public g::core
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_3D, voxels);
 
-        slices.using_shader(basic_shader)
-             .set_camera(cam)
-             ["u_model"].mat4(mat4::translation(vo))
-             ["u_voxels"].int1(0)
-             .draw<GL_TRIANGLES>();
+        // slices.using_shader(basic_shader)
+        //      .set_camera(cam)
+        //      ["u_model"].mat4(mat4::translation(vo))
+        //      ["u_rotation"].mat4(mat4::I())
+        //      ["u_voxels"].int1(0)
+        //      .draw<GL_TRIANGLES>();
 
         slices.using_shader(basic_shader)
              .set_camera(cam)
              ["u_model"].mat4(R)//mat4::translation(vo))
+             ["u_rotation"].mat4(R)
              ["u_voxels"].int1(0)
              .draw<GL_TRIANGLES>();
 
