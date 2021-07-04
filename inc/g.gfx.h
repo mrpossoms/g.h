@@ -538,8 +538,8 @@ struct mesh_factory {
 		std::vector<uint32_t> indices;
 		glGenBuffers(2, &c.vbo);
 
-		const auto h = 2 * sqrt(1.f / 2.f);
-		float dz = (4.f * h) / static_cast<float>(slices);
+		const auto h = 0.5 * sqrt(3);
+		float dz = (2.f * h) / static_cast<float>(slices);
 		for (;slices--;)
 		{
 			auto n = verts.size();

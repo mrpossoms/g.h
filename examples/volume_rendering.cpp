@@ -4,7 +4,7 @@
 using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
-const unsigned w=8, h=8, d=8;
+const unsigned w=16, h=16, d=16;
 uint8_t* data;
 
 struct volumetric : public g::core
@@ -16,11 +16,10 @@ struct volumetric : public g::core
     "uniform mat4 u_view;"
     "uniform mat4 u_proj;"
     "uniform mat4 u_rotation;"
-    "out vec3 v_position;"
     "out vec3 v_uvw;"
     "void main (void) {"
-    "v_position = a_position * 0.5 + vec3(0.5);"
-    "v_uvw = (inverse(u_rotation) * vec4(a_position * 0.5, 1.0)).xyz + vec3(0.5);"
+    "v_uvw = (u_rotation * vec4(a_position, 1.0)).xyz + vec3(0.5);"
+    // "v_uvw = (inverse(u_rotation) * vec4(a_position, 1.0)).xyz + vec3(0.5);"
     "gl_Position = u_proj * u_view * u_model * vec4(a_position * 0.5, 1.0);"
     "}";
 
@@ -42,9 +41,19 @@ struct volumetric : public g::core
     "color = vec4(v_uvw, 1.0);"
     "}";
 
+    const std::string fs_vis_src =
+    "#version 410\n"
+    "in vec3 v_uvw;"
+    "uniform sampler3D u_voxels;"
+    "out vec4 color;"
+    "void main (void) {"
+    "color = vec4(0.0, 1.0, 1.0 - v_uvw.z, 1.0/256.0);"
+    "}";
+
     g::gfx::mesh<g::gfx::vertex::pos> slices;
     g::game::camera_perspective cam;
     g::gfx::shader basic_shader;
+    g::gfx::shader viz_shader;
     float t, sub_step = 0.1f;
 
     GLuint voxels;
@@ -55,6 +64,10 @@ struct volumetric : public g::core
 
         basic_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
+                                               .create();
+
+        viz_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
+                                               .add_src<GL_FRAGMENT_SHADER>(fs_vis_src)
                                                .create();
 
         cam.position = { 0, 1, 1 };
@@ -146,7 +159,8 @@ struct volumetric : public g::core
         // u /= u[0][3];
         xmath::vec<3> vo = {0, 0, 0};
 
-        auto O = (cam.position - vo).unit();
+        // auto O = (cam.position - vo).unit();
+        auto O = cam.forward();
         auto u = xmath::vec<3>{0, 1, 0};//cam.up();
         auto l = xmath::vec<3>::cross(O, u);
         u = xmath::vec<3>::cross(O, l);
@@ -170,6 +184,16 @@ struct volumetric : public g::core
         //      ["u_voxels"].int1(0)
         //      .draw<GL_TRIANGLES>();
 
+
+        glDisable(GL_DEPTH_TEST);
+        slices.using_shader(viz_shader)
+             .set_camera(cam)
+             ["u_model"].mat4(R)//mat4::translation(vo))
+             ["u_rotation"].mat4(R)
+             ["u_voxels"].int1(0)
+             .draw<GL_TRIANGLES>();
+
+        glEnable(GL_DEPTH_TEST);
         slices.using_shader(basic_shader)
              .set_camera(cam)
              ["u_model"].mat4(R)//mat4::translation(vo))
