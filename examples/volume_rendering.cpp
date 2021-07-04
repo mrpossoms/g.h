@@ -30,15 +30,15 @@ struct volumetric : public g::core
     "out vec4 color;"
     "void main (void) {"
     "float v = texture(u_voxels, v_uvw).r;"
-    "if (v <= 0.0) { discard; }"
+    // "if (v <= 0.0) { discard; }"
     "const float dc = 0.001f;"
-    "float n_x = texture(u_voxels, v_uvw - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, v_uvw + vec3(dc, 0.0, 0.0)).r;"
-    "float n_y = texture(u_voxels, v_uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_uvw + vec3(0.0, dc, 0.0)).r;"
-    "float n_z = texture(u_voxels, v_uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_uvw + vec3(0.0, 0.0, dc)).r;"
-    "vec3 normal = vec3(n_x, n_y, n_z);"
-    "color = vec4(normal * 0.5 + vec3(0.5), 1.0);"
+    // "float n_x = texture(u_voxels, v_uvw - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, v_uvw + vec3(dc, 0.0, 0.0)).r;"
+    // "float n_y = texture(u_voxels, v_uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_uvw + vec3(0.0, dc, 0.0)).r;"
+    // "float n_z = texture(u_voxels, v_uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_uvw + vec3(0.0, 0.0, dc)).r;"
+    // "vec3 normal = vec3(n_x, n_y, n_z);"
+    // "color = vec4(normal * 0.5 + vec3(0.5), 1.0);"
     // "color = texture(u_voxels, v_uvw);"
-    "color = vec4(v_uvw, 1.0);"
+    "color = vec4(v_uvw, v);"
     "}";
 
     const std::string fs_vis_src =
@@ -51,6 +51,7 @@ struct volumetric : public g::core
     "}";
 
     g::gfx::mesh<g::gfx::vertex::pos> slices;
+    g::gfx::mesh<g::gfx::vertex::pos> low_res;
     g::game::camera_perspective cam;
     g::gfx::shader basic_shader;
     g::gfx::shader viz_shader;
@@ -60,6 +61,7 @@ struct volumetric : public g::core
 
     virtual bool initialize()
     {
+        low_res = g::gfx::mesh_factory::slice_cube(100);
         slices = g::gfx::mesh_factory::slice_cube(1000);
 
         basic_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
@@ -86,13 +88,17 @@ struct volumetric : public g::core
             lut[i] = rand();
         }
 
-        for (unsigned i = 0; i < w; i++)
-        for (unsigned j = 0; j < h; j++)
-        for (unsigned k = 0; k < d; k++)
+        auto sq_rad = powf(w>>1, 2.f);
+        int hw = w >> 1, hh = h >> 1, hd = d >> 1;
+        for (int i = 0; i < w; i++)
+        for (int j = 0; j < h; j++)
+        for (int k = 0; k < d; k++)
         {
             unsigned vi = i * bytes_per_plane + (j * d * 3) + (k * 3);
-            // if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = 1.f; }
-            if ((i + j + k) % 2 == 0) {
+
+            auto sq_dist = powf(i - hw, 2.f) + pow(j - hh, 2.f) + pow(k - hd, 2.f);
+            if (sq_dist < sq_rad)
+            {
                 data[vi + 0] = lut[vi % 999] & 0xff;
                 data[vi + 1] = (lut[vi % 999] >> 8) & 0xff;
                 data[vi + 2] = (lut[vi % 999] >> 16) & 0xff;
@@ -157,7 +163,7 @@ struct volumetric : public g::core
 
         // auto u = cam.projection().invert() * p;
         // u /= u[0][3];
-        xmath::vec<3> vo = {0, 0, 0};
+        xmath::vec<3> vo = {cos(t), 0, sin(t)};
 
         // auto O = (cam.position - vo).unit();
         auto O = cam.forward();
@@ -186,9 +192,9 @@ struct volumetric : public g::core
 
 
         glDisable(GL_DEPTH_TEST);
-        slices.using_shader(viz_shader)
+        low_res.using_shader(viz_shader)
              .set_camera(cam)
-             ["u_model"].mat4(R)//mat4::translation(vo))
+             ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
              ["u_rotation"].mat4(R)
              ["u_voxels"].int1(0)
              .draw<GL_TRIANGLES>();
@@ -196,7 +202,7 @@ struct volumetric : public g::core
         glEnable(GL_DEPTH_TEST);
         slices.using_shader(basic_shader)
              .set_camera(cam)
-             ["u_model"].mat4(R)//mat4::translation(vo))
+             ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
              ["u_rotation"].mat4(R)
              ["u_voxels"].int1(0)
              .draw<GL_TRIANGLES>();

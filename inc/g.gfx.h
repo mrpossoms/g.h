@@ -1,4 +1,5 @@
 
+
 #pragma once
 #define XMTYPE float
 #include <xmath.h>
@@ -7,6 +8,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 #include <string.h>
 #include <assert.h>
@@ -538,8 +540,9 @@ struct mesh_factory {
 		std::vector<uint32_t> indices;
 		glGenBuffers(2, &c.vbo);
 
-		const auto h = 0.5 * sqrt(3);
+		const float h = 0.5 * sqrt(3);
 		float dz = (2.f * h) / static_cast<float>(slices);
+
 		for (;slices--;)
 		{
 			auto n = verts.size();
@@ -555,6 +558,7 @@ struct mesh_factory {
 			verts.push_back({{ h, h, -h + z}});
 			verts.push_back({{ h,-h, -h + z}});
 			verts.push_back({{-h,-h, -h + z}});
+
 		}
 
 		c.set_vertices(verts);
