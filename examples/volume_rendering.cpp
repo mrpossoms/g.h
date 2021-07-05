@@ -166,11 +166,9 @@ struct volumetric : public g::core
         // u /= u[0][3];
         xmath::vec<3> vo = {cos(t), 0, sin(t)};
 
-        // auto O = (cam.position - vo).unit();
         auto O = cam.forward();
-        auto u = xmath::vec<3>{0, 1, 0};//cam.up();
+        auto u = cam.up();
         auto l = xmath::vec<3>::cross(O, u);
-        u = xmath::vec<3>::cross(O, l);
 
         // xmath::mat<4, 4> R = {
         //     { l[0], u[0], O[0], 0 },
