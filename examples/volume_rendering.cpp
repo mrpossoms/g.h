@@ -20,7 +20,7 @@ struct volumetric : public g::core
     "void main (void) {"
     "v_uvw = (u_rotation * vec4(a_position, 1.0)).xyz + vec3(0.5);"
     // "v_uvw = (inverse(u_rotation) * vec4(a_position, 1.0)).xyz + vec3(0.5);"
-    "gl_Position = u_proj * u_view * u_model * vec4(a_position * 0.5, 1.0);"
+    "gl_Position = u_proj * u_view * u_model * vec4(a_position, 1.0);"
     "}";
 
     const std::string fs_src =
@@ -47,7 +47,7 @@ struct volumetric : public g::core
     "uniform sampler3D u_voxels;"
     "out vec4 color;"
     "void main (void) {"
-    "color = vec4(0.0, 1.0, 1.0 - v_uvw.z, 1.0/256.0);"
+    "color = vec4(v_uvw, 1.0/256.0);"
     "}";
 
     g::gfx::mesh<g::gfx::vertex::pos> slices;
@@ -178,7 +178,7 @@ struct volumetric : public g::core
         //     { 0,    0,    0,    1 },
         // };
 
-        auto R = xmath::mat<4, 4>::look_at(vo, O, u).invert();
+        auto R = xmath::mat<4, 4>::look_at({0, 0, 0}, O, u).invert();
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_3D, voxels);
