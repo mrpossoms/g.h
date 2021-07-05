@@ -4,7 +4,7 @@
 using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
-const unsigned w=16, h=16, d=16;
+const unsigned w=8, h=8, d=8;
 uint8_t* data;
 
 struct volumetric : public g::core
@@ -20,24 +20,25 @@ struct volumetric : public g::core
     "void main (void) {"
     "v_uvw = (u_rotation * vec4(a_position, 1.0)).xyz + vec3(0.5);"
     // "v_uvw = (inverse(u_rotation) * vec4(a_position, 1.0)).xyz + vec3(0.5);"
-    "gl_Position = u_proj * u_view * u_model * vec4(a_position * 0.5, 1.0);"
+    "gl_Position = u_proj * u_view * u_model * vec4(a_position, 1.0);"
     "}";
 
     const std::string fs_src =
     "#version 410\n"
     "in vec3 v_uvw;"
     "uniform sampler3D u_voxels;"
+    "uniform float u_tex_coord_step;"
     "out vec4 color;"
     "void main (void) {"
     "float v = texture(u_voxels, v_uvw).r;"
     // "if (v <= 0.0) { discard; }"
-    "const float dc = 0.001f;"
-    // "float n_x = texture(u_voxels, v_uvw - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, v_uvw + vec3(dc, 0.0, 0.0)).r;"
-    // "float n_y = texture(u_voxels, v_uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_uvw + vec3(0.0, dc, 0.0)).r;"
-    // "float n_z = texture(u_voxels, v_uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_uvw + vec3(0.0, 0.0, dc)).r;"
-    // "vec3 normal = vec3(n_x, n_y, n_z);"
-    // "color = vec4(normal * 0.5 + vec3(0.5), 1.0);"
-    // "color = texture(u_voxels, v_uvw);"
+    "float dc = u_tex_coord_step;"
+    "float n_x = texture(u_voxels, v_uvw - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, v_uvw + vec3(dc, 0.0, 0.0)).r;"
+    "float n_y = texture(u_voxels, v_uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_uvw + vec3(0.0, dc, 0.0)).r;"
+    "float n_z = texture(u_voxels, v_uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_uvw + vec3(0.0, 0.0, dc)).r;"
+    "vec3 normal = vec3(n_x, n_y, n_z);"
+    // "color = vec4(normal * 0.5 + vec3(0.5), v);"
+    // "color = texture(u_voxels, v_uvw) * vec4;"
     "color = vec4(v_uvw, v);"
     "}";
 
@@ -204,6 +205,7 @@ struct volumetric : public g::core
              .set_camera(cam)
              ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
              ["u_rotation"].mat4(R)
+             ["u_tex_coord_step"].flt(1.f/static_cast<float>(w >> 2))
              ["u_voxels"].int1(0)
              .draw<GL_TRIANGLES>();
 
