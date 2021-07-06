@@ -84,7 +84,7 @@ static float aspect()
 struct texture
 {
 	GLenum type;
-	unsigned size[3];
+	unsigned size[3] = { 1, 1, 1 };
 	GLuint texture = (GLuint)-1;
 	char* data = nullptr;
 
@@ -95,6 +95,9 @@ struct texture
 	void destroy();
 
 	void set_pixels(size_t w, size_t h, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE, GLenum t=GL_TEXTURE_2D);
+
+	void set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE, GLenum t=GL_TEXTURE_2D);
+
 
 	void bind() const;
 };
@@ -672,14 +675,20 @@ struct mesh_factory {
 namespace primative
 {
 
+template <typename D>
 struct renderer
 {
-	virtual void draw(const g::game::camera* cam, const mat<4, 4>& model) = 0;
+	virtual void draw(const D& data, const g::game::camera* cam, const mat<4, 4>& model) = 0;
 };
 
-struct volume_slicer : public renderer
+struct volume_slicer : public renderer<texture>
 {
+	void draw(const game::voxels_paletted& data,
+	          const g::game::camera* cam,
+	          const mat<4, 4>& model)
+	{
 
+	}
 };
 
 }; // end namespace renderer

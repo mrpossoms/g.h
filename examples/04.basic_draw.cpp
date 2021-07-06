@@ -9,22 +9,25 @@
 using mat4 = xmath::mat<4,4>;
 
 const std::string vs_src =
-"attribute vec3 a_position;"
-"attribute vec2 a_uv;"
-"attribute vec3 a_normal;"
+"#version 410\n"
+"in vec3 a_position;"
+"in vec2 a_uv;"
+"in vec3 a_normal;"
 "uniform mat4 u_model;"
 "uniform mat4 u_proj;"
-"varying vec2 v_uv;"
+"out vec2 v_uv;"
 "void main (void) {"
 "v_uv = a_uv;"
 "gl_Position = u_proj * u_model * vec4(a_position * 0.5, 1.0);"
 "}";
 
 const std::string fs_src =
-"varying vec2 v_uv;"
+"#version 410\n"
+"in vec2 v_uv;"
 "uniform sampler2D u_tex;"
+"out vec4 color;"
 "void main (void) {"
-"gl_FragColor = texture2D(u_tex, v_uv);"
+"color = texture(u_tex, v_uv);"
 "}";
 
 

@@ -34,6 +34,16 @@ void texture::set_pixels(size_t w, size_t h, char* data, GLenum format, GLenum s
 	glTexImage2D(type, 0, format, size[0], size[1], 0, format, storage, data);
 }
 
+void texture::set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format, GLenum storage, GLenum t)
+{
+	size[0] = w;
+	size[1] = h;
+	size[2] = d;
+	type = t;
+	this->data = data;
+	glTexImage3D(type, 0, format, size[0], size[1], size[2], 0, format, storage, data);
+}
+
 void texture::bind() const { glBindTexture(type, texture); }
 
 
@@ -126,6 +136,9 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	{
 		abort(G_TERM_RED "[read_png_file] Error during read_image" G_TERM_COLOR_OFF);
 	}
+
+	// a png is a 2D matrix of pixels
+	texture_type = GL_TEXTURE_2D;
 
 	switch (png_color_type) {
 		case PNG_COLOR_TYPE_RGBA:

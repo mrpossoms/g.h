@@ -23,7 +23,7 @@ namespace game {
 
 struct view_point
 {
-	vec<3> position = {0, 0, 0}; 
+	vec<3> position = {0, 0, 0};
 	quat<> orientation = {0, 0, 0, 1};
 };
 
@@ -57,7 +57,7 @@ struct camera : public view_point
 	mat<4, 4>& look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
 	{
 		return _view = mat<4, 4>::look_at(position * -1.f, (subject + position).unit(), up);
-	}	
+	}
 
 	mat<4, 4>& look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up)
 	{
@@ -81,7 +81,7 @@ struct camera_perspective : public camera
 	float field_of_view = M_PI / 2;
 	float near = 0.1f, far = 1000.f;
 
-	virtual mat<4, 4> projection() const 
+	virtual mat<4, 4> projection() const
 	{
 		GLint vp[4];
 		glGetIntegerv(GL_VIEWPORT, vp);
@@ -95,11 +95,11 @@ struct camera_orthographic : public camera
 	float near = 0.1f, far = 1000.f;
 	float width = 10, height = 10;
 
-	virtual mat<4, 4> projection() const 
+	virtual mat<4, 4> projection() const
 	{
 		GLint vp[4];
 		glGetIntegerv(GL_VIEWPORT, vp);
-		return mat<4, 4>::orthographic(near, far, width/2, -width/2, height/2, -height/2);	
+		return mat<4, 4>::orthographic(near, far, width/2, -width/2, height/2, -height/2);
 	}
 };
 
@@ -122,7 +122,7 @@ struct voxels
 
 		size_t width, height, depth;
 		size_t offset, max_offset;
-		DAT* v;		
+		DAT* v;
 
 		itr(DAT* voxels, size_t w, size_t h, size_t d, bool end)
 		{
@@ -262,12 +262,12 @@ struct voxels
 	inline DAT& idx(size_t x, size_t y, size_t z) const
 	{
 		return v[(x * height * depth) + (y * depth) + z];
-	} 
+	}
 
 	inline DAT& idx(size_t x, size_t y, size_t z)
 	{
 		return v[(x * height * depth) + (y * depth) + z];
-	} 
+	}
 
 	inline DAT& idx2(size_t x, size_t y, size_t z) const
 	{
@@ -277,7 +277,7 @@ struct voxels
 	inline DAT& idx2(size_t x, size_t y, size_t z)
 	{
 		return v[x + (y * width) + (z * width * height)];
-	} 
+	}
 
 	slice operator[](size_t idx_w)
 	{
@@ -301,5 +301,5 @@ struct voxels_paletted : public voxels<uint8_t>
 };
 
 
-}
-}
+} // end namespace game
+} // end namespace g
