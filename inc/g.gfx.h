@@ -84,7 +84,7 @@ static float aspect()
 struct texture
 {
 	GLenum type;
-	size_t width, height;
+	size_t width=0, height=0, depth=0;
 	GLuint texture = (GLuint)-1;
 	char* data = nullptr;
 
@@ -102,7 +102,7 @@ struct texture
 
 struct texture_factory
 {
-	int width, height;
+	unsigned width, height, depth;
 	char* data = nullptr;
 	GLenum texture_type;
 	GLenum min_filter = GL_LINEAR, mag_filter = GL_LINEAR;
@@ -111,7 +111,9 @@ struct texture_factory
 	GLenum storage_type = GL_UNSIGNED_BYTE;
 
 
-	texture_factory(int w=0, int h=0, GLenum type=GL_TEXTURE_2D);
+	texture_factory(unsigned w=0, unsigned h=0, GLenum type=GL_TEXTURE_2D);
+
+	texture_factory(unsigned w=0, unsigned h=0, unsigned d=0);
 
 	void abort(std::string message);
 
@@ -664,5 +666,14 @@ struct mesh_factory {
 	}
 };
 
+namespace primative
+{
+
+struct volume_slicer
+{
+
 };
-};
+
+}; // end namespace renderer
+}; // end namespace gfx
+}; // end namespace g

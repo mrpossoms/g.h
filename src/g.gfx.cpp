@@ -38,12 +38,21 @@ void texture::bind() const { glBindTexture(type, texture); }
 
 
 
-texture_factory::texture_factory(int w, int h, GLenum type)
+texture_factory::texture_factory(unsigned w, unsigned h, GLenum type)
 {
 	data = nullptr;
 	texture_type = type;
 	width = w;
 	height = h;
+}
+
+texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)
+{
+	data = nullptr;
+	texture_type = GL_TEXTURE_3D;
+	width = w;
+	height = h;
+	depth = d;
 }
 
 void texture_factory::abort(std::string message)
@@ -159,6 +168,27 @@ texture_factory& texture_factory::color()
 	color_type = GL_RGBA;
 	storage_type = GL_UNSIGNED_BYTE;
 	return *this;
+}
+
+texture_factory& texture_factory::components(unsigned count)
+{
+	switch(count)
+	{
+		case 1:
+			storage_type = GL_RED;
+			break;
+		case 2:
+			storage_type = GL_RG;
+			break;
+		case 3:
+			storage_type = GL_RGB;
+			break;
+		case 4:
+			storage_type = GL_RGBA;
+			break;
+		default:
+
+	}
 }
 
 texture_factory& texture_factory::depth()

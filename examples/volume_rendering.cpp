@@ -4,7 +4,7 @@
 using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
-const unsigned w=8, h=8, d=8;
+const unsigned w=64, h=64, d=64;
 uint8_t* data;
 
 struct volumetric : public g::core
@@ -37,9 +37,10 @@ struct volumetric : public g::core
     "float n_y = texture(u_voxels, v_uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_uvw + vec3(0.0, dc, 0.0)).r;"
     "float n_z = texture(u_voxels, v_uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_uvw + vec3(0.0, 0.0, dc)).r;"
     "vec3 normal = vec3(n_x, n_y, n_z);"
-    // "color = vec4(normal * 0.5 + vec3(0.5), v);"
+    "float shade = dot(normalize(vec3(1.0, 1.0, 0.0)), normal);"
+    "color = vec4((normal * 0.5 + vec3(0.5)) * shade, v);"
     // "color = texture(u_voxels, v_uvw) * vec4;"
-    "color = vec4(v_uvw, v);"
+    // "color = vec4(v_uvw, v);"
     "}";
 
     const std::string fs_vis_src =
@@ -149,7 +150,7 @@ struct volumetric : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.position += cam.up() * dt;
-
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.position += cam.up() * -dt;
 
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -190,24 +191,25 @@ struct volumetric : public g::core
         //      .draw<GL_TRIANGLES>();
 
 
-        glDisable(GL_DEPTH_TEST);
-        low_res.using_shader(viz_shader)
-             .set_camera(cam)
-             ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
-             ["u_rotation"].mat4(R)
-             ["u_voxels"].int1(0)
-             .draw<GL_TRIANGLES>();
+        // glDisable(GL_DEPTH_TEST);
+        // low_res.using_shader(viz_shader)
+        //      .set_camera(cam)
+        //      ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
+        //      ["u_rotation"].mat4(R)
+        //      ["u_voxels"].int1(0)
+        //      .draw<GL_TRIANGLES>();
 
         glEnable(GL_DEPTH_TEST);
+        const auto delta = 1.f/static_cast<float>(w);
         slices.using_shader(basic_shader)
              .set_camera(cam)
              ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
              ["u_rotation"].mat4(R)
-             ["u_tex_coord_step"].flt(1.f/static_cast<float>(w >> 2))
+             ["u_tex_coord_step"].flt(delta)
              ["u_voxels"].int1(0)
              .draw<GL_TRIANGLES>();
 
-        t += dt;
+        t += dt * 0.001f;
     }
 };
 
