@@ -84,7 +84,7 @@ static float aspect()
 struct texture
 {
 	GLenum type;
-	size_t width=0, height=0, depth=0;
+	unsigned size[3];
 	GLuint texture = (GLuint)-1;
 	char* data = nullptr;
 
@@ -102,7 +102,7 @@ struct texture
 
 struct texture_factory
 {
-	unsigned width, height, depth;
+	unsigned size[3];
 	char* data = nullptr;
 	GLenum texture_type;
 	GLenum min_filter = GL_LINEAR, mag_filter = GL_LINEAR;
@@ -110,14 +110,17 @@ struct texture_factory
 	GLenum color_type = GL_RGBA;
 	GLenum storage_type = GL_UNSIGNED_BYTE;
 
+	explicit texture_factory() = default;
 
-	texture_factory(unsigned w=0, unsigned h=0, GLenum type=GL_TEXTURE_2D);
+	explicit texture_factory(unsigned w, unsigned h);
 
-	texture_factory(unsigned w=0, unsigned h=0, unsigned d=0);
+	explicit texture_factory(unsigned w, unsigned h, unsigned d);
 
 	void abort(std::string message);
 
 	texture_factory& from_png(const std::string& path);
+
+	texture_factory& components(unsigned count);
 
 	texture_factory& color();
 
@@ -175,12 +178,12 @@ struct texture_factory
 		}
 
 		auto bytes_per_pixel = bytes_per_component * components;
-		auto bytes_per_row = bytes_per_pixel * width;
-		data = (char*)calloc(bytes_per_pixel, width * height);
+		auto bytes_per_row = bytes_per_pixel * size[0];
+		data = (char*)calloc(bytes_per_pixel, size[0] * size[1]);
 
-		for (int y = 0; y < height; y++)
+		for (int y = 0; y < size[1]; y++)
 		{
-			for (int x = 0; x < width; x++)
+			for (int x = 0; x < size[0]; x++)
 			{
 				filler(x, y, data + (x * bytes_per_pixel) + (y * bytes_per_row));
 			}
@@ -196,13 +199,13 @@ struct texture_factory
 struct framebuffer
 {
 	GLuint fbo;
-	size_t width, height;
+	unsigned size[3];
 	texture color;
 	texture depth;
 
 	void bind_as_target()
 	{
-		glViewport(0, 0, width, height);
+		glViewport(0, 0, size[0], size[1]);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		assert(gl_get_error());
 	}
@@ -223,10 +226,10 @@ struct framebuffer
 
 struct framebuffer_factory
 {
-	int width, height;
+	unsigned size[2];
 	texture color_tex, depth_tex;
 
-	framebuffer_factory(int w, int h);
+	framebuffer_factory(unsigned w, unsigned h);
 
 	framebuffer_factory& color();
 
@@ -669,7 +672,12 @@ struct mesh_factory {
 namespace primative
 {
 
-struct volume_slicer
+struct renderer
+{
+	virtual void draw(const g::game::camera* cam, const mat<4, 4>& model) = 0;
+};
+
+struct volume_slicer : public renderer
 {
 
 };
