@@ -678,16 +678,31 @@ namespace primative
 template <typename D>
 struct renderer
 {
-	virtual void draw(const D& data, const g::game::camera* cam, const mat<4, 4>& model) = 0;
+	virtual void draw(const g::gfx::shader& shader, const D& data, const g::game::camera* cam, const mat<4, 4>& model) = 0;
 };
 
 struct volume_slicer : public renderer<texture>
 {
-	void draw(const game::voxels_paletted& data,
+	g::gfx::mesh<g::gfx::vertex::pos> slices;
+
+	volume_slicer(unsigned num_slices)
+	{
+        slices = g::gfx::mesh_factory::slice_cube(num_slices);
+	}
+
+	void draw(const g::gfx::shader& shader
+			  const game::voxels_paletted& data,
 	          const g::game::camera* cam,
 	          const mat<4, 4>& model)
 	{
-
+        // rotate volume slices to align with camera view
+        // create a rotation matrix to represente this
+        auto O = cam.forward();
+        auto u = cam.up();
+        auto l = xmath::vec<3>::cross(O, u);
+        auto R = xmath::mat<4, 4>::look_at({0, 0, 0}, O, u).invert();
+	
+        // auto tranform = 
 	}
 };
 
