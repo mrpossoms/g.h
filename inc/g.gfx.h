@@ -246,7 +246,8 @@ struct framebuffer_factory
 /**
  * @brief      { struct_description }
  */
-struct shader {
+struct shader
+{
 	GLuint program;
 	std::unordered_map<std::string, GLint> uni_locs;
 
@@ -257,7 +258,8 @@ struct shader {
 	 * @brief      shader::usage type represents the start of some invocation
 	 * of an interaction with a shader.
 	 */
-	struct usage {
+	struct usage
+	{
 		shader& shader_ref;
 		size_t vertices, indices;
 		int texture_unit;
@@ -306,7 +308,8 @@ struct shader {
 	/**
 	 * @brief      Offers interaction with the uniforms defined for a given shader
 	 */
-	struct uniform_usage {
+	struct uniform_usage
+	{
 		GLuint uni_loc;
 		usage& parent_usage;
 
@@ -455,7 +458,8 @@ namespace vertex
 
 
 template<typename V>
-struct mesh {
+struct mesh
+{
 	GLuint vbo = 0, ibo = 0;
 	size_t index_count = 0;
 	size_t vertex_count = 0;
@@ -525,7 +529,8 @@ struct mesh {
 };
 
 
-struct mesh_factory {
+struct mesh_factory
+{
 	static mesh<vertex::pos_uv_norm> plane()
 	{
 		mesh<vertex::pos_uv_norm> p;
@@ -681,17 +686,18 @@ struct renderer
 	virtual void draw(const g::gfx::shader& shader, const D& data, const g::game::camera* cam, const mat<4, 4>& model) = 0;
 };
 
+
 struct volume_slicer : public renderer<texture>
 {
 	g::gfx::mesh<g::gfx::vertex::pos> slices;
 
-	volume_slicer(unsigned num_slices)
+	volume_slicer(unsigned num_slices=1000)
 	{
         slices = g::gfx::mesh_factory::slice_cube(num_slices);
 	}
 
 	void draw(const g::gfx::shader& shader
-			  const game::voxels_paletted& data,
+			  const g::gfx::texture& data,
 	          const g::game::camera* cam,
 	          const mat<4, 4>& model)
 	{
@@ -701,8 +707,8 @@ struct volume_slicer : public renderer<texture>
         auto u = cam.up();
         auto l = xmath::vec<3>::cross(O, u);
         auto R = xmath::mat<4, 4>::look_at({0, 0, 0}, O, u).invert();
-	
-        // auto tranform = 
+
+        // auto tranform =
 	}
 };
 
