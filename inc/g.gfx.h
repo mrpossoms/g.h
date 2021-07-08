@@ -98,6 +98,9 @@ struct texture
 
 	void set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE, GLenum t=GL_TEXTURE_2D);
 
+	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
+	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
+	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
 
 	void bind() const;
 };
@@ -683,7 +686,7 @@ namespace primative
 template <typename D>
 struct renderer
 {
-	virtual void draw(const g::gfx::shader& shader, const D& data, const g::game::camera* cam, const mat<4, 4>& model) = 0;
+	virtual void draw(const g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
 
 
@@ -696,18 +699,53 @@ struct volume_slicer : public renderer<texture>
         slices = g::gfx::mesh_factory::slice_cube(num_slices);
 	}
 
-	void draw(const g::gfx::shader& shader
-			  const g::gfx::texture& data,
-	          const g::game::camera* cam,
+	void draw(g::gfx::shader& shader,
+			  const g::gfx::texture& vox,
+	          const g::game::camera& cam,
 	          const mat<4, 4>& model)
 	{
+		assert(vox.is_3D());
+
         // rotate volume slices to align with camera view
         // create a rotation matrix to represente this
         auto O = cam.forward();
         auto u = cam.up();
-        auto l = xmath::vec<3>::cross(O, u);
-        auto R = xmath::mat<4, 4>::look_at({0, 0, 0}, O, u).invert();
+        auto l = vec<3>::cross(O, u);
+        auto R_align = mat<4, 4>::look_at({0, 0, 0}, O, u).invert();
 
+        auto x_mag = sqrtf(powf(model[0][0], 2.f) + powf(model[1][0], 2.f) + powf(model[2][0], 2.f));
+        auto y_mag = sqrtf(powf(model[0][1], 2.f) + powf(model[1][1], 2.f) + powf(model[2][1], 2.f));
+        auto z_mag = sqrtf(powf(model[0][2], 2.f) + powf(model[1][2], 2.f) + powf(model[2][2], 2.f));
+
+        // extract the rotation matrix from model by dividing each basis column vector
+        // by the magnitude computed for each in the model matrix above
+        auto R_orient = mat<3, 3>{ 
+        	{ model[0][0] / x_mag, model[0][1] / y_mag, model[0][2] / z_mag },
+        	{ model[1][0] / x_mag, model[1][1] / y_mag, model[1][2] / z_mag },
+        	{ model[2][0] / x_mag, model[2][1] / y_mag, model[2][2] / z_mag },
+        };
+
+        // reconstruct the transform (model matrix) from only the scale and
+        // translation. The reason for this is that rotating the actual slicing
+        // mesh as desired by the model matrix will cause misalignment with the
+        // view frustum and undesired artifacts will be visible. 
+        auto T = mat<4, 4>{
+        	{ x_mag,     0,     0,    model[0][3] },
+        	{     0, y_mag,     0,    model[1][3] },
+        	{     0,     0, z_mag,    model[2][3] },
+        	{     0,     0,     0,              1 }
+        };
+
+        const auto delta = 1.f/static_cast<float>(vox.size[0]);
+
+        vox.bind();
+        slices.using_shader(shader)
+             .set_camera(cam)
+             ["u_model"].mat4(T * R_align)
+             ["u_rotation"].mat4(R_align)
+             ["u_tex_coord_step"].flt(delta)
+             ["u_voxels"].int1(0)
+             .draw<GL_TRIANGLES>();
         // auto tranform =
 	}
 };
