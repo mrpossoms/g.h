@@ -25,23 +25,23 @@ void texture::destroy()
 	release_bitmap();
 }
 
-void texture::set_pixels(size_t w, size_t h, char* data, GLenum format, GLenum storage, GLenum t)
-{
-	size[0] = w;
-	size[1] = h;
-	type = t;
-	this->data = data;
-	glTexImage2D(type, 0, format, size[0], size[1], 0, format, storage, data);
-}
-
-void texture::set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format, GLenum storage, GLenum t)
+void texture::set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format, GLenum storage)
 {
 	size[0] = w;
 	size[1] = h;
 	size[2] = d;
-	type = t;
 	this->data = data;
-	glTexImage3D(type, 0, format, size[0], size[1], size[2], 0, format, storage, data);
+
+	if (h > 1 && d > 1)
+	{
+		type = GL_TEXTURE_3D;
+		glTexImage3D(GL_TEXTURE_3D, 0, format, size[0], size[1], size[2], 0, format, storage, data);
+	}
+	else if (h > 1)
+	{
+		type = GL_TEXTURE_2D;
+		glTexImage2D(GL_TEXTURE_2D, 0, format, size[0], size[1], 0, format, storage, data);	
+	}
 }
 
 void texture::bind() const { glBindTexture(type, texture); }
@@ -176,6 +176,32 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	return *this;
 }
 
+texture_factory& texture_factory::type(GLenum t)
+{
+	storage_type = t;
+
+	switch(t)
+	{
+		case GL_UNSIGNED_BYTE:
+		case GL_BYTE:
+			bytes_per_component = 1;
+			break;
+
+		case GL_UNSIGNED_SHORT:
+		case GL_SHORT:
+			bytes_per_component = 2;
+			break;
+
+		case GL_UNSIGNED_INT:
+		case GL_INT:
+		case GL_FLOAT:
+			bytes_per_component = 4;
+			break;
+	}
+
+	return *this;
+}
+
 texture_factory& texture_factory::color()
 {
 	color_type = GL_RGBA;
@@ -185,19 +211,19 @@ texture_factory& texture_factory::color()
 
 texture_factory& texture_factory::components(unsigned count)
 {
-	switch(count)
+	switch(component_count = count)
 	{
 		case 1:
-			storage_type = GL_RED;
+			color_type = GL_RED;
 			break;
 		case 2:
-			storage_type = GL_RG;
+			color_type = GL_RG;
 			break;
 		case 3:
-			storage_type = GL_RGB;
+			color_type = GL_RGB;
 			break;
 		case 4:
-			storage_type = GL_RGBA;
+			color_type = GL_RGBA;
 			break;
 		default:
 			std::cerr << "Invalid number of components: " << count << std::endl;
@@ -227,13 +253,19 @@ texture_factory& texture_factory::smooth()
 
 texture_factory& texture_factory::clamped()
 {
-	wrap_s = wrap_t = GL_CLAMP_TO_EDGE;
+	wrap_s = wrap_t = wrap_r = GL_CLAMP_TO_EDGE;
+	return *this;
+}
+
+texture_factory& texture_factory::clamped_to_border()
+{
+	wrap_s = wrap_t = wrap_r = GL_CLAMP_TO_BORDER;
 	return *this;
 }
 
 texture_factory& texture_factory::repeating()
 {
-	wrap_s = wrap_t = GL_REPEAT;
+	wrap_s = wrap_t = wrap_r = GL_REPEAT;
 	return *this;
 }
 
@@ -242,18 +274,20 @@ texture texture_factory::create()
 {
 	texture out;
 
+
 	out.create(texture_type);
 	out.bind();
 
 	assert(gl_get_error());
-	out.set_pixels(size[0], size[1], data, color_type, storage_type);
+	out.set_pixels(size[0], size[1], size[2], data, color_type, storage_type);
 	assert(gl_get_error());
 
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
+	glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
+	glTexParameteri(texture_type, GL_TEXTURE_WRAP_T, wrap_t);
+	glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
+	glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
+	glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
 	assert(gl_get_error());
 	// glGenerateMipmap(GL_TEXTURE_2D);
 	assert(gl_get_error());
@@ -405,6 +439,13 @@ shader::uniform_usage::uniform_usage(shader::usage& parent, GLuint loc) : parent
 shader::usage shader::uniform_usage::mat4 (const mat<4, 4>& m)
 {
 	glUniformMatrix4fv(uni_loc, 1, false, m.ptr());
+
+	return parent_usage;
+}
+
+shader::usage shader::uniform_usage::mat3 (const mat<3, 3>& m)
+{
+	glUniformMatrix3fv(uni_loc, 1, false, m.ptr());
 
 	return parent_usage;
 }

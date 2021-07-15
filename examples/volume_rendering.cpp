@@ -5,7 +5,7 @@ using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
 const unsigned w=64, h=64, d=64;
-uint8_t* data;
+char* data;
 
 struct volumetric : public g::core
 {
@@ -57,6 +57,8 @@ struct volumetric : public g::core
     g::game::camera_perspective cam;
     g::gfx::shader basic_shader;
     g::gfx::shader viz_shader;
+    g::gfx::texture vox;
+    g::gfx::primative::volume_slicer slicer;
     float t, sub_step = 0.1f;
 
     GLuint voxels;
@@ -74,64 +76,28 @@ struct volumetric : public g::core
                                                .add_src<GL_FRAGMENT_SHADER>(fs_vis_src)
                                                .create();
 
-        cam.position = { 0, 1, 1 };
+        slicer = g::gfx::primative::volume_slicer(1000); 
 
-        glGenTextures(1, &voxels);
-        glBindTexture(GL_TEXTURE_3D, voxels);
+        cam.position = { 0, 1, 10 };
 
-        data = new uint8_t[w * h * d * 3];
+        data = new char[w * h * d * 1];
 
-        auto bytes_per_plane = 3 * h * d;
+        auto bytes_per_plane = 1 * h * d;
 
-        int lut[999];
-
-        for (int i = 0; i < 999; i++)
-        {
-            lut[i] = rand();
-        }
 
         auto sq_rad = powf(w>>1, 2.f);
         int hw = w >> 1, hh = h >> 1, hd = d >> 1;
-        for (int i = 0; i < w; i++)
-        for (int j = 0; j < h; j++)
-        for (int k = 0; k < d; k++)
-        {
-            unsigned vi = i * bytes_per_plane + (j * d * 3) + (k * 3);
+        auto fill_func = [&](int i, int j, int k, char* data) {
+            auto dw = i - hw, dh = j - hh, dd = k - hd;
+            auto sq_dist = (dw * dw) + (dh * dh) + (dd * dd);
+            data[0] = (sq_dist < sq_rad) * 0xff;
+        };
 
-            auto sq_dist = powf(i - hw, 2.f) + pow(j - hh, 2.f) + pow(k - hd, 2.f);
-            if (sq_dist < sq_rad)
-            {
-                data[vi + 0] = lut[vi % 999] & 0xff;
-                data[vi + 1] = (lut[vi % 999] >> 8) & 0xff;
-                data[vi + 2] = (lut[vi % 999] >> 16) & 0xff;
-            }
-            else
-            {
-                data[vi + 0] = 0;
-                data[vi + 1] = 0;
-                data[vi + 2] = 0;
-            }
-        }
-
-        glTexImage3D(
-            GL_TEXTURE_3D,
-            0,
-            GL_RGB,
-            w, h, d,
-            0,
-            GL_RGB,
-            GL_UNSIGNED_BYTE,
-            data
-        );
-
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-        // glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        // glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        // glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        vox = g::gfx::texture_factory{ w, h, d }.pixelated()
+                                                .clamped_to_border()
+                                                .components(1)
+                                                .type(GL_UNSIGNED_BYTE)
+                                                .fill(fill_func).create();
 
         return true;
     }
@@ -156,32 +122,7 @@ struct volumetric : public g::core
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_CULL_FACE);
 
-        xmath::mat<4, 1> v = {
-            {0}, {0}, {1000}, {1}
-        };
-
-        // auto p = cam.projection() * v;
-        // p /= p[0][3];
-
-        // auto u = cam.projection().invert() * p;
-        // u /= u[0][3];
-        xmath::vec<3> vo = {cos(t), 0, sin(t)};
-
-        auto O = cam.forward();
-        auto u = cam.up();
-        auto l = xmath::vec<3>::cross(O, u);
-
-        // xmath::mat<4, 4> R = {
-        //     { l[0], u[0], O[0], 0 },
-        //     { l[1], u[1], O[1], 0 },
-        //     { l[2], u[2], O[2], 0 },
-        //     { 0,    0,    0,    1 },
-        // };
-
-        auto R = xmath::mat<4, 4>::look_at({0, 0, 0}, O, u).invert();
-
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_3D, voxels);
+        slicer.draw(basic_shader, vox, cam, mat4::rotation({0, 1, 0}, t));
 
         // slices.using_shader(basic_shader)
         //      .set_camera(cam)
@@ -191,25 +132,29 @@ struct volumetric : public g::core
         //      .draw<GL_TRIANGLES>();
 
 
-        // glDisable(GL_DEPTH_TEST);
-        // low_res.using_shader(viz_shader)
+        // // glDisable(GL_DEPTH_TEST);
+        // // low_res.using_shader(viz_shader)
+        // //      .set_camera(cam)
+        // //      ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
+        // //      ["u_rotation"].mat4(R)
+        // //      ["u_voxels"].int1(0)
+        // //      .draw<GL_TRIANGLES>();
+
+        // glEnable(GL_DEPTH_TEST);
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_3D, vox.texture);
+
+        // const auto delta = 1.f/static_cast<float>(w);
+        // slices.using_shader(basic_shader)
         //      .set_camera(cam)
         //      ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
         //      ["u_rotation"].mat4(R)
-        //      ["u_voxels"].int1(0)
+        //      ["u_tex_coord_step"].flt(delta)
+        //      ["u_voxels"].texture(vox)
+        //      // ["u_voxels"].int1(0)
         //      .draw<GL_TRIANGLES>();
 
-        glEnable(GL_DEPTH_TEST);
-        const auto delta = 1.f/static_cast<float>(w);
-        slices.using_shader(basic_shader)
-             .set_camera(cam)
-             ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
-             ["u_rotation"].mat4(R)
-             ["u_tex_coord_step"].flt(delta)
-             ["u_voxels"].int1(0)
-             .draw<GL_TRIANGLES>();
-
-        t += dt * 0.001f;
+        t += dt;
     }
 };
 

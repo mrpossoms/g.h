@@ -94,9 +94,7 @@ struct texture
 
 	void destroy();
 
-	void set_pixels(size_t w, size_t h, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE, GLenum t=GL_TEXTURE_2D);
-
-	void set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE, GLenum t=GL_TEXTURE_2D);
+	void set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE);
 
 	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
 	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
@@ -112,9 +110,11 @@ struct texture_factory
 	char* data = nullptr;
 	GLenum texture_type;
 	GLenum min_filter = GL_LINEAR, mag_filter = GL_LINEAR;
-	GLenum wrap_s = GL_CLAMP_TO_EDGE, wrap_t = GL_CLAMP_TO_EDGE;
+	GLenum wrap_s = GL_CLAMP_TO_EDGE, wrap_t = GL_CLAMP_TO_EDGE, wrap_r = GL_CLAMP_TO_EDGE;
 	GLenum color_type = GL_RGBA;
 	GLenum storage_type = GL_UNSIGNED_BYTE;
+	unsigned component_count = 0;
+	unsigned bytes_per_component = 0;
 
 	explicit texture_factory() = default;
 
@@ -125,6 +125,8 @@ struct texture_factory
 	void abort(std::string message);
 
 	texture_factory& from_png(const std::string& path);
+
+	texture_factory& type(GLenum t);
 
 	texture_factory& components(unsigned count);
 
@@ -138,61 +140,34 @@ struct texture_factory
 
 	texture_factory& clamped();
 
+	texture_factory& clamped_to_border();
+
 	texture_factory& repeating();
 
-	template<GLenum COLOR, GLenum STORAGE>
-	texture_factory& custom(std::function<void(unsigned int x, unsigned int y, char* pixel)> filler)
+	texture_factory& fill(std::function<void(int x, int y, int z, char* pixel)> filler)
 	{
-		int components = 0;
-		int bytes_per_component;
-		void* pixels;
+		// void* pixels;
 
-		switch (COLOR)
+		auto bytes_per_pixel = bytes_per_component * component_count;
+		auto bytes_per_row = bytes_per_pixel * size[1];
+		auto bytes_per_plane = size[1] * size[2] * bytes_per_pixel;
+		data = new char[bytes_per_pixel * size[0] * size[1] * size[2]];
+
+		for (int i = 0; i < size[0]; i++)
 		{
-			case GL_RED:
-				components = 1;
-				break;
-			case GL_RG:
-				components = 2;
-				break;
-			case GL_RGB:
-			case GL_BGR:
-				components = 3;
-				break;
-			case GL_RGBA:
-	        case GL_BGRA:
-	        	components = 4;
-	        	break;
-		}
-
-
-		switch (STORAGE)
-		{
-			case GL_UNSIGNED_BYTE:
-			case GL_BYTE:
-				bytes_per_component = 1;
-				break;
-			case GL_UNSIGNED_SHORT:
-	        case GL_SHORT:
-	        	bytes_per_component = 2;
-	        	break;
-	        case GL_UNSIGNED_INT:
-	        case GL_INT:
-	        case GL_FLOAT:
-	        	bytes_per_component = 4;
-	        	break;
-		}
-
-		auto bytes_per_pixel = bytes_per_component * components;
-		auto bytes_per_row = bytes_per_pixel * size[0];
-		data = (char*)calloc(bytes_per_pixel, size[0] * size[1]);
-
-		for (int y = 0; y < size[1]; y++)
-		{
-			for (int x = 0; x < size[0]; x++)
+			for (int j = 0; j < size[1]; j++)
 			{
-				filler(x, y, data + (x * bytes_per_pixel) + (y * bytes_per_row));
-			}
+				for (int k = 0; k < size[2]; k++)
+				{
+					// unsigned vi = i * bytes_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
+					// unsigned vi = (i * bytes_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
+					// filler(i, j, k, data + vi);
+
+		            unsigned vi = i * bytes_per_plane + (j * size[2] * 1) + (k * 1);
+
+		            filler(i, j, k, data + vi);
+				}
+			}			
 		}
 
 		return *this;
@@ -319,6 +294,8 @@ struct shader
 		uniform_usage(usage& parent, GLuint loc);
 
 		usage mat4 (const mat<4, 4>& m);
+
+		usage mat3 (const mat<3, 3>& m);
 
 		usage vec3 (const vec<3>& v);
 
@@ -686,7 +663,7 @@ namespace primative
 template <typename D>
 struct renderer
 {
-	virtual void draw(const g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
+	virtual void draw(g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
 
 
@@ -694,7 +671,9 @@ struct volume_slicer : public renderer<texture>
 {
 	g::gfx::mesh<g::gfx::vertex::pos> slices;
 
-	volume_slicer(unsigned num_slices=1000)
+	volume_slicer() = default;
+
+	volume_slicer(unsigned num_slices)
 	{
         slices = g::gfx::mesh_factory::slice_cube(num_slices);
 	}
@@ -719,10 +698,11 @@ struct volume_slicer : public renderer<texture>
 
         // extract the rotation matrix from model by dividing each basis column vector
         // by the magnitude computed for each in the model matrix above
-        auto R_orient = mat<3, 3>{ 
-        	{ model[0][0] / x_mag, model[0][1] / y_mag, model[0][2] / z_mag },
-        	{ model[1][0] / x_mag, model[1][1] / y_mag, model[1][2] / z_mag },
-        	{ model[2][0] / x_mag, model[2][1] / y_mag, model[2][2] / z_mag },
+        auto R_orient = mat<4, 4>{ 
+        	{ model[0][0] / x_mag, model[0][1] / y_mag, model[0][2] / z_mag, 0 },
+        	{ model[1][0] / x_mag, model[1][1] / y_mag, model[1][2] / z_mag, 0 },
+        	{ model[2][0] / x_mag, model[2][1] / y_mag, model[2][2] / z_mag, 0 },
+        	{ 0                  , 0                  , 0                  , 1 }
         };
 
         // reconstruct the transform (model matrix) from only the scale and
@@ -738,13 +718,12 @@ struct volume_slicer : public renderer<texture>
 
         const auto delta = 1.f/static_cast<float>(vox.size[0]);
 
-        vox.bind();
         slices.using_shader(shader)
              .set_camera(cam)
              ["u_model"].mat4(T * R_align)
-             ["u_rotation"].mat4(R_align)
+             ["u_rotation"].mat4(R_orient)
              ["u_tex_coord_step"].flt(delta)
-             ["u_voxels"].int1(0)
+             ["u_voxels"].texture(vox)
              .draw<GL_TRIANGLES>();
         // auto tranform =
 	}
