@@ -28,6 +28,7 @@ struct volumetric : public g::core
     "#version 410\n"
     "in vec3 v_uvw;"
     "in mat4 v_inv_rotation;"
+    "uniform mat4 u_rotation;"
     "uniform sampler3D u_voxels;"
     "uniform vec3 u_uvw_step;"
     "out vec4 color;"
@@ -69,17 +70,21 @@ struct volumetric : public g::core
 
         auto sq_rad = powf(w>>1, 2.f);
         int hw = w >> 1, hh = h >> 1, hd = d >> 1;
-        auto fill_func = [&](int i, int j, int k, char* data) {
+        auto sphere_func = [&](int i, int j, int k, char* data) {
             auto dw = i - hw, dh = j - hh, dd = k - hd;
             auto sq_dist = (dw * dw) + (dh * dh) + (dd * dd);
             data[0] = (sq_dist < sq_rad) * 0xff;
+        };
+
+        auto cube_func = [&](int i, int j, int k, char* data) {
+            data[0] = 0xff;
         };
 
         vox = g::gfx::texture_factory{ w, h, d }.pixelated()
                                                 .clamped_to_border()
                                                 .components(1)
                                                 .type(GL_UNSIGNED_BYTE)
-                                                .fill(fill_func).create();
+                                                .fill(cube_func).create();
 
         return true;
     }
