@@ -17,63 +17,45 @@ struct volumetric : public g::core
     "uniform mat4 u_proj;"
     "uniform mat4 u_rotation;"
     "out vec3 v_uvw;"
+    "out mat4 v_inv_rotation;"
     "void main (void) {"
     "v_uvw = (u_rotation * vec4(a_position, 1.0)).xyz + vec3(0.5);"
-    // "v_uvw = (inverse(u_rotation) * vec4(a_position, 1.0)).xyz + vec3(0.5);"
+    "v_inv_rotation = inverse(u_rotation);"
     "gl_Position = u_proj * u_view * u_model * vec4(a_position, 1.0);"
     "}";
 
     const std::string fs_src =
     "#version 410\n"
     "in vec3 v_uvw;"
+    "in mat4 v_inv_rotation;"
     "uniform sampler3D u_voxels;"
-    "uniform float u_tex_coord_step;"
+    "uniform vec3 u_uvw_step;"
     "out vec4 color;"
     "void main (void) {"
     "float v = texture(u_voxels, v_uvw).r;"
-    // "if (v <= 0.0) { discard; }"
-    "float dc = u_tex_coord_step;"
-    "float n_x = texture(u_voxels, v_uvw - vec3(dc, 0.0, 0.0)).r - texture(u_voxels, v_uvw + vec3(dc, 0.0, 0.0)).r;"
-    "float n_y = texture(u_voxels, v_uvw - vec3(0.0, dc, 0.0)).r - texture(u_voxels, v_uvw + vec3(0.0, dc, 0.0)).r;"
-    "float n_z = texture(u_voxels, v_uvw - vec3(0.0, 0.0, dc)).r - texture(u_voxels, v_uvw + vec3(0.0, 0.0, dc)).r;"
-    "vec3 normal = vec3(n_x, n_y, n_z);"
+    "vec3 dc = u_uvw_step;"
+    "float n_x = texture(u_voxels, v_uvw - vec3(dc.x, 0.0, 0.0)).r - texture(u_voxels, v_uvw + vec3(dc.x, 0.0, 0.0)).r;"
+    "float n_y = texture(u_voxels, v_uvw - vec3(0.0, dc.y, 0.0)).r - texture(u_voxels, v_uvw + vec3(0.0, dc.y, 0.0)).r;"
+    "float n_z = texture(u_voxels, v_uvw - vec3(0.0, 0.0, dc.z)).r - texture(u_voxels, v_uvw + vec3(0.0, 0.0, dc.z)).r;"
+    "vec3 normal = (v_inv_rotation * vec4(n_x, n_y, n_z, 1.0)).xyz;"
     "float shade = dot(normalize(vec3(1.0, 1.0, 0.0)), normal);"
     "color = vec4((normal * 0.5 + vec3(0.5)) * shade, v);"
-    // "color = texture(u_voxels, v_uvw) * vec4;"
-    // "color = vec4(v_uvw, v);"
     "}";
 
-    const std::string fs_vis_src =
-    "#version 410\n"
-    "in vec3 v_uvw;"
-    "uniform sampler3D u_voxels;"
-    "out vec4 color;"
-    "void main (void) {"
-    "color = vec4(v_uvw, 1.0/256.0);"
-    "}";
 
-    g::gfx::mesh<g::gfx::vertex::pos> slices;
-    g::gfx::mesh<g::gfx::vertex::pos> low_res;
     g::game::camera_perspective cam;
     g::gfx::shader basic_shader;
     g::gfx::shader viz_shader;
     g::gfx::texture vox;
     g::gfx::primative::volume_slicer slicer;
-    float t, sub_step = 0.1f;
+    float t = 0;
 
     GLuint voxels;
 
     virtual bool initialize()
     {
-        low_res = g::gfx::mesh_factory::slice_cube(100);
-        slices = g::gfx::mesh_factory::slice_cube(1000);
-
         basic_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
-                                               .create();
-
-        viz_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
-                                               .add_src<GL_FRAGMENT_SHADER>(fs_vis_src)
                                                .create();
 
         slicer = g::gfx::primative::volume_slicer(1000); 
@@ -120,39 +102,10 @@ struct volumetric : public g::core
 
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glDisable(GL_CULL_FACE);
+        // glDisable(GL_CULL_FACE);
 
         slicer.draw(basic_shader, vox, cam, mat4::rotation({0, 1, 0}, t));
 
-        // slices.using_shader(basic_shader)
-        //      .set_camera(cam)
-        //      ["u_model"].mat4(mat4::translation(vo))
-        //      ["u_rotation"].mat4(mat4::I())
-        //      ["u_voxels"].int1(0)
-        //      .draw<GL_TRIANGLES>();
-
-
-        // // glDisable(GL_DEPTH_TEST);
-        // // low_res.using_shader(viz_shader)
-        // //      .set_camera(cam)
-        // //      ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
-        // //      ["u_rotation"].mat4(R)
-        // //      ["u_voxels"].int1(0)
-        // //      .draw<GL_TRIANGLES>();
-
-        // glEnable(GL_DEPTH_TEST);
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_3D, vox.texture);
-
-        // const auto delta = 1.f/static_cast<float>(w);
-        // slices.using_shader(basic_shader)
-        //      .set_camera(cam)
-        //      ["u_model"].mat4(mat4::translation(vo) * R)//mat4::translation(vo))
-        //      ["u_rotation"].mat4(R)
-        //      ["u_tex_coord_step"].flt(delta)
-        //      ["u_voxels"].texture(vox)
-        //      // ["u_voxels"].int1(0)
-        //      .draw<GL_TRIANGLES>();
 
         t += dt;
     }

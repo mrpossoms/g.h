@@ -539,12 +539,12 @@ struct mesh_factory
 		for (;slices--;)
 		{
 			auto n = verts.size();
-			indices.push_back(n + 2);
+			indices.push_back(n + 0);
 			indices.push_back(n + 3);
-			indices.push_back(n + 0);
-			indices.push_back(n + 1);
 			indices.push_back(n + 2);
 			indices.push_back(n + 0);
+			indices.push_back(n + 2);
+			indices.push_back(n + 1);
 
 			auto z = dz * slices;
 			verts.push_back({{-h, h, -h + z}});
@@ -716,13 +716,13 @@ struct volume_slicer : public renderer<texture>
         	{     0,     0,     0,              1 }
         };
 
-        const auto delta = 1.f/static_cast<float>(vox.size[0]);
+        const vec<3> delta = { 1.f/(float)vox.size[0], 1.f/(float)vox.size[1], 1.f/(float)vox.size[2] };
 
         slices.using_shader(shader)
              .set_camera(cam)
              ["u_model"].mat4(T * R_align)
              ["u_rotation"].mat4(R_orient)
-             ["u_tex_coord_step"].flt(delta)
+             ["u_uvw_step"].vec3(delta)
              ["u_voxels"].texture(vox)
              .draw<GL_TRIANGLES>();
         // auto tranform =
