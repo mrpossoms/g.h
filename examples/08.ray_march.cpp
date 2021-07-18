@@ -22,16 +22,22 @@ struct volumetric : public g::core
 		glGenTextures(1, &cube);
 		glBindTexture(GL_TEXTURE_3D, cube);
 
-		const unsigned w=3, h=3, d=3;
+		const unsigned w=32, h=32, d=32;
 		float data[w][h][d];
 
-		for (unsigned i = 0; i < w; i++)
-		for (unsigned j = 0; j < h; j++)
-		for (unsigned k = 0; k < d; k++)
+		for (int i = 0; i < w; i++)
+		for (int j = 0; j < h; j++)
+		for (int k = 0; k < d; k++)
 		{
 			// if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = -1.f; }
 			if ((i + j + k) % 2 == 0) { data[i][j][k] = -1.f; }
 			else { data[i][j][k] = 1.f; }
+			// if (i == 15 && j == 15 && k == 15) { data[i][j][k] = -1; }
+			// else
+			// {
+			// 	auto di = i - 15, dj = j - 15, dk = k - 15;
+			// 	data[i][j][k] = floor(sqrt(di * di + dj * dj + dk * dk));
+			// }
 		}			
 
 		glTexImage3D(
@@ -45,12 +51,14 @@ struct volumetric : public g::core
 			data
 		);
 
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
@@ -110,7 +118,7 @@ int main (int argc, const char* argv[])
 {
 	volumetric game;
 
-	game.start({ "volume", true, 1024, 768 });
+	game.start({ "volume", true, 640, 480 });
 
 	return 0;
 }

@@ -18,44 +18,66 @@ uniform int u_show;
 uniform float u_sub_step;
 
 
-struct step_t
+
+float get_distance(vec3 march_pos)
 {
-	float distance;
-	vec3 color;
-};
+	float d = length(march_pos.xz);
+	float p = march_pos.y - 0.5 + cos(d);
+	// float v = texture(u_cube, vec3(0, 2.0, -5.0) - march_pos).r;
+	float s = length(vec3(0, 2.0, -5.0) - march_pos) - 1.0;
 
-
-step_t get_distance_cube(vec3 m, vec3 pos)
-{
-	const float r = sqrt(3.0) / 2.0; 
-
-	vec3 uvw = ((m - pos)) + vec3(0.5);
-	// return distance(m, pos) - 0.5;
-	float d = distance(m, pos) - r;
-	if (u_show == 1 && d <= DIST_EPS)
-	{
-		float rd = texture(u_cube, uvw).r;
-		return step_t(rd * u_sub_step, uvw);// < 1.0 ? 0.0 : r;
-	}
-
-	return step_t(d, uvw);
+	return min(p, s);
 }
 
-step_t get_distance(vec3 march_pos)
+/**
+ * -------|----X       |
+ */
+
+/**
+ * @brief      { function_description }
+ *
+ * @param[in]  vec3  ray origin
+ * @param[in]  vec3  ray direction
+ * @param[in]  vec3  The vector 3
+ * @param[in]  vec3  The vector 3
+ *
+ * @return     distance along the ray direction where an intersection was detected
+ */
+float cast_ray( in vec3 ro, in vec3 rd, out vec3 oVos, out vec3 oDir )
 {
-	// TODO
-	step_t cd = get_distance_cube(march_pos, vec3(0.0, 2.0, -4.0));
-	step_t pd = step_t(march_pos.y - 0.5, vec3(march_pos.y));
-	// step_t sd = step_t(distance(march_pos, vec3(0.0, 0.5, 4.0)) - 0.5, vec3(distance(march_pos, vec3(0.0, 0.5, 4.0)) - 0.5));
+	vec3 ro_floor = floor(ro);
+	vec3 rd_inv = 1.0/rd;
+	vec3 rd_sign = sign(rd); // values > 0 become +1, where values < 0 become -1
+	vec3 dis = (ro_floor-ro + 0.5 + rd_sign*0.5) * rd_inv; // 
 	
-	if (cd.distance < pd.distance)
+	float res = -1.0;
+	vec3 mm = vec3(0.0);
+	for( int i=0; i<128; i++ ) 
 	{
-		return cd;
+		if( get_distance(ro_floor)<0.5 ) 
+		{
+			res = 1.0; 
+			break; 
+		}
+
+		// the step(a, b) function returns 1 when a is less than b. 0 otherwise
+		// 
+		mm = step(dis.xyz, dis.yzx) * step(dis.xyz, dis.zxy);
+		dis += mm * rd_sign * rd_inv;
+        ro_floor += mm * rd_sign;
 	}
-	else
-	{
-		return pd;
-	}
+
+	vec3 nor = -mm*rd_sign;
+	vec3 vos = ro_floor;
+	
+    // intersect the cube	
+	vec3 mini = (ro_floor-ro + 0.5 - 0.5*vec3(rd_sign))*rd_inv;
+	float t = max ( mini.x, max ( mini.y, mini.z ) );
+	
+	oDir = mm;
+	oVos = vos;
+
+	return t*res;
 }
 
 void main(void)
@@ -64,25 +86,33 @@ void main(void)
 	ray /= ray.w;
 
 	vec3 d = normalize(v_view_rotation * ray.xyz);
+	vec3 ds = sign(d);
 	vec3 o = v_view_pos;
 
-	// color = vec4(0.0, 0.0, 0.0, 1.0);
+	color = vec4(0.0, 0.0, 0.0, 1.0);
 	// color = ray;
 
-	float net_dist = 0.0;
-	for (int t = 0; t < MAX_STEPS; t++)
-	{
-		vec3 p = o + d * net_dist;
-		step_t step = get_distance(p);
+	vec3 p = o;
+	vec3 vos, dir;
 
-		if (step.distance <= DIST_EPS)
-		{
-			color = vec4((step.color + vec3(net_dist / 10.0)), 1.0);
-			break;
-		}
+	float t = cast_ray(p, d, vos, dir);
+	vec3 n = -dir * sign(d);
+	// for (int t = 0; t < MAX_STEPS; t++)
+	// {
+	// 	float step = get_distance(p);
 
-		net_dist += step.distance; 
-	}
+	// 	p += d * step;
+
+	// 	if (step <= 0.5)
+	// 	{
+	// 		p = round(p);
+	// 		break;
+	// 	}
+	// }
+
+	vec3 disp_n = (n * 0.5 + 0.5);
+	float v = texture(u_cube, o + dir * t).r;
+	color = vec4( disp_n * (vec3(t / 10.0)), 1.0);
 
 	// color.xyz += texture(u_cube, vec3(v_uv, 0.5)).rgb;
 }
