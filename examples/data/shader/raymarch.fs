@@ -5,7 +5,6 @@
 #define MAX_STEPS (200)
 
 in vec4 v_screen_pos;
-in vec2 v_uv;
 
 in mat3 v_view_rotation;
 in vec3 v_view_pos;
@@ -48,20 +47,20 @@ float cast_ray( in vec3 ro, in vec3 rd, out vec3 oVos, out vec3 oDir )
 	vec3 ro_floor = floor(ro);
 	vec3 rd_inv = 1.0/rd;
 	vec3 rd_sign = sign(rd); // values > 0 become +1, where values < 0 become -1
-	vec3 dis = (ro_floor-ro + 0.5 + rd_sign*0.5) * rd_inv; // 
-	
+	vec3 dis = (ro_floor-ro + 0.5 + rd_sign*0.5) * rd_inv; //
+
 	float res = -1.0;
 	vec3 mm = vec3(0.0);
-	for( int i=0; i<128; i++ ) 
+	for( int i=0; i<128; i++ )
 	{
-		if( get_distance(ro_floor)<0.5 ) 
+		if( get_distance(ro_floor)<0.5 )
 		{
-			res = 1.0; 
-			break; 
+			res = 1.0;
+			break;
 		}
 
 		// the step(a, b) function returns 1 when a is less than b. 0 otherwise
-		// 
+		//
 		mm = step(dis.xyz, dis.yzx) * step(dis.xyz, dis.zxy);
 		dis += mm * rd_sign * rd_inv;
         ro_floor += mm * rd_sign;
@@ -69,11 +68,11 @@ float cast_ray( in vec3 ro, in vec3 rd, out vec3 oVos, out vec3 oDir )
 
 	vec3 nor = -mm*rd_sign;
 	vec3 vos = ro_floor;
-	
-    // intersect the cube	
+
+    // intersect the cube
 	vec3 mini = (ro_floor-ro + 0.5 - 0.5*vec3(rd_sign))*rd_inv;
 	float t = max ( mini.x, max ( mini.y, mini.z ) );
-	
+
 	oDir = mm;
 	oVos = vos;
 
@@ -85,17 +84,14 @@ void main(void)
 	vec4 ray = inverse(u_proj) * vec4(v_screen_pos.xy, 1.0, 1.0);
 	ray /= ray.w;
 
-	vec3 d = normalize(v_view_rotation * ray.xyz);
+	vec3 d = v_view_rotation * normalize(ray.xyz);
 	vec3 ds = sign(d);
 	vec3 o = v_view_pos;
 
 	color = vec4(0.0, 0.0, 0.0, 1.0);
-	// color = ray;
-
-	vec3 p = o;
 	vec3 vos, dir;
 
-	float t = cast_ray(p, d, vos, dir);
+	float t = cast_ray(o, d, vos, dir);
 	vec3 n = -dir * sign(d);
 	// for (int t = 0; t < MAX_STEPS; t++)
 	// {

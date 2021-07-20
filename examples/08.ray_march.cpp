@@ -38,7 +38,7 @@ struct volumetric : public g::core
 			// 	auto di = i - 15, dj = j - 15, dk = k - 15;
 			// 	data[i][j][k] = floor(sqrt(di * di + dj * dj + dk * dk));
 			// }
-		}			
+		}
 
 		glTexImage3D(
 			GL_TEXTURE_3D,
@@ -74,13 +74,13 @@ struct volumetric : public g::core
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * -dt;
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(-dt);
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(dt);
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(dt);
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(-dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.position += cam.up() * dt;
 
-	
+
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glDisable(GL_CULL_FACE);
@@ -104,6 +104,7 @@ struct volumetric : public g::core
 		glBindTexture(GL_TEXTURE_3D, cube);
 		plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))
 		     .set_camera(cam)
+		     ["u_view_pos"].vec3(cam.position)
 		     ["u_cube"].int1(0)
 		     ["u_show"].int1(show)
 		     ["u_sub_step"].flt(sub_step)

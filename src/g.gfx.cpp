@@ -40,7 +40,7 @@ void texture::set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format
 	else if (h > 1)
 	{
 		type = GL_TEXTURE_2D;
-		glTexImage2D(GL_TEXTURE_2D, 0, format, size[0], size[1], 0, format, storage, data);	
+		glTexImage2D(GL_TEXTURE_2D, 0, format, size[0], size[1], 0, format, storage, data);
 	}
 }
 
