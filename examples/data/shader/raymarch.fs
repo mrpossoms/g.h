@@ -15,15 +15,15 @@ uniform mat4 u_proj;
 uniform sampler3D u_cube;
 uniform int u_show;
 uniform float u_sub_step;
-
-
+uniform vec3 u_light_pos;
 
 float get_distance(vec3 march_pos)
 {
 	float d = length(march_pos.xz);
 	float p = march_pos.y - 0.5 + cos(d);
 	// float v = texture(u_cube, vec3(0, 2.0, -5.0) - march_pos).r;
-	float s = length(vec3(0, 2.0, -5.0) - march_pos) - 1.0;
+	float s = length(vec3(0, 4.0, -5.0) - march_pos) - 1.0;
+	float l = length(u_light_pos - march_pos) - 1.0;
 
 	return min(p, s);
 }
@@ -93,6 +93,18 @@ void main(void)
 
 	float t = cast_ray(o, d, vos, dir);
 	vec3 n = -dir * sign(d);
+
+	vec3 so = o + d * t;
+	vec3 ld = normalize(u_light_pos - so);
+	float shade = dot(ld, n) * float(t >= 0);
+
+	if (t >= 0)
+	{
+		float st = cast_ray(so + n*DIST_EPS, ld, vos, dir);
+
+		shade = mix(shade, shade * 0.5, float(st > 0));
+	}
+
 	// for (int t = 0; t < MAX_STEPS; t++)
 	// {
 	// 	float step = get_distance(p);
@@ -108,7 +120,7 @@ void main(void)
 
 	vec3 disp_n = (n * 0.5 + 0.5);
 	float v = texture(u_cube, o + dir * t).r;
-	color = vec4( disp_n * (vec3(t / 10.0)), 1.0);
+	color = vec4( vec3(1.0) * shade, 1.0);
 
 	// color.xyz += texture(u_cube, vec3(v_uv, 0.5)).rgb;
 }
