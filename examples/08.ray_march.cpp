@@ -19,9 +19,6 @@ struct volumetric : public g::core
 
 		cam.position = { 0, 1, 0 };
 
-		glGenTextures(1, &cube);
-		glBindTexture(GL_TEXTURE_3D, cube);
-
 		const unsigned w=32, h=32, d=32;
 		float data[w][h][d];
 
@@ -30,8 +27,14 @@ struct volumetric : public g::core
 		for (int k = 0; k < d; k++)
 		{
 			// if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = -1.f; }
-			if ((i + j + k) % 2 == 0) { data[i][j][k] = -1.f; }
-			else { data[i][j][k] = 1.f; }
+			if (((i + j) % 2) == 0)
+			{
+				data[i][j][k] = 1.f;
+			}
+			else
+			{ 
+				data[i][j][k] = 0.f; 
+			}
 			// if (i == 15 && j == 15 && k == 15) { data[i][j][k] = -1; }
 			// else
 			// {
@@ -39,6 +42,9 @@ struct volumetric : public g::core
 			// 	data[i][j][k] = floor(sqrt(di * di + dj * dj + dk * dk));
 			// }
 		}
+
+		glGenTextures(1, &cube);
+		glBindTexture(GL_TEXTURE_3D, cube);
 
 		glTexImage3D(
 			GL_TEXTURE_3D,
@@ -51,9 +57,9 @@ struct volumetric : public g::core
 			data
 		);
 
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -111,7 +117,7 @@ struct volumetric : public g::core
 		     ["u_cube"].int1(0)
 		     ["u_show"].int1(show)
 		     ["u_sub_step"].flt(sub_step)
-		     ["u_light_pos"].vec3({20, 100, 10})
+		     ["u_light_pos"].vec3({20 * cos(t), 100, 20 * sin(t)})
 		     .draw<GL_TRIANGLE_FAN>();
 
 		t += dt;
@@ -123,7 +129,7 @@ int main (int argc, const char* argv[])
 {
 	volumetric game;
 
-	game.start({ "volume", true, 640, 480 });
+	game.start({ "volume", true, 1920, 1080 });
 
 	return 0;
 }

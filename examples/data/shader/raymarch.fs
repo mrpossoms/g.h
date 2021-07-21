@@ -119,8 +119,8 @@ void main(void)
 	// }
 
 	vec3 disp_n = (n * 0.5 + 0.5);
-	float v = texture(u_cube, o + dir * t).r;
-	color = vec4( vec3(1.0) * shade, 1.0);
+	float v = texture(u_cube, o + d * t).r;
+	color = vec4( vec3(v, 1.0, 1.0) * shade, 1.0);
 
 	// color.xyz += texture(u_cube, vec3(v_uv, 0.5)).rgb;
 }
