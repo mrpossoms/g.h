@@ -21,11 +21,13 @@ float get_distance(vec3 march_pos)
 {
 	float d = length(march_pos.xz);
 	float p = march_pos.y - 0.5 + cos(d);
-	// float v = texture(u_cube, vec3(0, 2.0, -5.0) - march_pos).r;
-	float s = length(vec3(0, 4.0, -5.0) - march_pos) - 1.0;
-	float l = length(u_light_pos - march_pos) - 1.0;
 
-	return min(p, s);
+	float v = texture(u_cube, march_pos * (1.0/16.0)).r;
+	
+	float s = length(vec3(0, 4.0, -5.0) - march_pos) - 1.0;
+	// float l = length(u_light_pos - march_pos) - 1.0;
+
+	return min(p, v);
 }
 
 /**

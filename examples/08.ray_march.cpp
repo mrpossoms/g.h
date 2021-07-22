@@ -4,6 +4,9 @@
 using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
+const unsigned w=16, h=16, d=16;
+float data[w][h][d];
+
 struct volumetric : public g::core
 {
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
@@ -19,26 +22,30 @@ struct volumetric : public g::core
 
 		cam.position = { 0, 1, 0 };
 
-		const unsigned w=32, h=32, d=32;
-		float data[w][h][d];
-
 		for (int i = 0; i < w; i++)
 		for (int j = 0; j < h; j++)
 		for (int k = 0; k < d; k++)
 		{
+			// if (i == 0 || i == w-1) { data[i][j][k] = 1.f; break; }
+			// if (j == 0 || j == h-1) { data[i][j][k] = 1.f; break; }
+			// if (k == 0 || k == d-1) { data[i][j][k] = 1.f; break; }
 			// if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = -1.f; }
-			if (((i + j) % 2) == 0)
+			if ((i > 4 && i < w-4 &&
+				 j > 4 && j < h-4 &&
+				 k > 4 && k < d-4)  )
+			// if ((i + j + k) % 2)
 			{
-				data[i][j][k] = 1.f;
+				data[i][j][k] = 0.f;
 			}
 			else
 			{ 
-				data[i][j][k] = 0.f; 
+				data[i][j][k] = 1.f; 
 			}
-			// if (i == 15 && j == 15 && k == 15) { data[i][j][k] = -1; }
+
+			// if (i == 7 && j == 7 && k == 7) { data[i][j][k] = 0; }
 			// else
 			// {
-			// 	auto di = i - 15, dj = j - 15, dk = k - 15;
+			// 	auto di = i - 8, dj = j - 8, dk = k - 8;
 			// 	data[i][j][k] = floor(sqrt(di * di + dj * dj + dk * dk));
 			// }
 		}
@@ -57,16 +64,18 @@ struct volumetric : public g::core
 			data
 		);
 
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+		cam.position = {0, 10, 0};
 
 		return true;
 	}
