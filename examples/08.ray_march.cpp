@@ -10,8 +10,10 @@ float data[w][h][d];
 struct volumetric : public g::core
 {
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
+	g::gfx::framebuffer render_buffer;
 	g::game::camera_perspective cam;
 	g::asset::store assets;
+
 	float t, sub_step = 0.0f;
 
 	GLuint cube;
@@ -19,6 +21,8 @@ struct volumetric : public g::core
 	virtual bool initialize()
 	{
 		plane = g::gfx::mesh_factory::plane();
+
+		render_buffer = g::gfx::framebuffer_factory{1920 >> 1, 1080 >> 1}.color().create();
 
 		cam.position = { 0, 1, 0 };
 
@@ -126,6 +130,8 @@ struct volumetric : public g::core
 
 		auto ld = xmath::vec<3>{ 0.6f, -1, 1};
 
+		render_buffer.bind_as_target();
+		
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_3D, cube);
 		plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))
@@ -138,6 +144,12 @@ struct volumetric : public g::core
 		     // ["u_light_pos"].vec3({20 * cos(t), 100, 20 * sin(t)})
 		     .draw<GL_TRIANGLE_FAN>();
 
+		render_buffer.unbind_as_target();
+
+		plane.using_shader(assets.shader("basic_post.vs+basic_texture.fs"))
+			["u_texture"].texture(render_buffer.color)
+			.draw<GL_TRIANGLE_FAN>();
+
 		t += dt;
 	}
 };
@@ -147,7 +159,7 @@ int main (int argc, const char* argv[])
 {
 	volumetric game;
 
-	game.start({ "volume", true, 1920 >> 3, 1080 >> 3 });
+	game.start({ "volume", true, 1920, 1080 });
 
 	return 0;
 }

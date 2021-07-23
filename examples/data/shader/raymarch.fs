@@ -17,6 +17,12 @@ uniform int u_show;
 uniform float u_sub_step;
 uniform vec3 u_light_pos;
 
+float box(vec3 march_pos, vec3 o, vec3 r)
+{
+	vec3 q = abs(march_pos - o) - r;
+	return length(max(q, vec3(0)));
+}
+
 float volume_distance(vec3 march_pos, sampler3D tex, vec3 o, float r)
 {
 	float sqrt_r = sqrt(r);
@@ -48,11 +54,17 @@ float volume_distance(vec3 march_pos, sampler3D tex, vec3 o, float r)
 
 	float ds = length(march_pos - o) - r;
 
-	return max(ds, dv);
+	if (ds <= 0.5)
+	{
+		return dv;
+	}
+
+	return ds;
 }
 
 float get_distance(vec3 march_pos)
 {
+	// wavey plane
 	float d = length(march_pos.xz);
 	float p = march_pos.y - 0.5 + cos(d);
 
@@ -64,7 +76,7 @@ float get_distance(vec3 march_pos)
 	float s = length(vec3(0, 4.0, -5.0) - march_pos) - 1.0;
 	// float l = length(u_light_pos - march_pos) - 1.0;
 
-	return min(p, v);
+	return min(p, box(march_pos, vec3(0, 11, -20), vec3(1.0, 2.0, 3.0)));
 }
 
 /**
