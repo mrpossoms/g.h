@@ -14,7 +14,7 @@ struct volumetric : public g::core
 	g::game::camera_perspective cam;
 	g::asset::store assets;
 
-	float t, sub_step = 0.0f;
+	float t, sub_step = -0.5f;
 
 	GLuint cube;
 
@@ -22,7 +22,7 @@ struct volumetric : public g::core
 	{
 		plane = g::gfx::mesh_factory::plane();
 
-		render_buffer = g::gfx::framebuffer_factory{1024 >> 1, 768 >> 1}.color().create();
+		render_buffer = g::gfx::framebuffer_factory{1024 >> 0, 768 >> 0}.color().create();
 
 		cam.position = { 0, 1, 0 };
 
@@ -35,13 +35,18 @@ struct volumetric : public g::core
 			// if (k == 0 || k == d-1) { data[i][j][k] = 1.f; continue; }
 			// if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = -1.f; }
 			const auto b = 0;
+			const int hw = w >> 1;
+			const int hd = d >> 1;
+
+			auto ikd = sqrt(pow(i - hw, 2.0) + pow(k - hd, 2.0));
 
 			if (
 				(i >= b && i < w-b &&
 				 j >= b && j < h-b &&
 				 k >= b && k < d-b)
+				&& ikd < 15
 				// && (i+j+k) % 2
-				&& i == j && j == k
+				// && i == j && j == k
 			)
 			// if ((i + j + k) % 2)
 			{
@@ -82,8 +87,8 @@ struct volumetric : public g::core
 		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 		cam.position = {0, 10, 0};
 
@@ -127,8 +132,14 @@ struct volumetric : public g::core
 
 		int show = 0;
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Z)) { show = 1; }
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS) sub_step += dt;
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_MINUS) == GLFW_PRESS) sub_step -= dt;
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS) { 
+			sub_step += dt;
+			std::cout << "radius bias: " << sub_step << std::endl;
+		}	
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_MINUS) == GLFW_PRESS) {
+			sub_step -= dt;
+			std::cout << "radius bias: " << sub_step << std::endl;
+		}
 
 		auto ld = xmath::vec<3>{ 0.6f, -1, 1};
 
