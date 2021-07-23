@@ -320,6 +320,12 @@ struct shader_factory
 		auto fd = open(path.c_str(), O_RDONLY);
 		auto size = lseek(fd, 0, SEEK_END);
 
+		if (fd < 0 || size <= 0)
+		{
+			std::cerr << G_TERM_RED << "Could not open: '" << path << "' file did not exist, or was empty" << std::endl;
+			return *this;
+		}
+
 		{ // read and compile the shader
 			GLchar* src = new GLchar[size];
 			lseek(fd, 0, SEEK_SET);

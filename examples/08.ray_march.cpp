@@ -22,7 +22,7 @@ struct volumetric : public g::core
 	{
 		plane = g::gfx::mesh_factory::plane();
 
-		render_buffer = g::gfx::framebuffer_factory{1920 >> 1, 1080 >> 1}.color().create();
+		render_buffer = g::gfx::framebuffer_factory{1024 >> 1, 768 >> 1}.color().create();
 
 		cam.position = { 0, 1, 0 };
 
@@ -34,12 +34,14 @@ struct volumetric : public g::core
 			// if (j == 0 || j == h-1) { data[i][j][k] = 1.f; continue; }
 			// if (k == 0 || k == d-1) { data[i][j][k] = 1.f; continue; }
 			// if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = -1.f; }
-			const auto b = 1;
+			const auto b = 0;
 
-			if ((i > b && i < w-b &&
-				 j > b && j < h-b &&
-				 k > b && k < d-b)
-				&& (i+j+k) % 2
+			if (
+				(i >= b && i < w-b &&
+				 j >= b && j < h-b &&
+				 k >= b && k < d-b)
+				// && (i+j+k) % 2
+				&& i == j && j == k
 			)
 			// if ((i + j + k) % 2)
 			{
@@ -159,7 +161,7 @@ int main (int argc, const char* argv[])
 {
 	volumetric game;
 
-	game.start({ "volume", true, 1920, 1080 });
+	game.start({ "volume", true, 1024, 768 });
 
 	return 0;
 }
