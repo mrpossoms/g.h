@@ -30,9 +30,13 @@ struct volumetric : public g::core
 			// if (j == 0 || j == h-1) { data[i][j][k] = 1.f; continue; }
 			// if (k == 0 || k == d-1) { data[i][j][k] = 1.f; continue; }
 			// if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = -1.f; }
-			if ((i > 1 && i < w-1 &&
-				 j > 1 && j < h-1 &&
-				 k > 1 && k < d-1) && (i+j+k) % 2)
+			const auto b = 1;
+
+			if ((i > b && i < w-b &&
+				 j > b && j < h-b &&
+				 k > b && k < d-b)
+				// && (i+j+k) % 2
+			)
 			// if ((i + j + k) % 2)
 			{
 				data[i][j][k] = 0.f;
@@ -80,10 +84,9 @@ struct volumetric : public g::core
 		return true;
 	}
 
-	virtual void update(float dt)
+	void controls(float dt)
 	{
-
-		const auto speed = 2.f;
+		const auto speed = 4.f;
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * speed * dt;
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * speed * -dt;
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * speed * dt;
@@ -95,7 +98,12 @@ struct volumetric : public g::core
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.position += cam.up() * speed * dt;
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.position -= cam.up() * speed * dt;
+	}
 
+	virtual void update(float dt)
+	{
+		this->controls(dt);
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -126,7 +134,8 @@ struct volumetric : public g::core
 		     ["u_cube"].int1(0)
 		     ["u_show"].int1(show)
 		     ["u_sub_step"].flt(sub_step)
-		     ["u_light_pos"].vec3({20 * cos(t), 100, 20 * sin(t)})
+		     ["u_light_pos"].vec3(cam.position + cam.up())
+		     // ["u_light_pos"].vec3({20 * cos(t), 100, 20 * sin(t)})
 		     .draw<GL_TRIANGLE_FAN>();
 
 		t += dt;
@@ -138,7 +147,7 @@ int main (int argc, const char* argv[])
 {
 	volumetric game;
 
-	game.start({ "volume", true, 1920, 1080 });
+	game.start({ "volume", true, 1920 >> 3, 1080 >> 3 });
 
 	return 0;
 }

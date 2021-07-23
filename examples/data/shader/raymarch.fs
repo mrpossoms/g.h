@@ -21,8 +21,26 @@ float volume_distance(vec3 march_pos, sampler3D tex, vec3 o, float r)
 {
 	float sqrt_r = sqrt(r);
 
-	vec3 A = o - vec3(r);
-	vec3 B = o + vec3(r);
+	/*
+	 *   A-------
+	 *   |\      |
+	 *  a|  \ 2r |
+	 *   |  d \  |
+	 *   |      \|
+	 *    -------B
+	 *       a
+	 *
+	 *	a^2 + a^2 = d^2
+	 *	2(a^2) = d^2
+	 *	a^2 = 0.5 * d^2
+	 *	a = sqrt(0.5 * d^2)
+	 *	a = sqrt(0.5 * (2r)^2)
+	 */
+
+
+	float a_2 = sqrt(0.5 * pow(2 * r, 2.0)) * 0.5; 
+	vec3 A = o - vec3(a_2);
+	vec3 B = o + vec3(a_2);
 	vec3 uvw = (march_pos - A) / (B - A);
 
 	// vec3 uvw = ((march_pos - o) + sqrt_r * 0.5) / sqrt_r;
