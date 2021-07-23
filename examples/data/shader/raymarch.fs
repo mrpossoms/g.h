@@ -23,9 +23,9 @@ float box(vec3 march_pos, vec3 o, vec3 r)
 	return length(max(q, vec3(0)));
 }
 
-float volume_distance(vec3 march_pos, sampler3D tex, vec3 o, float r)
+float volume_distance(vec3 march_pos, sampler3D tex, vec3 o, vec3 r)
 {
-	float sqrt_r = sqrt(r);
+	// float sqrt_r = sqrt(r);
 
 	/*
 	 *   A-------
@@ -44,22 +44,22 @@ float volume_distance(vec3 march_pos, sampler3D tex, vec3 o, float r)
 	 */
 
 
-	float a_2 = sqrt(0.5 * pow(2 * r, 2.0)) * 0.5; 
-	vec3 A = o - vec3(a_2);
-	vec3 B = o + vec3(a_2);
+	// float a_2 = sqrt(0.5 * pow(2 * r, 2.0)) * 0.5; 
+	vec3 A = o - vec3(r);
+	vec3 B = o + vec3(r);
 	vec3 uvw = (march_pos - A) / (B - A);
 
 	// vec3 uvw = ((march_pos - o) + sqrt_r * 0.5) / sqrt_r;
 	float dv = texture(tex, uvw).r;
 
-	float ds = length(march_pos - o) - r;
+	float db = box(march_pos, o, r);
 
-	if (ds <= 0.5)
-	{
-		return dv;
-	}
+	// if (db <= 0.0)
+	// {
+	// 	return dv;
+	// }
 
-	return ds;
+	return max(dv, db);
 }
 
 float get_distance(vec3 march_pos)
@@ -71,12 +71,12 @@ float get_distance(vec3 march_pos)
 
 	// float v = texture(u_cube, march_pos * (1.0/32.0)).r;
 
-	float v = volume_distance(march_pos, u_cube, vec3(0, 11, -20), sqrt(2*256)*0.5 + u_sub_step);
+	float v = volume_distance(march_pos, u_cube, vec3(0, 11, -20), vec3(8.0 + u_sub_step));//sqrt(2*256)*0.5 + u_sub_step);
 	
 	float s = length(vec3(0, 4.0, -5.0) - march_pos) - 1.0;
 	// float l = length(u_light_pos - march_pos) - 1.0;
 
-	return min(p, box(march_pos, vec3(0, 11, -20), vec3(1.0, 2.0, 3.0)));
+	return min(p, v);
 }
 
 /**

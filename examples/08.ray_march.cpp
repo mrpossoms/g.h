@@ -39,7 +39,7 @@ struct volumetric : public g::core
 			if ((i > b && i < w-b &&
 				 j > b && j < h-b &&
 				 k > b && k < d-b)
-				// && (i+j+k) % 2
+				&& (i+j+k) % 2
 			)
 			// if ((i + j + k) % 2)
 			{
