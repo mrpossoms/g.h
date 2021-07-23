@@ -17,12 +17,31 @@ uniform int u_show;
 uniform float u_sub_step;
 uniform vec3 u_light_pos;
 
+float volume_distance(vec3 march_pos, sampler3D tex, vec3 o, float r)
+{
+	float sqrt_r = sqrt(r);
+
+	vec3 A = o - vec3(r);
+	vec3 B = o + vec3(r);
+	vec3 uvw = (march_pos - A) / (B - A);
+
+	// vec3 uvw = ((march_pos - o) + sqrt_r * 0.5) / sqrt_r;
+	float dv = texture(tex, uvw).r;
+
+	float ds = length(march_pos - o) - r;
+
+	return max(ds, dv);
+}
+
 float get_distance(vec3 march_pos)
 {
 	float d = length(march_pos.xz);
 	float p = march_pos.y - 0.5 + cos(d);
 
-	float v = texture(u_cube, march_pos * (1.0/16.0)).r;
+
+	// float v = texture(u_cube, march_pos * (1.0/32.0)).r;
+
+	float v = volume_distance(march_pos, u_cube, vec3(0, 11, -20), sqrt(2*256)*0.5 + u_sub_step);
 	
 	float s = length(vec3(0, 4.0, -5.0) - march_pos) - 1.0;
 	// float l = length(u_light_pos - march_pos) - 1.0;

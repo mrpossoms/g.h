@@ -4,7 +4,7 @@
 using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
-const unsigned w=16, h=16, d=16;
+const unsigned w=32, h=32, d=32;
 float data[w][h][d];
 
 struct volumetric : public g::core
@@ -12,7 +12,7 @@ struct volumetric : public g::core
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
 	g::game::camera_perspective cam;
 	g::asset::store assets;
-	float t, sub_step = 0.1f;
+	float t, sub_step = 0.0f;
 
 	GLuint cube;
 
@@ -26,18 +26,18 @@ struct volumetric : public g::core
 		for (int j = 0; j < h; j++)
 		for (int k = 0; k < d; k++)
 		{
-			// if (i == 0 || i == w-1) { data[i][j][k] = 1.f; break; }
-			// if (j == 0 || j == h-1) { data[i][j][k] = 1.f; break; }
-			// if (k == 0 || k == d-1) { data[i][j][k] = 1.f; break; }
+			// if (i == 0 || i == w-1) { data[i][j][k] = 1.f; continue; }
+			// if (j == 0 || j == h-1) { data[i][j][k] = 1.f; continue; }
+			// if (k == 0 || k == d-1) { data[i][j][k] = 1.f; continue; }
 			// if (i == w / 2 && j == h / 2 && k == d / 2) { data[i][j][k] = -1.f; }
-			if ((i > 4 && i < w-4 &&
-				 j > 4 && j < h-4 &&
-				 k > 4 && k < d-4)  )
+			if ((i > 1 && i < w-1 &&
+				 j > 1 && j < h-1 &&
+				 k > 1 && k < d-1) && (i+j+k) % 2)
 			// if ((i + j + k) % 2)
 			{
 				data[i][j][k] = 0.f;
 			}
-			else
+			else 
 			{ 
 				data[i][j][k] = 1.f; 
 			}
@@ -64,9 +64,9 @@ struct volumetric : public g::core
 			data
 		);
 
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 
 		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -113,8 +113,8 @@ struct volumetric : public g::core
 
 		int show = 0;
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Z)) { show = 1; }
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS) sub_step += 0.1f * dt;
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_MINUS) == GLFW_PRESS) sub_step -= 0.1f * dt;
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS) sub_step += dt;
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_MINUS) == GLFW_PRESS) sub_step -= dt;
 
 		auto ld = xmath::vec<3>{ 0.6f, -1, 1};
 
