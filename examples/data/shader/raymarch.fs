@@ -55,7 +55,7 @@ float volume_distance(vec3 march_pos, sampler3D tex, vec3 o, vec3 r)
 	vec3 uvw = (march_pos - A) / (B - A);
 
 	// vec3 uvw = ((march_pos - o) + sqrt_r * 0.5) / sqrt_r;
-	float dv = texture(tex, uvw).r;
+	float dv = -texture(tex, uvw).r + 1.0;
 
 	float db = box(march_pos, o, r);
 

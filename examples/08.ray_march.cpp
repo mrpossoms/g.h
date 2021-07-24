@@ -44,7 +44,7 @@ struct volumetric : public g::core
 				(i >= b && i < w-b &&
 				 j >= b && j < h-b &&
 				 k >= b && k < d-b)
-				&& ikd < 15
+				&& ikd < w >> 1
 				// && (i+j+k) % 2
 				// && i == j && j == k
 			)
@@ -65,6 +65,10 @@ struct volumetric : public g::core
 			// }
 		}
 
+		auto vox = assets.vox("probe.vox");
+
+		std::cout << "vox: " << vox.width << ", " << vox.height << ", " << vox.depth << std::endl;
+
 		glGenTextures(1, &cube);
 		glBindTexture(GL_TEXTURE_3D, cube);
 
@@ -72,11 +76,11 @@ struct volumetric : public g::core
 			GL_TEXTURE_3D,
 			0,
 			GL_RED,
-			w, h, d,
+			vox.width, vox.height, vox.depth,
 			0,
 			GL_RED,
-			GL_FLOAT,
-			data
+			GL_UNSIGNED_BYTE,
+			vox.v
 		);
 
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
