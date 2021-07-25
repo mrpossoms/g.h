@@ -106,7 +106,7 @@ struct texture
 
 struct texture_factory
 {
-	unsigned size[3];
+	unsigned size[3] = {1, 1, 1};
 	char* data = nullptr;
 	GLenum texture_type;
 	GLenum min_filter = GL_LINEAR, mag_filter = GL_LINEAR;
@@ -167,7 +167,7 @@ struct texture_factory
 
 		            filler(i, j, k, data + vi);
 				}
-			}			
+			}
 		}
 
 		return *this;
@@ -207,7 +207,7 @@ struct framebuffer
 
 struct framebuffer_factory
 {
-	unsigned size[2];
+	unsigned size[2] = {1, 1};
 	texture color_tex, depth_tex;
 
 	framebuffer_factory(unsigned w, unsigned h);
@@ -704,7 +704,7 @@ struct volume_slicer : public renderer<texture>
 
         // extract the rotation matrix from model by dividing each basis column vector
         // by the magnitude computed for each in the model matrix above
-        auto R_orient = mat<4, 4>{ 
+        auto R_orient = mat<4, 4>{
         	{ model[0][0] / x_mag, model[0][1] / y_mag, model[0][2] / z_mag, 0 },
         	{ model[1][0] / x_mag, model[1][1] / y_mag, model[1][2] / z_mag, 0 },
         	{ model[2][0] / x_mag, model[2][1] / y_mag, model[2][2] / z_mag, 0 },
@@ -714,7 +714,7 @@ struct volume_slicer : public renderer<texture>
         // reconstruct the transform (model matrix) from only the scale and
         // translation. The reason for this is that rotating the actual slicing
         // mesh as desired by the model matrix will cause misalignment with the
-        // view frustum and undesired artifacts will be visible. 
+        // view frustum and undesired artifacts will be visible.
         auto T = mat<4, 4>{
         	{ x_mag,     0,     0,    model[0][3] },
         	{     0, y_mag,     0,    model[1][3] },
