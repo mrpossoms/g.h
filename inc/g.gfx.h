@@ -1,3 +1,5 @@
+
+
 #pragma once
 #define XMTYPE float
 #include <xmath.h>
@@ -6,6 +8,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 #include <string.h>
 #include <assert.h>
@@ -81,7 +84,7 @@ static float aspect()
 struct texture
 {
 	GLenum type;
-	size_t width, height;
+	unsigned size[3] = { 1, 1, 1 };
 	GLuint texture = (GLuint)-1;
 	char* data = nullptr;
 
@@ -91,7 +94,11 @@ struct texture
 
 	void destroy();
 
-	void set_pixels(size_t w, size_t h, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE, GLenum t=GL_TEXTURE_2D);
+	void set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE);
+
+	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
+	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
+	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
 
 	void bind() const;
 };
@@ -99,20 +106,29 @@ struct texture
 
 struct texture_factory
 {
-	int width, height;
+	unsigned size[3];
 	char* data = nullptr;
 	GLenum texture_type;
 	GLenum min_filter = GL_LINEAR, mag_filter = GL_LINEAR;
-	GLenum wrap_s = GL_CLAMP_TO_EDGE, wrap_t = GL_CLAMP_TO_EDGE;
+	GLenum wrap_s = GL_CLAMP_TO_EDGE, wrap_t = GL_CLAMP_TO_EDGE, wrap_r = GL_CLAMP_TO_EDGE;
 	GLenum color_type = GL_RGBA;
 	GLenum storage_type = GL_UNSIGNED_BYTE;
+	unsigned component_count = 0;
+	unsigned bytes_per_component = 0;
 
+	explicit texture_factory() = default;
 
-	texture_factory(int w=0, int h=0, GLenum type=GL_TEXTURE_2D);
+	explicit texture_factory(unsigned w, unsigned h);
+
+	explicit texture_factory(unsigned w, unsigned h, unsigned d);
 
 	void abort(std::string message);
 
 	texture_factory& from_png(const std::string& path);
+
+	texture_factory& type(GLenum t);
+
+	texture_factory& components(unsigned count);
 
 	texture_factory& color();
 
@@ -124,61 +140,34 @@ struct texture_factory
 
 	texture_factory& clamped();
 
+	texture_factory& clamped_to_border();
+
 	texture_factory& repeating();
 
-	template<GLenum COLOR, GLenum STORAGE>
-	texture_factory& custom(std::function<void(unsigned int x, unsigned int y, char* pixel)> filler)
+	texture_factory& fill(std::function<void(int x, int y, int z, char* pixel)> filler)
 	{
-		int components = 0;
-		int bytes_per_component;
-		void* pixels;
+		// void* pixels;
 
-		switch (COLOR)
+		auto bytes_per_pixel = bytes_per_component * component_count;
+		auto bytes_per_row = bytes_per_pixel * size[1];
+		auto bytes_per_plane = size[1] * size[2] * bytes_per_pixel;
+		data = new char[bytes_per_pixel * size[0] * size[1] * size[2]];
+
+		for (int i = 0; i < size[0]; i++)
 		{
-			case GL_RED:
-				components = 1;
-				break;
-			case GL_RG:
-				components = 2;
-				break;
-			case GL_RGB:
-			case GL_BGR:
-				components = 3;
-				break;
-			case GL_RGBA:
-	        case GL_BGRA:
-	        	components = 4;
-	        	break;
-		}
-
-
-		switch (STORAGE)
-		{
-			case GL_UNSIGNED_BYTE:
-			case GL_BYTE:
-				bytes_per_component = 1;
-				break;
-			case GL_UNSIGNED_SHORT:
-	        case GL_SHORT:
-	        	bytes_per_component = 2;
-	        	break;
-	        case GL_UNSIGNED_INT:
-	        case GL_INT:
-	        case GL_FLOAT:
-	        	bytes_per_component = 4;
-	        	break;
-		}
-
-		auto bytes_per_pixel = bytes_per_component * components;
-		auto bytes_per_row = bytes_per_pixel * width;
-		data = (char*)calloc(bytes_per_pixel, width * height);
-
-		for (int y = 0; y < height; y++)
-		{
-			for (int x = 0; x < width; x++)
+			for (int j = 0; j < size[1]; j++)
 			{
-				filler(x, y, data + (x * bytes_per_pixel) + (y * bytes_per_row));
-			}
+				for (int k = 0; k < size[2]; k++)
+				{
+					// unsigned vi = i * bytes_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
+					// unsigned vi = (i * bytes_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
+					// filler(i, j, k, data + vi);
+
+		            unsigned vi = i * bytes_per_plane + (j * size[2] * 1) + (k * 1);
+
+		            filler(i, j, k, data + vi);
+				}
+			}			
 		}
 
 		return *this;
@@ -191,13 +180,13 @@ struct texture_factory
 struct framebuffer
 {
 	GLuint fbo;
-	size_t width, height;
+	unsigned size[3];
 	texture color;
 	texture depth;
 
 	void bind_as_target()
 	{
-		glViewport(0, 0, width, height);
+		glViewport(0, 0, size[0], size[1]);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		assert(gl_get_error());
 	}
@@ -218,10 +207,10 @@ struct framebuffer
 
 struct framebuffer_factory
 {
-	int width, height;
+	unsigned size[2];
 	texture color_tex, depth_tex;
 
-	framebuffer_factory(int w, int h);
+	framebuffer_factory(unsigned w, unsigned h);
 
 	framebuffer_factory& color();
 
@@ -235,7 +224,8 @@ struct framebuffer_factory
 /**
  * @brief      { struct_description }
  */
-struct shader {
+struct shader
+{
 	GLuint program;
 	std::unordered_map<std::string, GLint> uni_locs;
 
@@ -246,7 +236,8 @@ struct shader {
 	 * @brief      shader::usage type represents the start of some invocation
 	 * of an interaction with a shader.
 	 */
-	struct usage {
+	struct usage
+	{
 		shader& shader_ref;
 		size_t vertices, indices;
 		int texture_unit;
@@ -295,7 +286,8 @@ struct shader {
 	/**
 	 * @brief      Offers interaction with the uniforms defined for a given shader
 	 */
-	struct uniform_usage {
+	struct uniform_usage
+	{
 		GLuint uni_loc;
 		usage& parent_usage;
 
@@ -303,7 +295,11 @@ struct shader {
 
 		usage mat4 (const mat<4, 4>& m);
 
+		usage mat3 (const mat<3, 3>& m);
+
 		usage vec3 (const vec<3>& v);
+
+		usage flt(float f);
 
 		usage int1(const int i);
 
@@ -323,6 +319,12 @@ struct shader_factory
 	{
 		auto fd = open(path.c_str(), O_RDONLY);
 		auto size = lseek(fd, 0, SEEK_END);
+
+		if (fd < 0 || size <= 0)
+		{
+			std::cerr << G_TERM_RED << "Could not open: '" << path << "' file did not exist, or was empty" << std::endl;
+			return *this;
+		}
 
 		{ // read and compile the shader
 			GLchar* src = new GLchar[size];
@@ -356,6 +358,39 @@ struct shader_factory
 
 namespace vertex
 {
+	struct pos
+	{
+		vec<3> position;
+
+		static void attributes(GLuint prog)
+		{
+			auto pos_loc = glGetAttribLocation(prog, "a_position");
+
+			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
+		}
+	};
+
+	struct pos_uv
+	{
+		vec<3> position;
+		vec<2> uv;
+
+		static void attributes(GLuint prog)
+		{
+			auto pos_loc = glGetAttribLocation(prog, "a_position");
+			auto uv_loc = glGetAttribLocation(prog, "a_uv");
+
+			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+			if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
+
+			auto p_size = sizeof(position);
+
+			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv), (void*)0);
+			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv), (void*)p_size);
+		}
+	};
+
 	struct pos_uv_norm
 	{
 		vec<3> position;
@@ -405,24 +440,12 @@ namespace vertex
 			if (color_loc > -1) glVertexAttribPointer(color_loc, 4, GL_UNSIGNED_BYTE, false, sizeof(pos_norm_color), (void*)(p_size + n_size));
 		}
 	};
-
-	struct pos
-	{
-		vec<3> position;
-
-		static void attributes(GLuint prog)
-		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
-		}
-	};
 }
 
 
 template<typename V>
-struct mesh {
+struct mesh
+{
 	GLuint vbo = 0, ibo = 0;
 	size_t index_count = 0;
 	size_t vertex_count = 0;
@@ -492,7 +515,8 @@ struct mesh {
 };
 
 
-struct mesh_factory {
+struct mesh_factory
+{
 	static mesh<vertex::pos_uv_norm> plane()
 	{
 		mesh<vertex::pos_uv_norm> p;
@@ -506,6 +530,40 @@ struct mesh_factory {
 		});
 
 		return p;
+	}
+
+	static mesh<vertex::pos> slice_cube(unsigned slices)
+	{
+		mesh<vertex::pos> c;
+		std::vector<vertex::pos> verts;
+		std::vector<uint32_t> indices;
+		glGenBuffers(2, &c.vbo);
+
+		const float h = 0.5 * sqrt(3);
+		float dz = (2.f * h) / static_cast<float>(slices);
+
+		for (;slices--;)
+		{
+			auto n = verts.size();
+			indices.push_back(n + 0);
+			indices.push_back(n + 3);
+			indices.push_back(n + 2);
+			indices.push_back(n + 0);
+			indices.push_back(n + 2);
+			indices.push_back(n + 1);
+
+			auto z = dz * slices;
+			verts.push_back({{-h, h, -h + z}});
+			verts.push_back({{ h, h, -h + z}});
+			verts.push_back({{ h,-h, -h + z}});
+			verts.push_back({{-h,-h, -h + z}});
+
+		}
+
+		c.set_vertices(verts);
+		c.set_indices(indices);
+
+		return c;
 	}
 
 	static mesh<vertex::pos_uv_norm> cube()
@@ -605,5 +663,78 @@ struct mesh_factory {
 	}
 };
 
+namespace primative
+{
+
+template <typename D>
+struct renderer
+{
+	virtual void draw(g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
+
+
+struct volume_slicer : public renderer<texture>
+{
+	g::gfx::mesh<g::gfx::vertex::pos> slices;
+
+	volume_slicer() = default;
+
+	volume_slicer(unsigned num_slices)
+	{
+        slices = g::gfx::mesh_factory::slice_cube(num_slices);
+	}
+
+	void draw(g::gfx::shader& shader,
+			  const g::gfx::texture& vox,
+	          const g::game::camera& cam,
+	          const mat<4, 4>& model)
+	{
+		assert(vox.is_3D());
+
+        // rotate volume slices to align with camera view
+        // create a rotation matrix to represente this
+        auto O = cam.forward();
+        auto u = cam.up();
+        auto l = vec<3>::cross(O, u);
+        auto R_align = mat<4, 4>::look_at({0, 0, 0}, O, u).invert();
+
+        auto x_mag = sqrtf(powf(model[0][0], 2.f) + powf(model[1][0], 2.f) + powf(model[2][0], 2.f));
+        auto y_mag = sqrtf(powf(model[0][1], 2.f) + powf(model[1][1], 2.f) + powf(model[2][1], 2.f));
+        auto z_mag = sqrtf(powf(model[0][2], 2.f) + powf(model[1][2], 2.f) + powf(model[2][2], 2.f));
+
+        // extract the rotation matrix from model by dividing each basis column vector
+        // by the magnitude computed for each in the model matrix above
+        auto R_orient = mat<4, 4>{ 
+        	{ model[0][0] / x_mag, model[0][1] / y_mag, model[0][2] / z_mag, 0 },
+        	{ model[1][0] / x_mag, model[1][1] / y_mag, model[1][2] / z_mag, 0 },
+        	{ model[2][0] / x_mag, model[2][1] / y_mag, model[2][2] / z_mag, 0 },
+        	{ 0                  , 0                  , 0                  , 1 }
+        };
+
+        // reconstruct the transform (model matrix) from only the scale and
+        // translation. The reason for this is that rotating the actual slicing
+        // mesh as desired by the model matrix will cause misalignment with the
+        // view frustum and undesired artifacts will be visible. 
+        auto T = mat<4, 4>{
+        	{ x_mag,     0,     0,    model[0][3] },
+        	{     0, y_mag,     0,    model[1][3] },
+        	{     0,     0, z_mag,    model[2][3] },
+        	{     0,     0,     0,              1 }
+        };
+
+        const vec<3> delta = { 1.f/(float)vox.size[0], 1.f/(float)vox.size[1], 1.f/(float)vox.size[2] };
+
+        slices.using_shader(shader)
+             .set_camera(cam)
+             ["u_model"].mat4(T * R_align)
+             ["u_rotation"].mat4(R_orient)
+             ["u_uvw_step"].vec3(delta)
+             ["u_voxels"].texture(vox)
+             .draw<GL_TRIANGLES>();
+        // auto tranform =
+	}
 };
+
+}; // end namespace renderer
+}; // end namespace gfx
+}; // end namespace g

@@ -25,25 +25,44 @@ void texture::destroy()
 	release_bitmap();
 }
 
-void texture::set_pixels(size_t w, size_t h, char* data, GLenum format, GLenum storage, GLenum t)
+void texture::set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format, GLenum storage)
 {
-	width = w;
-	height = h;
-	type = t;
+	size[0] = w;
+	size[1] = h;
+	size[2] = d;
 	this->data = data;
-	glTexImage2D(type, 0, format, width, height, 0, format, storage, data);
+
+	if (h > 1 && d > 1)
+	{
+		type = GL_TEXTURE_3D;
+		glTexImage3D(GL_TEXTURE_3D, 0, format, size[0], size[1], size[2], 0, format, storage, data);
+	}
+	else if (h > 1)
+	{
+		type = GL_TEXTURE_2D;
+		glTexImage2D(GL_TEXTURE_2D, 0, format, size[0], size[1], 0, format, storage, data);
+	}
 }
 
 void texture::bind() const { glBindTexture(type, texture); }
 
 
 
-texture_factory::texture_factory(int w, int h, GLenum type)
+texture_factory::texture_factory(unsigned w, unsigned h)
 {
 	data = nullptr;
-	texture_type = type;
-	width = w;
-	height = h;
+	texture_type = GL_TEXTURE_2D;
+	size[0] = w;
+	size[1] = h;
+}
+
+texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)
+{
+	data = nullptr;
+	texture_type = GL_TEXTURE_3D;
+	size[0] = w;
+	size[1] = h;
+	size[2] = d;
 }
 
 void texture_factory::abort(std::string message)
@@ -95,8 +114,8 @@ texture_factory& texture_factory::from_png(const std::string& path)
 
 	png_read_info(png_ptr, info_ptr);
 
-	width = png_get_image_width(png_ptr, info_ptr);
-	height = png_get_image_height(png_ptr, info_ptr);
+	size[0] = png_get_image_width(png_ptr, info_ptr);
+	size[1] = png_get_image_height(png_ptr, info_ptr);
 	png_color_type = png_get_color_type(png_ptr, info_ptr);
 	auto bit_depth = png_get_bit_depth(png_ptr, info_ptr);
 	auto channels = png_get_channels(png_ptr, info_ptr);
@@ -118,6 +137,9 @@ texture_factory& texture_factory::from_png(const std::string& path)
 		abort(G_TERM_RED "[read_png_file] Error during read_image" G_TERM_COLOR_OFF);
 	}
 
+	// a png is a 2D matrix of pixels
+	texture_type = GL_TEXTURE_2D;
+
 	switch (png_color_type) {
 		case PNG_COLOR_TYPE_RGBA:
 			color_type = GL_RGBA;
@@ -128,18 +150,18 @@ texture_factory& texture_factory::from_png(const std::string& path)
 			break;
 	}
 
-	row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * height);
-	char* pixel_buf = (char*)calloc(color_depth * width * height, sizeof(char));
+	row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * size[1]);
+	char* pixel_buf = (char*)calloc(color_depth * size[0] * size[1], sizeof(char));
 	int bytes_per_row = png_get_rowbytes(png_ptr,info_ptr);
 
-	for (int y = 0; y < height; y++)
+	for (int y = 0; y < size[1]; y++)
 	{
 		row_pointers[y] = (png_byte*) malloc(bytes_per_row); //
 		assert(row_pointers[y]);
 	}
 
 	png_read_image(png_ptr, row_pointers);
-	for (int y = 0; y < height; y++)
+	for (int y = 0; y < size[1]; y++)
 	{
 		memcpy(pixel_buf + (y * bytes_per_row), row_pointers[y], bytes_per_row);
 		free(row_pointers[y]);
@@ -154,10 +176,59 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	return *this;
 }
 
+texture_factory& texture_factory::type(GLenum t)
+{
+	storage_type = t;
+
+	switch(t)
+	{
+		case GL_UNSIGNED_BYTE:
+		case GL_BYTE:
+			bytes_per_component = 1;
+			break;
+
+		case GL_UNSIGNED_SHORT:
+		case GL_SHORT:
+			bytes_per_component = 2;
+			break;
+
+		case GL_UNSIGNED_INT:
+		case GL_INT:
+		case GL_FLOAT:
+			bytes_per_component = 4;
+			break;
+	}
+
+	return *this;
+}
+
 texture_factory& texture_factory::color()
 {
 	color_type = GL_RGBA;
 	storage_type = GL_UNSIGNED_BYTE;
+	return *this;
+}
+
+texture_factory& texture_factory::components(unsigned count)
+{
+	switch(component_count = count)
+	{
+		case 1:
+			color_type = GL_RED;
+			break;
+		case 2:
+			color_type = GL_RG;
+			break;
+		case 3:
+			color_type = GL_RGB;
+			break;
+		case 4:
+			color_type = GL_RGBA;
+			break;
+		default:
+			std::cerr << "Invalid number of components: " << count << std::endl;
+	}
+
 	return *this;
 }
 
@@ -182,13 +253,19 @@ texture_factory& texture_factory::smooth()
 
 texture_factory& texture_factory::clamped()
 {
-	wrap_s = wrap_t = GL_CLAMP_TO_EDGE;
+	wrap_s = wrap_t = wrap_r = GL_CLAMP_TO_EDGE;
+	return *this;
+}
+
+texture_factory& texture_factory::clamped_to_border()
+{
+	wrap_s = wrap_t = wrap_r = GL_CLAMP_TO_BORDER;
 	return *this;
 }
 
 texture_factory& texture_factory::repeating()
 {
-	wrap_s = wrap_t = GL_REPEAT;
+	wrap_s = wrap_t = wrap_r = GL_REPEAT;
 	return *this;
 }
 
@@ -197,18 +274,20 @@ texture texture_factory::create()
 {
 	texture out;
 
+
 	out.create(texture_type);
 	out.bind();
 
 	assert(gl_get_error());
-	out.set_pixels(width, height, data, color_type, storage_type);
+	out.set_pixels(size[0], size[1], size[2], data, color_type, storage_type);
 	assert(gl_get_error());
 
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
+	glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
+	glTexParameteri(texture_type, GL_TEXTURE_WRAP_T, wrap_t);
+	glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
+	glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
+	glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
 	assert(gl_get_error());
 	// glGenerateMipmap(GL_TEXTURE_2D);
 	assert(gl_get_error());
@@ -216,21 +295,21 @@ texture texture_factory::create()
 	return out;
 }
 
-framebuffer_factory::framebuffer_factory(int w, int h)
+framebuffer_factory::framebuffer_factory(unsigned w, unsigned h)
 {
-	width = w;
-	height = h;
+	size[0] = w;
+	size[1] = h;
 }
 
 framebuffer_factory& framebuffer_factory::color()
 {
-	color_tex = texture_factory{ width, height }.color().clamped().smooth().create();
+	color_tex = texture_factory{ size[0], size[1] }.color().clamped().smooth().create();
 	return *this;
 }
 
 framebuffer_factory& framebuffer_factory::depth()
 {
-	depth_tex = texture_factory{ width, height }.depth().clamped().smooth().create();
+	depth_tex = texture_factory{ size[0], size[1] }.depth().clamped().smooth().create();
 	return *this;
 }
 
@@ -243,8 +322,8 @@ framebuffer framebuffer_factory::create()
 {
 	framebuffer fb;
 
-	fb.width = width;
-	fb.height = height;
+	fb.size[0] = size[0];
+	fb.size[1] = size[1];
 	fb.color = color_tex;
 	fb.depth = depth_tex;
 	glGenFramebuffers(1, &fb.fbo);
@@ -364,9 +443,23 @@ shader::usage shader::uniform_usage::mat4 (const mat<4, 4>& m)
 	return parent_usage;
 }
 
+shader::usage shader::uniform_usage::mat3 (const mat<3, 3>& m)
+{
+	glUniformMatrix3fv(uni_loc, 1, false, m.ptr());
+
+	return parent_usage;
+}
+
 shader::usage shader::uniform_usage::vec3 (const vec<3>& v)
 {
 	glUniform3fv(uni_loc, 1, v.v);
+
+	return parent_usage;
+}
+
+shader::usage shader::uniform_usage::flt (float f)
+{
+	glUniform1f(uni_loc, f);
 
 	return parent_usage;
 }

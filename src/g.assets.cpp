@@ -12,7 +12,7 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
 	auto itr = textures.find(partial_path);
 	if (itr == textures.end())
 	{
-		auto chain = g::gfx::texture_factory{}.from_png(root + "/tex/" + partial_path).pixelated();
+		auto chain = g::gfx::texture_factory().from_png(root + "/tex/" + partial_path).pixelated();
 		// do spicy chain thing with processors here
 		auto tex = chain.create();
 		textures[partial_path] = { time(nullptr), tex };
