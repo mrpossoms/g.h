@@ -60,26 +60,11 @@ static bool gl_get_error()
 
 extern GLFWwindow* GLFW_WIN;
 
-static size_t width()
-{
-	int width, height;
-	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
-	return width;
-}
+size_t width();
 
-static size_t height()
-{
-	int width, height;
-	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
-	return height;
-}
+size_t height();
 
-static float aspect()
-{
-	int width, height;
-	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
-	return width / (float)height;
-}
+float aspect();
 
 struct texture
 {
@@ -637,7 +622,7 @@ struct mesh_factory
 
 		VERT* verts = new VERT[mesh->vertex_count];
 		uint32_t* inds = new uint32_t[mesh->index_count];
-		for (auto i = 0; i < mesh->vertex_count; i++)
+		for (unsigned i = 0; i < mesh->vertex_count; i++)
 		{
 			verts[i] = converter(mesh->vertices + i);
 		}
