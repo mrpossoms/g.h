@@ -148,22 +148,22 @@ struct texture_factory
 	{
 		// void* pixels;
 
-		auto bytes_per_pixel = bytes_per_component * component_count;
-		auto bytes_per_row = bytes_per_pixel * size[1];
-		auto bytes_per_plane = size[1] * size[2] * bytes_per_pixel;
-		data = new char[bytes_per_pixel * size[0] * size[1] * size[2]];
+		auto bytes_per_textel = bytes_per_component * component_count;
+		auto textels_per_row = size[2];
+		auto textels_per_plane = size[1] * size[2];
+		data = new char[bytes_per_textel * size[0] * size[1] * size[2]];
 
-		for (int i = 0; i < size[0]; i++)
+		for (unsigned i = 0; i < size[0]; i++)
 		{
-			for (int j = 0; j < size[1]; j++)
+			for (unsigned j = 0; j < size[1]; j++)
 			{
-				for (int k = 0; k < size[2]; k++)
+				for (unsigned k = 0; k < size[2]; k++)
 				{
-					// unsigned vi = i * bytes_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
-					// unsigned vi = (i * bytes_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
+					// unsigned vi = i * textels_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
+					// unsigned vi = (i * textels_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
 					// filler(i, j, k, data + vi);
 
-		            unsigned vi = i * bytes_per_plane + (j * size[2] * 1) + (k * 1);
+		            unsigned vi = ((i * textels_per_plane) + (j * textels_per_row) + k) * bytes_per_textel;
 
 		            filler(i, j, k, data + vi);
 				}
@@ -695,7 +695,6 @@ struct volume_slicer : public renderer<texture>
         // create a rotation matrix to represente this
         auto O = cam.forward();
         auto u = cam.up();
-        auto l = vec<3>::cross(O, u);
         auto R_align = mat<4, 4>::look_at({0, 0, 0}, O, u).invert();
 
         auto x_mag = sqrtf(powf(model[0][0], 2.f) + powf(model[1][0], 2.f) + powf(model[2][0], 2.f));
