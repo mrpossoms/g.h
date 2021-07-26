@@ -3,35 +3,23 @@
 
 using namespace g::gfx;
 
-bool gl_get_error()
-{
-	GLenum err = GL_NO_ERROR;
-	bool good = true;
 
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-		std::cerr << "GL_ERROR: 0x" << std::hex << err << std::endl;
-		good = false;
-	}
 
-	return good;
-}
-
-size_t width()
+size_t g::gfx::width()
 {
 	int width, height;
 	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
 	return width;
 }
 
-size_t height()
+size_t g::gfx::height()
 {
 	int width, height;
 	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
 	return height;
 }
 
-float aspect()
+float g::gfx::aspect()
 {
 	int width, height;
 	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
