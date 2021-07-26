@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <ogt_vox.h>
 
+#include <unordered_set>
+#include <vector>
+
 #ifdef __linux__
 #include <GL/glx.h>
 #include <GL/glext.h>
@@ -172,7 +175,7 @@ struct voxels
 	};
 
 	size_t width, height, depth;
-	DAT* v;
+	std::vector<DAT> v;
 	vec<3> com;
 
 	voxels() = default;
@@ -182,7 +185,7 @@ struct voxels
 		width = w;
 		height = h;
 		depth = d;
-		v = new DAT[w * h * d];
+		v.resize(w * h * d);
 	}
 
 	voxels(const DAT* ptr, size_t w, size_t h, size_t d)
@@ -190,8 +193,16 @@ struct voxels
 		width = w;
 		height = h;
 		depth = d;
-		v = new DAT[w * h * d];
-		memcpy(v, ptr, sizeof(DAT) * w * h * d);
+		v.resize(w * h * d);
+		memcpy(v.data(), ptr, sizeof(DAT) * w * h * d);
+	}
+
+	void resize(size_t w, size_t h, size_t d)
+	{
+		width = w;
+		height = h;
+		depth = d;
+		v.resize(w * h * d);
 	}
 
 	uint32_t hash()
@@ -259,9 +270,9 @@ struct voxels
 		}
 	}
 
-	inline DAT& idx(size_t x, size_t y, size_t z) const
+	inline const DAT& idx(size_t x, size_t y, size_t z) const
 	{
-		return v[(x * height * depth) + (y * depth) + z];
+		return v.at((x * height * depth) + (y * depth) + z);
 	}
 
 	inline DAT& idx(size_t x, size_t y, size_t z)
@@ -271,7 +282,7 @@ struct voxels
 
 	inline DAT& idx2(size_t x, size_t y, size_t z) const
 	{
-		return v[x + (y * width) + (z * width * height)];
+		return v.at(x + (y * width) + (z * width * height));
 	}
 
 	inline DAT& idx2(size_t x, size_t y, size_t z)
@@ -297,6 +308,29 @@ struct voxels_paletted : public voxels<uint8_t>
 	voxels_paletted(const ogt_vox_palette& pal, const uint8_t* ptr, size_t w, size_t h, size_t d) : voxels(ptr, w, h, d)
 	{
 		palette = pal;
+	}
+
+	voxels_paletted(const voxels_paletted& vox, std::unordered_set<uint8_t> exclude) : voxels(vox.width, vox.height, vox.depth)
+	{
+		sift(vox, exclude);
+	}
+
+	void sift(const voxels_paletted& src, std::unordered_set<uint8_t> exclude)
+	{
+		palette = src.palette;
+		this->resize(src.width, src.height, src.depth);
+		for (size_t w = 0; w < width; w++)
+		for (size_t h = 0; h < height; h++)
+		for (size_t d = 0; d < depth; d++)
+		{
+			auto sv = src.idx(w, h, d);
+
+			// copy only voxels that are not marked as excluded
+			if (exclude.find(sv) == exclude.end())
+			{
+				this->idx(w, h, d) = sv;
+			}
+		}
 	}
 };
 

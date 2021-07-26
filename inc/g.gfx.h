@@ -618,7 +618,7 @@ struct mesh_factory
 		assert(GL_TRUE == glIsBuffer(m.vbo));
 		assert(GL_TRUE == glIsBuffer(m.ibo));
 
-		auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, vox.v, vox.width, vox.height, vox.depth, (const ogt_mesh_rgba*)vox.palette.color);
+		auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, vox.v.data(), vox.width, vox.height, vox.depth, (const ogt_mesh_rgba*)vox.palette.color);
 
 		VERT* verts = new VERT[mesh->vertex_count];
 		uint32_t* inds = new uint32_t[mesh->index_count];
