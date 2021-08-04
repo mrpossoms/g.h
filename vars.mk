@@ -9,8 +9,8 @@ $(eval OS := $(shell uname))
 
 G_DEPS=$(BUILD_PATH)/gitman_sources
 SRC_OBJS=$(patsubst src/%.cpp,obj/$(TARGET)/%.cpp.o,$(wildcard src/*.c*))
-INC+=-I$(BUILD_PATH)/inc -I$(BUILD_PATH)/gitman_sources/g.h/inc -I$(G_DEPS)/xmath.h/inc -I$(G_DEPS)/opengametools/src -I$(G_DEPS)/libpng
-LIB+=-L$(BUILD_PATH)/gitman_sources/g.h/lib/$(TARGET) -L$(G_DEPS)/lib/$(TARGET)/ 
+INC+=-I$(BUILD_PATH)/inc -I$(BUILD_PATH)/gitman_sources/g.h/inc -I$(G_DEPS)/xmath.h/inc -I$(G_DEPS)/opengametools/src
+LIB+=-L$(BUILD_PATH)/gitman_sources/g.h/lib/$(TARGET) -L$(G_DEPS)/lib/$(TARGET)/
 LIB+=
 CXXFLAGS+=-Wall -g -std=c++11
 LINK+=-lg -lm

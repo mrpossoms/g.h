@@ -1,5 +1,5 @@
 #include "g.gfx.h"
-#include <png.h>
+#include <lodepng.h>
 
 using namespace g::gfx;
 
@@ -97,73 +97,24 @@ void texture_factory::abort(std::string message)
 
 texture_factory& texture_factory::from_png(const std::string& path)
 {
-	char header[8];    // 8 is the maximum size that can be checked
-	png_structp png_ptr = {};
-	png_infop info_ptr;
-	png_bytep* row_pointers;
-	png_byte png_color_type;
-
 	std::cerr << "loading texture '" <<  path << "'... ";
 
-	/* open file and test for it being a png */
-	FILE *fp = fopen(path.c_str(), "rb");
-	if (!fp)
+	unsigned width, height;
+	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
+
+	// If there's an error, display it.
+	if(error != 0)
 	{
-		fprintf(stderr, G_TERM_RED "[read_png_file] File %s could not be opened for reading" G_TERM_COLOR_OFF, path.c_str());
-		return *this;
-	}
-
-	fread(header, 1, 8, fp);
-	if (png_sig_cmp((png_bytep)header, 0, 8))
-	{
-		fprintf(stderr, G_TERM_RED "[read_png_file] File %s is not recognized as a PNG file" G_TERM_COLOR_OFF, path.c_str());
-	}
-
-
-	/* initialize stuff */
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-
-	if (!png_ptr)
-		abort(G_TERM_RED "[read_png_file] png_create_read_struct failed" G_TERM_COLOR_OFF);
-
-	info_ptr = png_create_info_struct(png_ptr);
-	if (!info_ptr)
-		abort(G_TERM_RED "[read_png_file] png_create_info_struct failed" G_TERM_COLOR_OFF);
-
-	if (setjmp(png_jmpbuf(png_ptr)))
-		abort(G_TERM_RED "[read_png_file] Error during init_io" G_TERM_COLOR_OFF);
-
-	png_init_io(png_ptr, fp);
-	png_set_sig_bytes(png_ptr, 8);
-
-	png_read_info(png_ptr, info_ptr);
-
-	size[0] = png_get_image_width(png_ptr, info_ptr);
-	size[1] = png_get_image_height(png_ptr, info_ptr);
-	png_color_type = png_get_color_type(png_ptr, info_ptr);
-	auto bit_depth = png_get_bit_depth(png_ptr, info_ptr);
-	auto channels = png_get_channels(png_ptr, info_ptr);
-	auto color_depth = channels * (bit_depth >> 3);
-
-	switch (bit_depth)
-	{
-		case 8:
-			storage_type = GL_UNSIGNED_BYTE;
-			break;
-	}
-
-	//number_of_passes = png_set_interlace_handling(png_ptr);
-	png_read_update_info(png_ptr, info_ptr);
-
-	/* read file */
-	if (setjmp(png_jmpbuf(png_ptr)))
-	{
-		abort(G_TERM_RED "[read_png_file] Error during read_image" G_TERM_COLOR_OFF);
+	  std::cout << G_TERM_RED "[lodepng::decode] error " << error << ": " << lodepng_error_text(error) << G_TERM_COLOR_OFF << std::endl;
+	  exit(-1);
 	}
 
 	// a png is a 2D matrix of pixels
 	texture_type = GL_TEXTURE_2D;
 
+	// TODO: change. this is hacky, I don't love it, but it sure is simple
+	color_type = GL_RGBA;
+/*
 	switch (png_color_type) {
 		case PNG_COLOR_TYPE_RGBA:
 			color_type = GL_RGBA;
@@ -173,28 +124,7 @@ texture_factory& texture_factory::from_png(const std::string& path)
 			color_type = GL_RGB;
 			break;
 	}
-
-	row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * size[1]);
-	char* pixel_buf = (char*)calloc(color_depth * size[0] * size[1], sizeof(char));
-	int bytes_per_row = png_get_rowbytes(png_ptr,info_ptr);
-
-	for (int y = 0; y < size[1]; y++)
-	{
-		row_pointers[y] = (png_byte*) malloc(bytes_per_row); //
-		assert(row_pointers[y]);
-	}
-
-	png_read_image(png_ptr, row_pointers);
-	for (int y = 0; y < size[1]; y++)
-	{
-		memcpy(pixel_buf + (y * bytes_per_row), row_pointers[y], bytes_per_row);
-		free(row_pointers[y]);
-	}
-	free(row_pointers);
-	fclose(fp);
-
-	data = pixel_buf;
-
+*/
 	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
 
 	return *this;

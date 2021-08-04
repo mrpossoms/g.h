@@ -15,17 +15,23 @@ endif()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# c++ flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGL_SILENCE_DEPRECATION")
+
 # add all source files
 set(SOURCE ${SOURCE} src/g.assets.cpp)
 set(SOURCE ${SOURCE} src/g.gfx.cpp)
 set(SOURCE ${SOURCE} src/g.core.cpp)
 set(SOURCE ${SOURCE} src/g.utils.cpp)
+set(SOURCE ${SOURCE} gitman_sources/lodepng/lodepng.cpp)
+
 # set(SOURCE ${SOURCE} gitman_sources/png/*.o))
 add_library(${PROJECT_NAME} STATIC ${SOURCE})
 
 # include directories for deps
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
+include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
 
 # specify includes for libg
 target_include_directories(${PROJECT_NAME} PRIVATE inc)
