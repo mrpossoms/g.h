@@ -18,12 +18,20 @@ sources:
     link: deps/opengametools
     scripts:
       -
-  - name: lodepng 
+  - name: lodepng
     type: git
     repo: git@github.com:lvandeve/lodepng.git
     sparse_paths:
       -
     rev: master
+  - name: glfw
+    type: git
+    repo: git@github.com:glfw/glfw.git
+    sparse_paths:
+      -
+    rev: 3.3.4
+    scripts:
+      -
   - name: sha1
     type: git
     repo: git@github.com:mrpossoms/sha1.git

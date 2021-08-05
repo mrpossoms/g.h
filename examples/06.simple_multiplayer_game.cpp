@@ -89,6 +89,16 @@ struct bullet : public mover
 {
 	float life;
 	uint8_t owner_idx;
+
+	bullet() = default;
+
+	bullet(const vec<2>& pos, const vec<2>& vel, float life, uint8_t owner_idx)
+	{
+		position = pos;
+		velocity = vel;
+		this->life = life;
+		this->owner_idx = owner_idx;
+	}
 };
 
 struct player : public mover
@@ -242,7 +252,7 @@ struct zappers : public g::core
 			{
 				auto& cmd = commands[i];
 				auto& player = state.players[i];
-				auto q = quat::from_axis_angle({0, 0, 1}, player.angle);
+				auto q = quat<>::from_axis_angle({0, 0, 1}, player.angle);
 				auto thrust = q.rotate({cmd.thrust[0], cmd.thrust[1], 0}) * dt;
 				player.velocity += thrust.slice<2>(0);
 				player.angle += cmd.ang_vel * dt;
@@ -251,11 +261,11 @@ struct zappers : public g::core
 
 				if (cmd.shooting && player.cool_down <= 0)
 				{
-					auto vel = quat::from_axis_angle({0, 0, 1}, player.angle)
+					auto vel = quat<>::from_axis_angle({0, 0, 1}, player.angle)
 							   .rotate({0, 10, 0})
 							   .slice<2>();
 
-					state.bullets.push_back({
+					state.bullets.push_back(bullet{
 						player.position,
 						player.velocity + vel,
 						2,
@@ -326,7 +336,7 @@ struct zappers : public g::core
 				if (client.connect("127.0.0.1", 1337))
 				{
 					std::cerr << "connected!\n";
-					client.listen();				
+					client.listen();
 				}
 				else
 				{
@@ -360,7 +370,7 @@ struct zappers : public g::core
 		state_lock.lock();
 
 		cam.position = {-state.players[my_index].position[0], -state.players[my_index].position[1], 0};
-		cam.orientation = quat::from_axis_angle({0, 0, 1}, state.players[my_index].angle);
+		cam.orientation = quat<>::from_axis_angle({0, 0, 1}, state.players[my_index].angle);
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -384,7 +394,7 @@ struct zappers : public g::core
 			.set_camera(cam)
 			["u_model"].mat4(model)
 			["u_tex"].texture(assets.tex("ship.png"))
-			.draw<GL_TRIANGLE_FAN>();			
+			.draw<GL_TRIANGLE_FAN>();
 		}
 
 		for (auto bullet : state.bullets)
@@ -394,7 +404,7 @@ struct zappers : public g::core
 			.set_camera(cam)
 			["u_model"].mat4(model)
 			["u_tex"].texture(assets.tex("bolt.png"))
-			.draw<GL_TRIANGLE_FAN>();			
+			.draw<GL_TRIANGLE_FAN>();
 		}
 
 		state_lock.unlock();

@@ -1,14 +1,17 @@
+#version 410
 #ifdef GL_ES
 precision mediump float;
 #endif
 
-varying vec4 v_color;
-varying vec3 v_normal;
-varying vec4 v_light_proj_pos;
+in vec4 v_color;
+in vec3 v_normal;
+in vec4 v_light_proj_pos;
 
 uniform vec3 u_light_diffuse;
 uniform vec3 u_light_ambient;
 uniform sampler2D u_shadow_map;
+
+out vec4 color;
 
 void main (void)
 {
@@ -24,7 +27,7 @@ void main (void)
 	for(float y = -2.0; y <= 2.0; y++)
 	for(float x = -2.0; x <= 2.0; x++)
 	{
-		float sampled_depth = texture2D(u_shadow_map, v_light_proj_pos.xy + (vec2(x, y) * 0.0005)).r;
+		float sampled_depth = texture(u_shadow_map, v_light_proj_pos.xy + (vec2(x, y) * 0.0005)).r;
 
 		if (depth <= sampled_depth)
 		{
@@ -41,6 +44,6 @@ void main (void)
 	vec4 c_diff = v_color * vec4(u_light_diffuse * shading, 1.0);
 	vec4 c_ambi = v_color * vec4(u_light_ambient, 1.0);
 
-	gl_FragColor = v_color * 0.1 + c_ambi + c_diff;
+	color = v_color * 0.1 + c_ambi + c_diff;
 
 }

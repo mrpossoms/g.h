@@ -36,15 +36,16 @@ include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_s
 # specify includes for libg
 target_include_directories(${PROJECT_NAME} PRIVATE inc)
 
-# find_package(libpng REQUIRED)
-find_package(glfw3 3.3 REQUIRED)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(gitman_sources/glfw)
 find_package(OpenGL REQUIRED)
-
-add_subdirectory(gitman_sources/png)
 
 target_link_libraries(${PROJECT_NAME} glfw)
 target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 
+add_subdirectory(examples)
 #target_include_directories(${PROJECT_NAME} PUBLIC
 #    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
 #    $<INSTALL_INTERFACE:inc>

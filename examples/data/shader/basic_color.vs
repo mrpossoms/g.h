@@ -1,10 +1,11 @@
+#version 410
 #ifdef GL_ES
 precision mediump float;
 #endif
 
-attribute vec3 a_position;
-attribute vec3 a_normal;
-attribute vec4 a_color;
+in vec3 a_position;
+in vec3 a_normal;
+in vec4 a_color;
 
 uniform mat4 u_model;
 uniform mat4 u_view;
@@ -13,9 +14,9 @@ uniform mat4 u_proj;
 uniform mat4 u_light_view;
 uniform mat4 u_light_proj;
 
-varying vec4 v_color;
-varying vec3 v_normal;
-varying vec4 v_light_proj_pos;
+out vec4 v_color;
+out vec3 v_normal;
+out vec4 v_light_proj_pos;
 
 void main (void)
 {

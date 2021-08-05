@@ -1,10 +1,11 @@
+#version 410
 #ifdef GL_ES
 precision mediump float;
 #endif
 
-attribute vec3 a_position;
-attribute vec3 a_normal;
-attribute vec3 a_color;
+in vec3 a_position;
+in vec3 a_normal;
+in vec3 a_color;
 
 uniform mat4 u_model;
 uniform mat4 u_view;
