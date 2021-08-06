@@ -12,23 +12,31 @@
 
 #include <string.h>
 #include <assert.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#ifdef _WIN32
+#include <gl/GL.h>
+#include <GL/gl.h>
+#include <GL/glext.h>
+#endif
+
 
 #ifdef __linux__
+#include <unistd.h>
 #include <GL/glx.h>
 #include <GL/glext.h>
 #endif
 
-#include <GLFW/glfw3.h>
-
 #ifdef __APPLE__
 #undef __gl_h_
+#include <unistd.h>
 #include <OpenGL/gl3.h>
 #endif
+
+#include <GLFW/glfw3.h>
+
 
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>

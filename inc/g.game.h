@@ -21,33 +21,37 @@
 
 using namespace xmath;
 
+#ifdef __linux__
+using quat = quat;
+#endif
+
 namespace g {
 namespace game {
 
 struct view_point
 {
 	vec<3> position = {0, 0, 0};
-	quat<> orientation = {0, 0, 0, 1};
+	quat orientation = {0, 0, 0, 1};
 };
 
 
 struct camera : public view_point
 {
-	quat<>& d_pitch(float delta)
+	quat& d_pitch(float delta)
 	{
-		auto dq = quat<>::from_axis_angle({1, 0, 0}, delta);
+		auto dq = quat::from_axis_angle({1, 0, 0}, delta);
 		return orientation *= dq;
 	}
 
-	quat<>& d_yaw(float delta)
+	quat& d_yaw(float delta)
 	{
-		auto dq = quat<>::from_axis_angle({0, 1, 0}, delta);
+		auto dq = quat::from_axis_angle({0, 1, 0}, delta);
 		return orientation *= dq;
 	}
 
-	quat<>& d_roll(float delta)
+	quat& d_roll(float delta)
 	{
-		auto dq = quat<>::from_axis_angle({0, 0, 1}, delta);
+		auto dq = quat::from_axis_angle({0, 0, 1}, delta);
 		return orientation *= dq;
 	}
 
