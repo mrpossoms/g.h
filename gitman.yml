@@ -32,6 +32,14 @@ sources:
     rev: 3.3.4
     scripts:
       -
+  - name: glew 
+    type: git
+    repo: git@github.com:nigels-com/glew.git
+    sparse_paths:
+      -
+    rev: glew-2.2.0
+    scripts:
+      -
   - name: sha1
     type: git
     repo: git@github.com:mrpossoms/sha1.git
