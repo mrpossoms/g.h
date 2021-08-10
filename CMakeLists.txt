@@ -35,14 +35,19 @@ include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_s
 
 # specify includes for libg
 target_include_directories(${PROJECT_NAME} PRIVATE inc)
+target_include_directories(${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR})
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(gitman_sources/glfw)
+add_subdirectory(gitman_sources/glew/build/cmake)
+find_package(GLEW REQUIRED CONFIG)
+find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
 find_package(OpenGL REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} glfw)
+target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} glew)
 target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 
 add_subdirectory(examples)
