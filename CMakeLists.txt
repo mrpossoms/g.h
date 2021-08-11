@@ -32,6 +32,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCE})
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
+include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
 
 # specify includes for libg
 target_include_directories(${PROJECT_NAME} PRIVATE inc)
@@ -46,7 +47,7 @@ find_package(GLEW REQUIRED CONFIG)
 find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
 find_package(OpenGL REQUIRED)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
+# target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} glew)
 target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 

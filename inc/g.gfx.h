@@ -18,8 +18,6 @@
 
 #ifdef _WIN32
 #include <gl/GL.h>
-#include <GL/gl.h>
-
 #endif
 
 
