@@ -11,6 +11,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+# prefer new vendor provided GL implementations
 if(POLICY CMP0072)
   cmake_policy (SET CMP0072 NEW)
   set(OpenGL_GL_PREFERENCE GLVND)
