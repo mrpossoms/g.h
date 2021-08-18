@@ -7,17 +7,17 @@
 #include <unordered_set>
 #include <vector>
 
-#ifdef __linux__
-#include <GL/glx.h>
-#include <GL/glext.h>
-#endif
+// #ifdef __linux__
+// #include <GL/glx.h>
+// #include <GL/glext.h>
+// #endif
 
-#include <GLFW/glfw3.h>
+// #include <GLFW/glfw3.h>
 
-#ifdef __APPLE__
-#undef __gl_h_
-#include <OpenGL/gl3.h>
-#endif
+// #ifdef __APPLE__
+// #undef __gl_h_
+// #include <OpenGL/gl3.h>
+// #endif
 
 using namespace xmath;
 

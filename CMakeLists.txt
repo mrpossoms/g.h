@@ -48,6 +48,8 @@ set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(gitman_sources/glfw)
+
+set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
 add_subdirectory(gitman_sources/glew/build/cmake)
 find_package(GLEW REQUIRED CONFIG)
 find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call

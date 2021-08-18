@@ -23,8 +23,10 @@
 
 #ifdef __linux__
 #include <unistd.h>
+#include <GL/glew.h>
 #include <GL/glx.h>
 #include <GL/glext.h>
+#include <GL/gl.h>
 #endif
 
 #ifdef __APPLE__
