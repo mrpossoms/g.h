@@ -74,6 +74,14 @@ void g::core::start(const core::opts& opts)
 		case g::core::opts::render_api::OPEN_GL:
 		{
 			GLuint vao;
+			GLenum err = glewInit();
+			if (GLEW_OK != err)
+			{
+				std::cerr << "glew Error: " << glewGetErrorString(err) << std::endl;
+				/* Problem: glewInit failed, something is seriously wrong. */
+				throw std::runtime_error("glew runtime error");
+			}
+
 			glGenVertexArrays(1, &vao);
 			glBindVertexArray(vao);
 
