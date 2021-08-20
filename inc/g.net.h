@@ -3,7 +3,7 @@
 #include "g.utils.h"
 #include <sys/types.h>
 
-#ifdef __unix__
+#if defined(__APPLE__) || defined(__linux__)
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/tcp.h>

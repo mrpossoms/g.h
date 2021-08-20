@@ -24,7 +24,6 @@
 #define lseek _lseek
 #endif
 
-
 #ifdef __linux__
 #include <unistd.h>
 #include <GL/glew.h>
@@ -36,6 +35,7 @@
 #ifdef __APPLE__
 #undef __gl_h_
 #include <unistd.h>
+#include <GL/glew.h>
 #include <OpenGL/gl3.h>
 #endif
 
