@@ -34,6 +34,15 @@ set(SOURCE ${SOURCE} gitman_sources/lodepng/lodepng.cpp)
 # set(SOURCE ${SOURCE} gitman_sources/png/*.o))
 add_library(${PROJECT_NAME} STATIC ${SOURCE})
 
+execute_process(COMMAND cmake -H../gitman_sources/glew/build/cmake 
+                   -Bout/build/glew 
+                   -DCMAKE_INSTALL_PREFIX=out
+                  )
+
+set(GLEW_USE_STATIC_LIBS 1)
+set(CMAKE_PREFIX_PATH ./out)
+set(CMAKE_INSTALL_PREFIX ./out)
+
 # include directories for deps
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
@@ -50,9 +59,8 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(gitman_sources/glfw)
 
-set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
+# set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
 add_subdirectory(gitman_sources/glew/build/cmake)
-find_package(GLEW REQUIRED CONFIG)
 find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
 find_package(OpenGL REQUIRED)
 
@@ -61,7 +69,3 @@ target_link_libraries(${PROJECT_NAME} glew)
 target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 
 add_subdirectory(examples)
-#target_include_directories(${PROJECT_NAME} PUBLIC
-#    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
-#    $<INSTALL_INTERFACE:inc>
-#    PRIVATE src)

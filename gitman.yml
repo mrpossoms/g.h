@@ -40,6 +40,7 @@ sources:
     rev: glew-2.2.0
     scripts:
       - make -C auto
+      - ./cmake-testbuild.sh
   - name: sha1
     type: git
     repo: git@github.com:mrpossoms/sha1.git

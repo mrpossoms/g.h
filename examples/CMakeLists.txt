@@ -20,8 +20,17 @@ add_executable(06.simple_multiplayer_game 06.simple_multiplayer_game.cpp)
 add_executable(07.voxels 07.voxels.cpp)
 add_executable(08.ray_march 08.ray_march.cpp)
 
+if (WIN32)
+message(STATUS ">>> Will copy data directory")
+add_custom_command(TARGET 01.core PRE_BUILD
+                   COMMAND cmake -E copy_directory
+                   ${CMAKE_SOURCE_DIR}/examples/data
+                   $<TARGET_FILE_DIR:01.core>/data
+                  )
+else ()
 add_custom_command(TARGET 01.core PRE_BUILD
                    COMMAND cmake -E create_symlink
                    ${CMAKE_SOURCE_DIR}/examples/data
                    $<TARGET_FILE_DIR:01.core>/data
                   )
+endif ()
