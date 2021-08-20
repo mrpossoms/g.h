@@ -6,3 +6,5 @@ X Should decouple g.game.h from g.gfx.h. g.game should not need to know anything
 
 
 TODO: completely decouple g.core from g.gfx. Seems like extension loading with glew is nessesary
+
+TODO: includes to the glew library are missing in VS project

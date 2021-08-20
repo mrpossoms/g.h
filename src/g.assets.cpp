@@ -3,7 +3,11 @@
 
 #define OGT_VOX_IMPLEMENTATION
 #define OGT_VOXEL_MESHIFY_IMPLEMENTATION
+
+#ifdef __unix__
 #include <strings.h>
+#endif
+
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
 

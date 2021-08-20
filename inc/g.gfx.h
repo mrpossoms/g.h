@@ -17,7 +17,11 @@
 #include <fcntl.h>
 
 #ifdef _WIN32
+#include <gl/glew.h>
 #include <gl/GL.h>
+#include <io.h>
+#define open _open
+#define lseek _lseek
 #endif
 
 
@@ -78,7 +82,7 @@ struct texture
 {
 	GLenum type;
 	unsigned size[3] = { 1, 1, 1 };
-	GLuint texture = (GLuint)-1;
+	GLuint hnd = -1;
 	char* data = nullptr;
 
 	void release_bitmap();
@@ -186,7 +190,7 @@ struct framebuffer
 
 	void unbind_as_target()
 	{
-		if (color.texture != (GLuint)-1)
+		if (color.hnd != (GLuint)-1)
 		{
 			color.bind();
 			glGenerateMipmap(GL_TEXTURE_2D);

@@ -1,6 +1,10 @@
 #include "g.gfx.h"
 #include <lodepng.h>
 
+#ifdef _WIN32
+#include <corecrt_wio.h>
+#endif
+
 using namespace g::gfx;
 
 
@@ -39,13 +43,13 @@ void texture::release_bitmap()
 void texture::create(GLenum texture_type)
 {
 	type = texture_type;
-	glGenTextures(1, &this->texture);
+	glGenTextures(1, &this->hnd);
 	assert(gl_get_error());
 }
 
 void texture::destroy()
 {
-	glDeleteTextures(1, &texture);
+	glDeleteTextures(1, &hnd);
 	release_bitmap();
 }
 
@@ -68,7 +72,7 @@ void texture::set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format
 	}
 }
 
-void texture::bind() const { glBindTexture(type, texture); }
+void texture::bind() const { glBindTexture(type, hnd); }
 
 
 
@@ -284,16 +288,16 @@ framebuffer framebuffer_factory::create()
 	glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
 	assert(gl_get_error());
 
-	if (color_tex.texture != (GLuint)-1)
+	if (color_tex.hnd != (GLuint)-1)
 	{
 		color_tex.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex.texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex.hnd, 0);
 	}
 
-	if (depth_tex.texture != (GLuint)-1)
+	if (depth_tex.hnd != (GLuint)-1)
 	{
 		depth_tex.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tex.texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tex.hnd, 0);
 	}
 
 	auto fb_stat = glCheckFramebufferStatus(GL_FRAMEBUFFER);
