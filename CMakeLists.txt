@@ -38,15 +38,18 @@ execute_process(COMMAND cmake -H../gitman_sources/glew/build/cmake
                    -Bout/build/glew 
                    -DCMAKE_INSTALL_PREFIX=out
                   )
+execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
+execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
 
 if (WIN32)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 endif ()
 
+message("CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
 set(GLEW_USE_STATIC_LIBS 1)
-set(CMAKE_PREFIX_PATH ./out)
-set(CMAKE_INSTALL_PREFIX ./out)
+set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/out)
+set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/out)
 
 # include directories for deps
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
