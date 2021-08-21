@@ -39,6 +39,11 @@ execute_process(COMMAND cmake -H../gitman_sources/glew/build/cmake
                    -DCMAKE_INSTALL_PREFIX=out
                   )
 
+if (WIN32)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+endif ()
+
 set(GLEW_USE_STATIC_LIBS 1)
 set(CMAKE_PREFIX_PATH ./out)
 set(CMAKE_INSTALL_PREFIX ./out)
@@ -65,7 +70,7 @@ find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
 find_package(OpenGL REQUIRED)
 
 # target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} glew)
+target_link_libraries(${PROJECT_NAME} glew_s)
 target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 
 add_subdirectory(examples)
