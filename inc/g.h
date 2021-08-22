@@ -3,9 +3,12 @@
 #define XMTYPE float
 #include <xmath.h>
 
-#include <stdlib.h>
+#ifdef __unix__
 #include <unistd.h>
 #include <strings.h>
+#endif
+
+#include <stdlib.h>
 #include <fcntl.h>
 #include <assert.h>
 

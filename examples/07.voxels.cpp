@@ -79,6 +79,7 @@ struct voxels : public g::core
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) return;
 
+		cam.aspect_ratio = g::gfx::aspect();
 		// cam.orientation = quat::from_axis_angle({0, 0, 1}, 0);
 
 

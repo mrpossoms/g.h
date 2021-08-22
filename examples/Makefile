@@ -3,7 +3,7 @@ TARGET=$(shell $(CXX) -dumpmachine)
 
 CXXFLAGS+=-std=c++17 -g $(pkg-config --cflags glfw3)
 INC+=-I../inc -I../gitman_sources/xmath.h/inc -I../gitman_sources/libpng -I../gitman_sources/opengametools/src -I../gitman_sources/zlib -I../gitman_sources/sha1
-LIB+=-L../lib/$(TARGET)/ -L../ex_libs/$(TARGET)/png -L../ex_libs/$(TARGET)/zlib -L../gitman_sources/sha1/lib/$(TARGET)
+LIB+=-L../build/ -L../ex_libs/$(TARGET)/png -L../ex_libs/$(TARGET)/zlib -L../gitman_sources/sha1/lib/$(TARGET)
 LINK+=-lg
 
 ifeq ($(OS),Darwin)

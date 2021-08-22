@@ -2,13 +2,11 @@ TARGET=$(shell $(CXX) -dumpmachine)
 
 CXXFLAGS+=-std=c++11 -g
 CXXFLAGS+=-D_XOPEN_SOURCE=500 -D_GNU_SOURCE -DGL_GLEXT_PROTOTYPES -DGL_SILENCE_DEPRECATION
-INC+=-I./inc -Igitman_sources/xmath.h/inc -Igitman_sources/png -Igitman_sources/sha1 -Igitman_sources/opengametools/src
+INC+=-I./inc -Igitman_sources/xmath.h/inc -Igitman_sources/png -Igitman_sources/sha1 -Igitman_sources/opengametools/src -Igitman_sources/lodepng
 #LIB+=-Lgitman_sources/sha1/lib/$(TARGET)
 LINK+=-s MAX_WEBGL_VERSION=2
-SRCS=$(wildcard src/*.cpp)
+SRCS=$(wildcard src/*.cpp) gitman_sources/lodepng/lodepng.cpp
 OBJS=$(patsubst src/%.cpp,out/$(TARGET)/%.cpp.o,$(wildcard src/*.cpp))
-OBJS+=$(wildcard gitman_sources/png/*.o)
-OBJS+=$(wildcard gitman_sources/zlib/*.o)
 
 lib/$(TARGET):
 	mkdir -p $@

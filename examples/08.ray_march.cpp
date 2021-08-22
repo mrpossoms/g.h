@@ -52,9 +52,9 @@ struct volumetric : public g::core
 			{
 				data[i][j][k] = 0.f;
 			}
-			else 
-			{ 
-				data[i][j][k] = 1.f; 
+			else
+			{
+				data[i][j][k] = 1.f;
 			}
 
 			// if (i == 7 && j == 7 && k == 7) { data[i][j][k] = 0; }
@@ -80,7 +80,7 @@ struct volumetric : public g::core
 			0,
 			GL_RED,
 			GL_UNSIGNED_BYTE,
-			vox.v
+			vox.v.data()
 		);
 
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -136,10 +136,10 @@ struct volumetric : public g::core
 
 		int show = 0;
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Z)) { show = 1; }
-		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS) { 
+		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS) {
 			sub_step += dt;
 			std::cout << "radius bias: " << sub_step << std::endl;
-		}	
+		}
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_MINUS) == GLFW_PRESS) {
 			sub_step -= dt;
 			std::cout << "radius bias: " << sub_step << std::endl;
@@ -148,7 +148,7 @@ struct volumetric : public g::core
 		auto ld = xmath::vec<3>{ 0.6f, -1, 1};
 
 		render_buffer.bind_as_target();
-		
+
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_3D, cube);
 		plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))

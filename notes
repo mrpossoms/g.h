@@ -1,0 +1,10 @@
+Got GD glew building and linking into g with the following command (note this requires glew testbuild script to run first)
+
+cmake -DCMAKE_PREFIX_PATH=../gitman_sources/glew/out -DCMAKE_INSTALL_PREFIX=../gitman_sources/glew/out -UGLEW_USE_STATIC_LIBS ..
+
+X Should decouple g.game.h from g.gfx.h. g.game should not need to know anything special about the rendering api in use
+
+
+TODO: completely decouple g.core from g.gfx. Seems like extension loading with glew is nessesary
+
+TODO: includes to the glew library are missing in VS project

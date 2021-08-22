@@ -18,27 +18,29 @@ sources:
     link: deps/opengametools
     scripts:
       -
-  - name: zlib
+  - name: lodepng
     type: git
-    repo: git@github.com:madler/zlib.git
+    repo: git@github.com:lvandeve/lodepng.git
     sparse_paths:
       -
     rev: master
-    link: deps/zlib
-    scripts:
-      - ./configure --static
-      - make clean
-      - make -j
-  - name: png
+  - name: glfw
     type: git
-    repo: git@github.com:mrpossoms/libpng.git
+    repo: git@github.com:glfw/glfw.git
     sparse_paths:
       -
-    rev: emscripten-makefile
-    link: deps/libpng
+    rev: 3.3.4
     scripts:
-      - if [ $($CC -dumpmachine) = "wasm32-unknown-emscripten" ]; then cp scripts/makefile.emcc ./makefile; else cp scripts/makefile.gcc ./makefile; fi
-      - make -j
+      -
+  - name: glew 
+    type: git
+    repo: git@github.com:nigels-com/glew.git
+    sparse_paths:
+      -
+    rev: glew-2.2.0
+    scripts:
+      - make -C auto
+      - ./cmake-testbuild.sh
   - name: sha1
     type: git
     repo: git@github.com:mrpossoms/sha1.git

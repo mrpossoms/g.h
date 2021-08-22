@@ -7,17 +7,17 @@
 #include <unordered_set>
 #include <vector>
 
-#ifdef __linux__
-#include <GL/glx.h>
-#include <GL/glext.h>
-#endif
+// #ifdef __linux__
+// #include <GL/glx.h>
+// #include <GL/glext.h>
+// #endif
 
-#include <GLFW/glfw3.h>
+// #include <GLFW/glfw3.h>
 
-#ifdef __APPLE__
-#undef __gl_h_
-#include <OpenGL/gl3.h>
-#endif
+// #ifdef __APPLE__
+// #undef __gl_h_
+// #include <OpenGL/gl3.h>
+// #endif
 
 using namespace xmath;
 
@@ -27,27 +27,27 @@ namespace game {
 struct view_point
 {
 	vec<3> position = {0, 0, 0};
-	quat<> orientation = {0, 0, 0, 1};
+	quat<float> orientation = {0, 0, 0, 1};
 };
 
 
 struct camera : public view_point
 {
-	quat<>& d_pitch(float delta)
+	quat<float>& d_pitch(float delta)
 	{
-		auto dq = quat<>::from_axis_angle({1, 0, 0}, delta);
+		auto dq = quat<float>::from_axis_angle({1, 0, 0}, delta);
 		return orientation *= dq;
 	}
 
-	quat<>& d_yaw(float delta)
+	quat<float>& d_yaw(float delta)
 	{
-		auto dq = quat<>::from_axis_angle({0, 1, 0}, delta);
+		auto dq = quat<float>::from_axis_angle({0, 1, 0}, delta);
 		return orientation *= dq;
 	}
 
-	quat<>& d_roll(float delta)
+	quat<float>& d_roll(float delta)
 	{
-		auto dq = quat<>::from_axis_angle({0, 0, 1}, delta);
+		auto dq = quat<float>::from_axis_angle({0, 0, 1}, delta);
 		return orientation *= dq;
 	}
 
@@ -83,13 +83,11 @@ struct camera_perspective : public camera
 {
 	float field_of_view = M_PI / 2;
 	float near = 0.1f, far = 1000.f;
+	float aspect_ratio = 1;
 
 	virtual mat<4, 4> projection() const
 	{
-		GLint vp[4];
-		glGetIntegerv(GL_VIEWPORT, vp);
-		auto aspect = vp[2] / (float)vp[3];
-		return mat<4, 4>::perspective(near, far, field_of_view, aspect);
+		return mat<4, 4>::perspective(near, far, field_of_view, aspect_ratio);
 	}
 };
 
@@ -100,8 +98,6 @@ struct camera_orthographic : public camera
 
 	virtual mat<4, 4> projection() const
 	{
-		GLint vp[4];
-		glGetIntegerv(GL_VIEWPORT, vp);
 		return mat<4, 4>::orthographic(near, far, width/2, -width/2, height/2, -height/2);
 	}
 };

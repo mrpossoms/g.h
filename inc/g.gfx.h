@@ -12,23 +12,35 @@
 
 #include <string.h>
 #include <assert.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#ifdef _WIN32
+#include <gl/glew.h>
+#include <gl/GL.h>
+#include <io.h>
+#define open _open
+#define lseek _lseek
+#endif
 
 #ifdef __linux__
+#include <unistd.h>
+#include <GL/glew.h>
 #include <GL/glx.h>
 #include <GL/glext.h>
+#include <GL/gl.h>
+#endif
+
+#ifdef __APPLE__
+#undef __gl_h_
+#include <unistd.h>
+#include <GL/glew.h>
+#include <OpenGL/gl3.h>
 #endif
 
 #include <GLFW/glfw3.h>
 
-#ifdef __APPLE__
-#undef __gl_h_
-#include <OpenGL/gl3.h>
-#endif
 
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
@@ -70,7 +82,7 @@ struct texture
 {
 	GLenum type;
 	unsigned size[3] = { 1, 1, 1 };
-	GLuint texture = (GLuint)-1;
+	GLuint hnd = -1;
 	char* data = nullptr;
 
 	void release_bitmap();
@@ -178,7 +190,7 @@ struct framebuffer
 
 	void unbind_as_target()
 	{
-		if (color.texture != (GLuint)-1)
+		if (color.hnd != (GLuint)-1)
 		{
 			color.bind();
 			glGenerateMipmap(GL_TEXTURE_2D);

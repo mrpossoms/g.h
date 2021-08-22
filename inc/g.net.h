@@ -2,10 +2,17 @@
 
 #include "g.utils.h"
 #include <sys/types.h>
+
+#if defined(__APPLE__) || defined(__linux__)
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
+#endif
+
+#if defined(_MSC_VER)
+#include <winsock.h>
+#endif
 
 #define SHA1HANDSOFF
 
@@ -570,7 +577,7 @@ struct net
 
 			struct sockaddr_in host_addr = {};
 			// fill in host_addr with resolved info
-			bcopy(
+			memcpy(
 				(char *)host->h_addr_list[0],
 				(char *)&host_addr.sin_addr.s_addr,
 				host->h_length
