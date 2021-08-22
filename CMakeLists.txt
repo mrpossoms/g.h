@@ -25,18 +25,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGL_SILENCE_DEPRECATION")
 
 # add all source files
-set(G_SOURCE ${G_SOURCE} src/g.assets.cpp)
-set(G_SOURCE ${G_SOURCE} src/g.gfx.cpp)
-set(G_SOURCE ${G_SOURCE} src/g.core.cpp)
-set(G_SOURCE ${G_SOURCE} src/g.utils.cpp)
-set(G_SOURCE ${G_SOURCE} gitman_sources/lodepng/lodepng.cpp)
+set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.assets.cpp)
+set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.gfx.cpp)
+set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.core.cpp)
+set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.utils.cpp)
+set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng/lodepng.cpp)
 
 # set(SOURCE ${SOURCE} gitman_sources/png/*.o))
 add_library(${PROJECT_NAME} STATIC ${G_SOURCE})
 
-execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake 
-                   -Bout/build/glew 
-                   -DCMAKE_INSTALL_PREFIX=out
+execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
+                   -B${CMAKE_BINARY_DIR}/out/build/glew
+                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
                   )
 execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
 execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
@@ -52,23 +52,23 @@ set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/out)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/out)
 
 # include directories for deps
-include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
-include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
-include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
-include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
-include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
 
 # specify includes for libg
-target_include_directories(${PROJECT_NAME} PRIVATE inc)
-target_include_directories(${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR})
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)
+target_include_directories(${PROJECT_NAME} PUBLIC ${OPENGL_INCLUDE_DIR})
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(gitman_sources/glfw)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
 
 # set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
-add_subdirectory(gitman_sources/glew/build/cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
 find_package(OpenGL REQUIRED)
 
