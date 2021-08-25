@@ -65,7 +65,7 @@ void texture::set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format
 		type = GL_TEXTURE_3D;
 		glTexImage3D(GL_TEXTURE_3D, 0, format, size[0], size[1], size[2], 0, format, storage, data);
 	}
-	else if (h > 1)
+	else if (h >= 1)
 	{
 		type = GL_TEXTURE_2D;
 		glTexImage2D(GL_TEXTURE_2D, 0, format, size[0], size[1], 0, format, storage, data);

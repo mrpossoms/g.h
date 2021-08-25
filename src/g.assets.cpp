@@ -18,10 +18,20 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
 	{
 		auto chain = g::gfx::texture_factory().from_png(root + "/tex/" + partial_path).pixelated();
 		// do spicy chain thing with processors here
+		if (std::string::npos != partial_path.find("repeating"))
+		{
+			chain = chain.repeating();
+		}
+
+		if (std::string::npos != partial_path.find("smooth"))
+		{
+			chain = chain.smooth();
+		}
+
 		auto tex = chain.create();
 		textures[partial_path] = { time(nullptr), tex };
 	}
-	
+
 	return textures[partial_path].get();
 }
 
@@ -31,7 +41,7 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 	auto itr = shaders.find(program_collection);
 	if (itr == shaders.end())
 	{
-		g::gfx::shader_factory factory; 
+		g::gfx::shader_factory factory;
 		for (auto shader_path : g::utils::split(program_collection, "+"))
 		{
 			if (std::string::npos != shader_path.find(".vs"))
@@ -99,5 +109,5 @@ g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path)
 	    ogt_vox_destroy_scene(scene);
 	}
 
-    return voxels[partial_path].get();	
+    return voxels[partial_path].get();
 }
