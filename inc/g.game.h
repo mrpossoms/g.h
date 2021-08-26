@@ -59,7 +59,7 @@ struct camera : public view_point
 
 	mat<4, 4>& look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
 	{
-		return _view = mat<4, 4>::look_at(position * -1.f, (subject + position).unit(), up);
+		return _view = mat<4, 4>::look_at(position * -1.f, (position - subject).unit(), up);
 	}
 
 	mat<4, 4>& look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up)
