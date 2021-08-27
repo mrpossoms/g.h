@@ -53,22 +53,57 @@ void texture::destroy()
 	release_bitmap();
 }
 
-void texture::set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format, GLenum storage)
+void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type, GLenum storage)
 {
 	size[0] = w;
 	size[1] = h;
 	size[2] = d;
 	this->data = data;
 
+	switch(storage)
+	{
+		case GL_UNSIGNED_BYTE:
+		case GL_BYTE:
+			this->bytes_per_component = 1;
+			break;
+
+		case GL_UNSIGNED_SHORT:
+		case GL_SHORT:
+			this->bytes_per_component = 2;
+			break;
+
+		case GL_UNSIGNED_INT:
+		case GL_INT:
+		case GL_FLOAT:
+			this->bytes_per_component = 4;
+			break;
+	}
+
+	switch(color_type)
+	{
+		case GL_RED:
+			this->component_count = 1;
+			break;
+		case GL_RG:
+			this->component_count = 2;
+			break;
+		case GL_RGB:
+			this->component_count = 3;
+			break;
+		case GL_RGBA:
+			this->component_count = 4;
+			break;
+	}
+
 	if (h > 1 && d > 1)
 	{
 		type = GL_TEXTURE_3D;
-		glTexImage3D(GL_TEXTURE_3D, 0, format, size[0], size[1], size[2], 0, format, storage, data);
+		glTexImage3D(GL_TEXTURE_3D, 0, color_type, size[0], size[1], size[2], 0, color_type, storage, data);
 	}
 	else if (h >= 1)
 	{
 		type = GL_TEXTURE_2D;
-		glTexImage2D(GL_TEXTURE_2D, 0, format, size[0], size[1], 0, format, storage, data);
+		glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage, data);
 	}
 }
 

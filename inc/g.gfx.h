@@ -81,9 +81,11 @@ float aspect();
 struct texture
 {
 	GLenum type;
+	unsigned component_count = 0;
+	unsigned bytes_per_component = 0;
 	unsigned size[3] = { 1, 1, 1 };
 	GLuint hnd = -1;
-	char* data = nullptr;
+	unsigned char* data = nullptr;
 
 	void release_bitmap();
 
@@ -91,7 +93,18 @@ struct texture
 
 	void destroy();
 
-	void set_pixels(size_t w, size_t h, size_t d, char* data, GLenum format=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE);
+	void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE);
+
+	unsigned char* sample(unsigned x, unsigned y=1, unsigned z=1) const
+	{
+		const unsigned textel_stride = bytes_per_component * component_count;
+
+		const unsigned x_stride = 1;
+		const unsigned y_stride = size[0];
+		const unsigned z_stride = size[0] * size[1];
+
+		return data + (x * x_stride + y * y_stride + z * z_stride) * textel_stride;
+	}
 
 	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
 	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
@@ -104,7 +117,7 @@ struct texture
 struct texture_factory
 {
 	unsigned size[3] = {1, 1, 1};
-	char* data = nullptr;
+	unsigned char* data = nullptr;
 	GLenum texture_type;
 	GLenum min_filter = GL_LINEAR, mag_filter = GL_LINEAR;
 	GLenum wrap_s = GL_CLAMP_TO_EDGE, wrap_t = GL_CLAMP_TO_EDGE, wrap_r = GL_CLAMP_TO_EDGE;
@@ -141,14 +154,14 @@ struct texture_factory
 
 	texture_factory& repeating();
 
-	texture_factory& fill(std::function<void(int x, int y, int z, char* pixel)> filler)
+	texture_factory& fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler)
 	{
 		// void* pixels;
 
 		auto bytes_per_textel = bytes_per_component * component_count;
 		auto textels_per_row = size[2];
 		auto textels_per_plane = size[1] * size[2];
-		data = new char[bytes_per_textel * size[0] * size[1] * size[2]];
+		data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
 
 		for (unsigned i = 0; i < size[0]; i++)
 		{
