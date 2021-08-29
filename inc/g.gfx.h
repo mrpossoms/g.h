@@ -95,7 +95,7 @@ struct texture
 
 	void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE);
 
-	unsigned char* sample(unsigned x, unsigned y=1, unsigned z=1) const
+	unsigned char* sample(unsigned x, unsigned y=0, unsigned z=0) const
 	{
 		const unsigned textel_stride = bytes_per_component * component_count;
 
@@ -103,7 +103,7 @@ struct texture
 		const unsigned y_stride = size[0];
 		const unsigned z_stride = size[0] * size[1];
 
-		return data + (x * x_stride + y * y_stride + z * z_stride) * textel_stride;
+		return &data[(x * x_stride + y * y_stride + z * z_stride) * textel_stride];
 	}
 
 	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
