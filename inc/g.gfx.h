@@ -339,7 +339,7 @@ struct shader_factory
 		{ // read and compile the shader
 			GLchar* src = new GLchar[size];
 			lseek(fd, 0, SEEK_SET);
-			read(fd, src, size);
+			size = read(fd, src, size);
 
 			std::cerr << "Compiling: " << path << "... ";
 
