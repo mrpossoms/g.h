@@ -28,6 +28,8 @@
 #include "g.net.h"
 #include "g.game.h"
 #include "g.assets.h"
+#include "g.dyn.h"
+#include "g.ui.h"
 
 namespace g {
 

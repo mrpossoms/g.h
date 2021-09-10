@@ -6,7 +6,9 @@
 using namespace xmath;
 using namespace g::gfx;
 
-namespace g::ui
+namespace g
+{
+namespace ui
 {
 
 struct layer
@@ -76,4 +78,5 @@ public:
     bool mouse_click() { return false; }
 };
 
-} // end namespace g::ui
+} // end namespace ui
+} // end namespace g

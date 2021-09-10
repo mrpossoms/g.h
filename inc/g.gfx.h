@@ -460,11 +460,13 @@ struct mesh
 	size_t index_count = 0;
 	size_t vertex_count = 0;
 
+
+	inline bool is_initialized() const { return vbo != 0; }
+
 	mesh& set_vertices(const std::vector<V>& verts)
 	{
 		return set_vertices(verts.data(), verts.size());
 	}
-
 
 	mesh& set_vertices(const V* verts, size_t count)
 	{
@@ -533,10 +535,10 @@ struct mesh_factory
 		glGenBuffers(2, &p.vbo);
 
 		p.set_vertices({
-			{{-1, 1, 0}, {1, 1}, {0, 0, 1}},
-			{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
-			{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
 			{{-1,-1, 0}, {1, 0}, {0, 0, 1}},
+			{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
+			{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
+			{{-1, 1, 0}, {1, 1}, {0, 0, 1}},
 		});
 
 		return p;
