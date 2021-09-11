@@ -12,6 +12,7 @@ using mat4 = xmath::mat<4,4>;
 struct my_core : public g::core
 {
     g::asset::store assets;
+    float t = 0;
 
     virtual bool initialize()
     {
@@ -27,7 +28,12 @@ struct my_core : public g::core
 
         root.shader().draw_tri_fan();
 
-        auto button = root.child({0.5f, 0.5f}, {0, 0, -0.1f});
+        auto button = root.child({0.5f + (cosf(t) * 0.05f), 0.5f + (cosf(t) * 0.05f)}, {0, 0, -0.1f});
+
+        if (button.intersects({0, 0, -1}, {0, 0, 1}))
+        {
+            t += dt;
+        }
 
         button.shader().draw_tri_fan();
     }

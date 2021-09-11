@@ -71,7 +71,18 @@ public:
         return shader();
     }
 
+    float intersects(const vec<3>& ray_o, const vec<3>& ray_d)
+    {
+        auto t = vec<3>{ ctx.transform[0][3], ctx.transform[1][3], ctx.transform[2][3] };
 
+        vec<3> half_lengths[3] = {
+            { ctx.transform[0][0], ctx.transform[1][0], ctx.transform[2][0] },
+            { ctx.transform[0][1], ctx.transform[1][1], ctx.transform[2][1] },
+            { ctx.transform[0][2], ctx.transform[1][2], ctx.transform[2][2] },
+        };
+
+        return intersect::ray_box(ray_o, ray_d, t, half_lengths);
+    }
 
     bool mouse_hover() { return false; }
 
