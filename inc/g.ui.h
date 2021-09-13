@@ -42,6 +42,13 @@ public:
         ctx.program_collection = program_collection;
     }
 
+    layer(g::asset::store* store, const std::string& program_collection, const mat<4, 4>& trans)
+    {
+        ctx.assets = store;
+        ctx.program_collection = program_collection;
+        ctx.transform = trans;
+    }
+
     layer(const g::ui::layer& parent, const mat<4, 4>& trans)
     {
         ctx = parent.ctx;
@@ -50,7 +57,7 @@ public:
 
     layer child(const vec<2>& dimensions, const vec<3>& position)
     {
-        auto transform = mat<4, 4>::translation(position) * mat<4, 4>::scale({dimensions[0], dimensions[1], 1});
+        auto transform = mat<4, 4>::translation(position) * mat<4, 4>::scale({dimensions[0], dimensions[1], 0.1f});
 
         return { *this, transform };
     }

@@ -8,6 +8,19 @@
 
 using mat4 = xmath::mat<4,4>;
 
+struct my_cam : public g::game::camera
+{
+    virtual mat<4, 4> view() const
+    {
+        return mat<4, 4>::I();
+    }
+
+    virtual mat<4, 4> projection() const
+    {
+        return mat<4, 4>::I();
+    }
+
+};
 
 struct my_core : public g::core
 {
@@ -28,9 +41,12 @@ struct my_core : public g::core
 
         root.shader().draw_tri_fan();
 
-        auto button = root.child({0.5f + (cosf(t) * 0.05f), 0.5f + (cosf(t) * 0.05f)}, {0, 0, -0.1f});
+        my_cam cam;
+        auto button = root.child({0.25f + (cosf(t) * 0.05f), 0.25f + (cosf(t) * 0.05f)}, {0, 0, -0.1f});
 
-        if (button.intersects({0, 0, -1}, {0, 0, 1}))
+        auto ray_d = g::gfx::cast_from_mouse(&cam);
+        std::cerr << "ray: " << ray_d.to_string() << std::endl;
+        if (!isnan(button.intersects({0, 0, -3}, ray_d)))
         {
             t += dt;
         }
