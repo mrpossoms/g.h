@@ -365,22 +365,6 @@ struct shader_factory
 	shader create();
 };
 
-static xmath::vec<3> cast_from_mouse(g::game::camera* cam)
-{
-	double xpos, ypos;
-	glfwGetCursorPos(GLFW_WIN, &xpos, &ypos);
-
-	int width, height;
-	glfwGetWindowSize(GLFW_WIN, &width, &height);
-
-	auto ray_d = cam->projection().invert() * xmath::vec<4>{
-		2.f * (float)(xpos / width) - 1.f,
-		2.f * (float)(ypos / height) - 1.f, 1.f, 1.f
-	};
-
-	return ray_d.slice<3>();
-}
-
 namespace vertex
 {
 	struct pos

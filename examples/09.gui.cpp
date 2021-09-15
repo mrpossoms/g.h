@@ -25,7 +25,7 @@ struct my_cam : public g::game::camera
 struct my_core : public g::core
 {
     g::asset::store assets;
-    float t = 0;
+    float t[2];
 
     virtual bool initialize()
     {
@@ -42,16 +42,23 @@ struct my_core : public g::core
         root.shader().draw_tri_fan();
 
         my_cam cam;
-        auto button = root.child({0.25f + (cosf(t) * 0.05f), 0.25f + (cosf(t) * 0.05f)}, {0, 0, -0.1f});
+        auto button0 = root.child({0.25f + (cosf(t[0]) * 0.05f), 0.25f + (cosf(t[0]) * 0.05f)}, {-0.55f, 0, -0.1f});
+        auto button1 = root.child({0.25f + (cosf(t[1]) * 0.05f), 0.25f + (cosf(t[1]) * 0.05f)}, {0.55f, 0, -0.1f});
 
-        auto ray_d = g::gfx::cast_from_mouse(&cam);
-        std::cerr << "ray: " << ray_d.to_string() << std::endl;
-        if (!isnan(button.intersects({0, 0, -3}, ray_d)))
+        // auto ray_o = g::ui::origin_from_mouse(&cam);
+        auto pointer = g::ui::pointer_from_mouse(&cam);
+        if (button0.hover(pointer))
         {
-            t += dt;
+            t[0] += dt;
         }
 
-        button.shader().draw_tri_fan();
+        if (button1.hover(pointer))
+        {
+            t[1] += dt;
+        }
+
+        button0.shader().draw_tri_fan();
+        button1.shader().draw_tri_fan();
     }
 };
 
