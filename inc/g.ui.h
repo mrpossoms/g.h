@@ -128,31 +128,34 @@ static pointer pointer_from_mouse(g::game::camera* cam)
     uint32_t pick = 0;
 
     auto view = cam->view();
+    auto view_rot = cam->orientation.to_matrix();
+    view_rot[3] *= {0, 0, 0, 1};
 
     if (is_proj_ortho)
     {
-        auto ray_pos = view.transpose() * xmath::vec<4>{
+        auto ray_offset = cam->orientation.to_matrix() * vec<4>{ 0, 0, 1, 1 };
+        auto ray_pos = view.invert() * xmath::vec<4>{
             0,//2.f * (float)(xpos / width) - 1.f,
             0,//2.f * (float)(ypos / height) - 1.f,
             0.f,
             1.0f
         };
-        pos = ray_pos.slice<3>();
+        pos = (view * ray_offset).slice<3>();//ray_pos.slice<3>();
     }
 
     {
         // zero out the translational components of the view matrix
-        view[3] *= {0, 0, 0, 1};
         auto ray_d_unproj = xmath::vec<4>{
-            2.f * (float)(xpos / width) - 1.f,
-            2.f * (float)(ypos / height) - 1.f,
+            (2.f * (float)(xpos / width) - 1.f),
+            (2.f * (float)(ypos / height) - 1.f),
             -1.f,
             1.f
         };
 
-        auto view_T = view;// .transpose();
+        auto view_T = view.invert();// .transpose();
 
-        auto ray_d = view_T * ray_d_unproj;
+        auto ray_d = view_rot * ray_d_unproj;
+        //auto ray_d = ray_d_unproj;
         //ray_d /= ray_d[3];
         dir = ray_d.slice<3>();
         std::cerr << dir.to_string() << std::endl;

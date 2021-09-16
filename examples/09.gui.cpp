@@ -33,6 +33,7 @@ struct my_core : public g::core
         cam.position = { 0, 0, -2 };
         cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
         glDisable(GL_CULL_FACE);
+        glPointSize(3);
         return true;
     }
 
@@ -78,7 +79,8 @@ struct my_core : public g::core
 
         debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
 
-        debug::print(&cam).color({ 1, 0, 0, 1 }).ray(pointer.position, pointer.direction);
+        debug::print(&cam).color({ 1, 0, 0, 1 }).point(pointer.position);
+        debug::print(&cam).color({ 1, 0, 0, 1 }).ray(pointer.position, pointer.direction * 10);
     }
 };
 

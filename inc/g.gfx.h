@@ -740,6 +740,17 @@ namespace debug
 
 			debug_mesh.using_shader(debug_shader).set_camera(*cur_cam).set_uniform("u_color").vec4(cur_color).draw<GL_LINES>();
 		}
+
+		void point(const vec<3>& o)
+		{
+			vertex::pos verts[1] = {
+				{ o },
+			};
+
+			debug_mesh.set_vertices(verts, 1);
+
+			debug_mesh.using_shader(debug_shader).set_camera(*cur_cam).set_uniform("u_color").vec4(cur_color).draw<GL_POINTS>();
+		}
 	};
 }
 
