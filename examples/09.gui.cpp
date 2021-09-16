@@ -75,6 +75,10 @@ struct my_core : public g::core
 
         button0.shader().set_camera(cam).draw_tri_fan();
         button1.shader().set_camera(cam).draw_tri_fan();
+
+        debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
+
+        debug::print(&cam).color({ 1, 0, 0, 1 }).ray(pointer.position, pointer.direction);
     }
 };
 

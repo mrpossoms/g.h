@@ -150,7 +150,7 @@ static pointer pointer_from_mouse(g::game::camera* cam)
             1.f
         };
 
-        auto view_T = view.transpose();
+        auto view_T = view;// .transpose();
 
         auto ray_d = view_T * ray_d_unproj;
         //ray_d /= ray_d[3];

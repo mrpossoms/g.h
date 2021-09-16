@@ -87,6 +87,8 @@ struct texture
 	GLuint hnd = -1;
 	unsigned char* data = nullptr;
 
+	inline bool is_initialized() const { return hnd != -1; }
+
 	void release_bitmap();
 
 	void create(GLenum texture_type);
@@ -236,8 +238,10 @@ struct framebuffer_factory
  */
 struct shader
 {
-	GLuint program;
+	GLuint program = 0;
 	std::unordered_map<std::string, GLint> uni_locs;
+
+	inline bool is_initialized() const { return program != 0; }
 
 	shader& bind();
 
@@ -309,6 +313,8 @@ struct shader
 
 		usage vec3 (const vec<3>& v);
 
+		usage vec4(const vec<4>& v);
+
 		usage flt(float f);
 
 		usage int1(const int i);
@@ -364,6 +370,7 @@ struct shader_factory
 
 	shader create();
 };
+
 
 namespace vertex
 {
@@ -674,6 +681,69 @@ struct mesh_factory
 	}
 };
 
+
+namespace debug
+{
+	static g::gfx::shader debug_shader;
+	static g::gfx::mesh<vertex::pos> debug_mesh;
+
+	struct print
+	{
+		const std::string vs_dbg_src =
+		"#version 410\n"
+		"in vec3 a_position;"
+		"uniform mat4 u_view;"
+		"uniform mat4 u_proj;"
+		"void main (void) {"
+		"gl_Position = u_proj * u_view * vec4(a_position, 1.0);"
+		"}";
+
+		const std::string fs_dbg_src =
+		"#version 410\n"
+		"uniform vec4 u_color;"
+		"out vec4 color;"
+		"void main (void) {"
+		"color = u_color;"
+		"}";
+
+		vec<4> cur_color;
+		g::game::camera* cur_cam;
+
+		print(g::game::camera* cam)
+		{
+			if (!debug_shader.is_initialized())
+			{
+				debug_shader = shader_factory{}
+					.add_src<GL_VERTEX_SHADER>(vs_dbg_src)
+					.add_src<GL_FRAGMENT_SHADER>(fs_dbg_src)
+					.create();
+				debug_mesh = mesh_factory::empty_mesh<vertex::pos>();
+			}
+
+			cur_cam = cam;
+		}
+
+		print& color(const vec<4>& c)
+		{
+			cur_color = c;
+			return *this;
+		}
+
+		void ray(const vec<3>& o, const vec<3>& d)
+		{
+			vertex::pos verts[2] = {
+				{ o },
+				{ o + d},
+			};
+
+			debug_mesh.set_vertices(verts, 2);
+
+			debug_mesh.using_shader(debug_shader).set_camera(*cur_cam).set_uniform("u_color").vec4(cur_color).draw<GL_LINES>();
+		}
+	};
+}
+
+
 namespace primative
 {
 
@@ -745,6 +815,6 @@ struct volume_slicer : public renderer<texture>
 	}
 };
 
-}; // end namespace renderer
+}; // end namespace primative
 }; // end namespace gfx
 }; // end namespace g
