@@ -26,9 +26,13 @@ struct my_core : public g::core
 {
     g::asset::store assets;
     float t[2];
+    g::game::camera_perspective cam;
 
     virtual bool initialize()
     {
+        cam.position = { 0, 0, -2 };
+        cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
+        glDisable(GL_CULL_FACE);
         return true;
     }
 
@@ -37,13 +41,25 @@ struct my_core : public g::core
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        const auto speed = 4.0f;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
+        cam.aspect_ratio = g::gfx::aspect();
+
         g::ui::layer root(&assets, "basic_gui.vs+basic_gui.fs");
 
-        root.shader().draw_tri_fan();
+        root.shader().set_camera(cam).draw_tri_fan();
 
-        my_cam cam;
-        auto button0 = root.child({0.25f + (cosf(t[0]) * 0.05f), 0.25f + (cosf(t[0]) * 0.05f)}, {-0.55f, 0, -0.1f});
-        auto button1 = root.child({0.25f + (cosf(t[1]) * 0.05f), 0.25f + (cosf(t[1]) * 0.05f)}, {0.55f, 0, -0.1f});
+        auto button0 = root.child({0.25f + (cosf(t[0] * 2) * 0.05f), 0.25f + (cosf(t[0] * 2) * 0.05f)}, {-0.55f, 0, -0.1f});
+        auto button1 = root.child({0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f)}, {0.55f, 0, -0.1f});
 
         // auto ray_o = g::ui::origin_from_mouse(&cam);
         auto pointer = g::ui::pointer_from_mouse(&cam);
@@ -57,8 +73,8 @@ struct my_core : public g::core
             t[1] += dt;
         }
 
-        button0.shader().draw_tri_fan();
-        button1.shader().draw_tri_fan();
+        button0.shader().set_camera(cam).draw_tri_fan();
+        button1.shader().set_camera(cam).draw_tri_fan();
     }
 };
 

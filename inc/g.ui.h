@@ -125,13 +125,15 @@ static pointer pointer_from_mouse(g::game::camera* cam)
                          fabs(proj[2].dot(proj[0])) < eps;
 
     vec<3> pos, dir;
-    uint32_t pick;
+    uint32_t pick = 0;
+
+    auto view = cam->view();
 
     if (is_proj_ortho)
     {
-        auto ray_pos = cam->view() * xmath::vec<4>{
-            2.f * (float)(xpos / width) - 1.f,
-            2.f * (float)(ypos / height) - 1.f,
+        auto ray_pos = view.transpose() * xmath::vec<4>{
+            0,//2.f * (float)(xpos / width) - 1.f,
+            0,//2.f * (float)(ypos / height) - 1.f,
             0.f,
             1.0f
         };
@@ -139,11 +141,21 @@ static pointer pointer_from_mouse(g::game::camera* cam)
     }
 
     {
-        auto ray_d = cam->projection().invert() * xmath::vec<4>{
+        // zero out the translational components of the view matrix
+        view[3] *= {0, 0, 0, 1};
+        auto ray_d_unproj = xmath::vec<4>{
             2.f * (float)(xpos / width) - 1.f,
-            2.f * (float)(ypos / height) - 1.f, 1.f, 1.f
+            2.f * (float)(ypos / height) - 1.f,
+            -1.f,
+            1.f
         };
+
+        auto view_T = view.transpose();
+
+        auto ray_d = view_T * ray_d_unproj;
+        //ray_d /= ray_d[3];
         dir = ray_d.slice<3>();
+        std::cerr << dir.to_string() << std::endl;
     }
 
     return { pos, dir, pick };
