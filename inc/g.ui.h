@@ -16,6 +16,7 @@ struct pointer
     vec<3> position;
     vec<3> direction;
     uint32_t pick; //< Bitfield which corresponds to combinations of buttons or actions. 0 for none
+    float analog[8]; //< Analog control inputs, intended for things like joysticks and track pads
 };
 
 struct layer
@@ -112,6 +113,7 @@ public:
 
 static pointer pointer_from_mouse(g::game::camera* cam)
 {
+    pointer pointer_out = {};
     double xpos, ypos;
     glfwGetCursorPos(GLFW_WIN, &xpos, &ypos);
 
@@ -120,47 +122,57 @@ static pointer pointer_from_mouse(g::game::camera* cam)
 
     auto eps = 0.000001f;
     auto proj = cam->projection();
-    auto is_proj_ortho = fabs(proj[0].dot(proj[1])) < eps &&
-                         fabs(proj[1].dot(proj[2])) < eps &&
-                         fabs(proj[2].dot(proj[0])) < eps;
+    // auto is_proj_ortho = fabs(proj[0].dot(proj[1])) < eps &&
+    //                      fabs(proj[1].dot(proj[2])) < eps &&
+    //                      fabs(proj[2].dot(proj[0])) < eps;
 
-    vec<3> pos, dir;
-    uint32_t pick = 0;
+    const int buttons[] = {
+        GLFW_MOUSE_BUTTON_1,
+        GLFW_MOUSE_BUTTON_2,
+        GLFW_MOUSE_BUTTON_3,
+        GLFW_MOUSE_BUTTON_4,
+        GLFW_MOUSE_BUTTON_5,
+        GLFW_MOUSE_BUTTON_6,
+        GLFW_MOUSE_BUTTON_7,
+        GLFW_MOUSE_BUTTON_8,
+    };
+
+    // check each button for presses
+    for (unsigned bi = 0; bi < sizeof(buttons)/sizeof(buttons[0]); bi++)
+    {
+        pointer_out.pick |= glfwGetMouseButton(GLFW_WIN, buttons[bi]) << bi;
+    }
+
 
     auto view = cam->view();
     auto view_rot = cam->orientation.to_matrix();
-    // view_rot[3] *= {0, 0, 0, 1};
 
-    if (is_proj_ortho)
-    {
-        auto ray_offset = cam->orientation.to_matrix() * vec<4>{ 0, 0, 1, 1 };
-        auto ray_pos = view.invert() * xmath::vec<4>{
-            0,//2.f * (float)(xpos / width) - 1.f,
-            0,//2.f * (float)(ypos / height) - 1.f,
-            0.f,
-            1.0f
-        };
-        //pos = (view * ray_offset).slice<3>();//ray_pos.slice<3>();
-        pos = cam->position;
-    }
+    // TODO: figure out where to position ray origins for orthographic
+    // projections
+    // if (is_proj_ortho)
+    // {
+    // // ...
+    // }
+    pointer_out.position = cam->position;
+
+    pointer_out.analog[0] = xpos / width; // mouse x-axis
+    pointer_out.analog[1] = ypos / height; // mouse y-axis
 
     {
-        // zero out the translational components of the view matrix
-        auto ray_d_unproj = xmath::vec<4>{
-            (2.f * (float)(xpos / width) - 1.f),
-            -(2.f * (float)(ypos / height) - 1.f),
-            -1.f,
+        // unproject the point of the mouse on screen into world space
+        auto ray_d_unproj = proj.transpose().invert() * xmath::vec<4>{
+            (2.f * pointer_out.analog[0] - 1.f),
+            -(2.f * pointer_out.analog[1] - 1.f),
+            1.f,
             1.f
         };
 
+        // rotate the unprojected point
         auto ray_d = view_rot * ray_d_unproj;
-        //auto ray_d = ray_d_unproj;
-        //ray_d /= ray_d[3];
-        dir = ray_d.slice<3>();
-        std::cerr << dir.to_string() << std::endl;
+        pointer_out.direction = ray_d.slice<3>() / ray_d[3];
     }
 
-    return { pos, dir, pick };
+    return pointer_out;
 }
 
 

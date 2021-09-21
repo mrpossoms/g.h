@@ -69,7 +69,7 @@ struct my_core : public g::core
             t[0] += dt;
         }
 
-        if (button1.hover(pointer))
+        if (button1.select(pointer, 1))
         {
             t[1] += dt;
         }
@@ -80,7 +80,7 @@ struct my_core : public g::core
         // debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
 
         debug::print(&cam).color({ 0, 1, 0, 1 }).point(pointer.position + (pointer.direction * vec<3>{1, 1, 1}));
-        debug::print(&cam).color({ 1, 0, 0, 1 }).ray(pointer.position + pointer.direction, pointer.direction * 10);
+        debug::print(&cam).color({ 1, 0, 0, 1 }).ray(pointer.position + pointer.direction, pointer.direction);
     }
 };
 

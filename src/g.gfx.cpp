@@ -553,10 +553,6 @@ shader shader_factory::create()
 		}
 		exit(-1);
 	}
-	else
-	{
-		std::cerr << "Linked program " << out.program << std::endl;
-	}
 
 	assert(gl_get_error());
 
