@@ -33,7 +33,7 @@ struct my_core : public g::core
         cam.position = { 0, 0, -2 };
         cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
         glDisable(GL_CULL_FACE);
-        glPointSize(3);
+        glPointSize(10);
         return true;
     }
 
@@ -77,10 +77,10 @@ struct my_core : public g::core
         button0.shader().set_camera(cam).draw_tri_fan();
         button1.shader().set_camera(cam).draw_tri_fan();
 
-        debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
+        // debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
 
-        debug::print(&cam).color({ 1, 0, 0, 1 }).point(pointer.position);
-        debug::print(&cam).color({ 1, 0, 0, 1 }).ray(pointer.position, pointer.direction * 10);
+        debug::print(&cam).color({ 0, 1, 0, 1 }).point(pointer.position + (pointer.direction * vec<3>{1, 1, 1}));
+        debug::print(&cam).color({ 1, 0, 0, 1 }).ray(pointer.position + pointer.direction, pointer.direction * 10);
     }
 };
 

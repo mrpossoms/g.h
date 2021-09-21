@@ -129,7 +129,7 @@ static pointer pointer_from_mouse(g::game::camera* cam)
 
     auto view = cam->view();
     auto view_rot = cam->orientation.to_matrix();
-    view_rot[3] *= {0, 0, 0, 1};
+    // view_rot[3] *= {0, 0, 0, 1};
 
     if (is_proj_ortho)
     {
@@ -140,19 +140,18 @@ static pointer pointer_from_mouse(g::game::camera* cam)
             0.f,
             1.0f
         };
-        pos = (view * ray_offset).slice<3>();//ray_pos.slice<3>();
+        //pos = (view * ray_offset).slice<3>();//ray_pos.slice<3>();
+        pos = cam->position;
     }
 
     {
         // zero out the translational components of the view matrix
         auto ray_d_unproj = xmath::vec<4>{
             (2.f * (float)(xpos / width) - 1.f),
-            (2.f * (float)(ypos / height) - 1.f),
+            -(2.f * (float)(ypos / height) - 1.f),
             -1.f,
             1.f
         };
-
-        auto view_T = view.invert();// .transpose();
 
         auto ray_d = view_rot * ray_d_unproj;
         //auto ray_d = ray_d_unproj;
