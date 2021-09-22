@@ -691,7 +691,7 @@ struct font
 	};
 
 	texture face; /**< Texture containing all characters of the font face */
-	std::map<char, glyph> char_map; /**< associates string characters with their corresponding glyph */
+	std::unordered_map<char, glyph> char_map; /**< associates string characters with their corresponding glyph */
 };
 
 

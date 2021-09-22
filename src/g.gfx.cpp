@@ -581,17 +581,30 @@ font font_factory::from_true_type(const std::string& path)
 	// ... the font file could be opened and read, but it appears
 	// ... that its font format is unsupported
 	}
-	else if ( error )
+	else if (err_load)
 	{
 	// ... another error code means that the font file could not
 	// ... be opened or read, or that it is broken...
 	}
 
-	auto slot = face->slot;
-
-	if (FT_Render_Glyph( face->glyph, FT_RENDER_MODE_NORMAL ))
+	if (FT_Set_Pixel_Sizes(face,   /* handle to face object */
+                               0,      /* pixel_width           */
+                               16 ))   /* pixel_height          */
 	{
-		// render error
+	/*
+	Usually, an error occurs with a fixed-size font format (like FNT or PCF)
+	when trying to set the pixel size to a value that is not listed in the 
+	face->fixed_sizes array.
+	*/
 	}
+
+	for (unsigned ci = 0; ci < 256; ci++)
+	{
+		auto glyph_index = FT_Get_Char_Index(face, ci);
+		if (FT_Load_Char(face, ci, FT_LOAD_RENDER )) { continue; /* skip on err */ }
+		auto slot = face->glyph;
+	}
+
+
 }
 
