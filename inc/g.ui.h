@@ -70,7 +70,7 @@ public:
         return { *this, transform };
     }
 
-    shader::usage shader()
+    shader::usage using_shader()
     {
         const auto I = mat<4, 4>::I();
 
@@ -80,10 +80,10 @@ public:
         ["u_proj"].mat4(I);
     }
 
-    shader::usage shader(const std::string& program_collection)
+    shader::usage using_shader(const std::string& program_collection)
     {
         ctx.program_collection = program_collection;
-        return shader();
+        return using_shader();
     }
 
     float intersects(const vec<3>& ray_o, const vec<3>& ray_d) const

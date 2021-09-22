@@ -682,6 +682,25 @@ struct mesh_factory
 };
 
 
+struct font
+{
+	struct glyph
+	{
+		vec<2> uv_top_left;
+		vec<2> uv_bottom_right;
+	};
+
+	texture face; /**< Texture containing all characters of the font face */
+	std::map<char, glyph> char_map; /**< associates string characters with their corresponding glyph */
+};
+
+
+struct font_factory
+{
+	font from_true_type(const std::string& path);
+};
+
+
 namespace debug
 {
 	static g::gfx::shader debug_shader;

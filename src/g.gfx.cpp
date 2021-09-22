@@ -564,3 +564,34 @@ shader shader_factory::create()
 
 	return out;
 }
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+font font_factory::from_true_type(const std::string& path)
+{
+	FT_Library  library;   /* handle to library     */
+	FT_Face     face;      /* handle to face object */
+
+	auto err_init = FT_Init_FreeType( &library );
+
+	auto err_load = FT_New_Face(library, path.c_str(), 0, &face);
+	if (err_load == FT_Err_Unknown_File_Format)
+	{
+	// ... the font file could be opened and read, but it appears
+	// ... that its font format is unsupported
+	}
+	else if ( error )
+	{
+	// ... another error code means that the font file could not
+	// ... be opened or read, or that it is broken...
+	}
+
+	auto slot = face->slot;
+
+	if (FT_Render_Glyph( face->glyph, FT_RENDER_MODE_NORMAL ))
+	{
+		// render error
+	}
+}
+

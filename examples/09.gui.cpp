@@ -57,7 +57,7 @@ struct my_core : public g::core
 
         g::ui::layer root(&assets, "basic_gui.vs+basic_gui.fs");
 
-        root.shader().set_camera(cam).draw_tri_fan();
+        root.using_shader().set_camera(cam).draw_tri_fan();
 
         auto button0 = root.child({0.25f + (cosf(t[0] * 2) * 0.05f), 0.25f + (cosf(t[0] * 2) * 0.05f)}, {-0.55f, 0, -0.1f});
         auto button1 = root.child({0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f)}, {0.55f, 0, -0.1f});
@@ -74,8 +74,8 @@ struct my_core : public g::core
             t[1] += dt;
         }
 
-        button0.shader().set_camera(cam).draw_tri_fan();
-        button1.shader().set_camera(cam).draw_tri_fan();
+        button0.using_shader().set_camera(cam).draw_tri_fan();
+        button1.using_shader().set_camera(cam).draw_tri_fan();
 
         // debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
 
