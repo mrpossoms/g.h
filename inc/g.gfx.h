@@ -156,34 +156,9 @@ struct texture_factory
 
 	texture_factory& repeating();
 
-	texture_factory& fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler)
-	{
-		// void* pixels;
+	texture_factory& fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler);
 
-		auto bytes_per_textel = bytes_per_component * component_count;
-		auto textels_per_row = size[2];
-		auto textels_per_plane = size[1] * size[2];
-		data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
-
-		for (unsigned i = 0; i < size[0]; i++)
-		{
-			for (unsigned j = 0; j < size[1]; j++)
-			{
-				for (unsigned k = 0; k < size[2]; k++)
-				{
-					// unsigned vi = i * textels_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
-					// unsigned vi = (i * textels_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
-					// filler(i, j, k, data + vi);
-
-		            unsigned vi = ((i * textels_per_plane) + (j * textels_per_row) + k) * bytes_per_textel;
-
-		            filler(i, j, k, data + vi);
-				}
-			}
-		}
-
-		return *this;
-	}
+	texture_factory& fill(unsigned char* buffer);
 
 	texture create();
 };
@@ -310,6 +285,8 @@ struct shader
 		usage mat4 (const mat<4, 4>& m);
 
 		usage mat3 (const mat<3, 3>& m);
+
+		usage vec2 (const vec<2>& v);
 
 		usage vec3 (const vec<3>& v);
 
@@ -688,16 +665,17 @@ struct font
 	{
 		vec<2> uv_top_left;
 		vec<2> uv_bottom_right;
+		unsigned width, height;
 	};
 
 	texture face; /**< Texture containing all characters of the font face */
-	std::unordered_map<char, glyph> char_map; /**< associates string characters with their corresponding glyph */
+	std::unordered_map<unsigned char, glyph> char_map; /**< associates string characters with their corresponding glyph */
 };
 
 
 struct font_factory
 {
-	font from_true_type(const std::string& path);
+	font from_true_type(const std::string& path, unsigned point=16);
 };
 
 
@@ -842,6 +820,39 @@ struct volume_slicer : public renderer<texture>
              ["u_voxels"].texture(vox)
              .draw<GL_TRIANGLES>();
         // auto tranform =
+	}
+};
+
+struct text : public renderer<std::string>
+{
+	g::gfx::font& font;
+    static g::gfx::mesh<vertex::pos_uv_norm> plane;
+
+	text(g::gfx::font& f) : font(f)
+	{
+		if (!plane.is_initialized())
+		{
+			plane = g::gfx::mesh_factory{}.plane();
+		}
+	}
+
+	void draw(g::gfx::shader& shader,
+		  const std::string& str,
+	      const g::game::camera& cam,
+	      const mat<4, 4>& model)
+	{
+		for (unsigned i = 0; i < str.length(); i++)
+		{
+			auto glyph = font.char_map[str[i]];
+
+	        plane.using_shader(shader)
+	        .set_camera(cam)
+	        ["u_font_color"].vec4({1, 1, 1, 1})
+	        ["u_uv_top_left"].vec2(glyph.uv_top_left)
+	        ["u_uv_bottom_right"].vec2(glyph.uv_bottom_right)
+	        ["u_texture"].texture(font.face)
+	        .draw_tri_fan();
+		}
 	}
 };
 

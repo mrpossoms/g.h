@@ -263,6 +263,43 @@ texture_factory& texture_factory::repeating()
 }
 
 
+texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler)
+{
+	// void* pixels;
+
+	auto bytes_per_textel = bytes_per_component * component_count;
+	auto textels_per_row = size[2];
+	auto textels_per_plane = size[1] * size[2];
+	data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
+
+	for (unsigned i = 0; i < size[0]; i++)
+	{
+		for (unsigned j = 0; j < size[1]; j++)
+		{
+			for (unsigned k = 0; k < size[2]; k++)
+			{
+				// unsigned vi = i * textels_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
+				// unsigned vi = (i * textels_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
+				// filler(i, j, k, data + vi);
+
+	            unsigned vi = ((i * textels_per_plane) + (j * textels_per_row) + k) * bytes_per_textel;
+
+	            filler(i, j, k, data + vi);
+			}
+		}
+	}
+
+	return *this;
+}
+
+texture_factory& texture_factory::fill(unsigned char* buffer)
+{
+	data = buffer;
+
+	return *this;
+}
+
+
 texture texture_factory::create()
 {
 	texture out;
@@ -287,6 +324,7 @@ texture texture_factory::create()
 
 	return out;
 }
+
 
 framebuffer_factory::framebuffer_factory(unsigned w, unsigned h)
 {
@@ -443,6 +481,13 @@ shader::usage shader::uniform_usage::mat3 (const mat<3, 3>& m)
 	return parent_usage;
 }
 
+shader::usage shader::uniform_usage::vec2 (const vec<2>& v)
+{
+	glUniform2fv(uni_loc, 1, v.v);
+
+	return parent_usage;
+}
+
 shader::usage shader::uniform_usage::vec3 (const vec<3>& v)
 {
 	glUniform3fv(uni_loc, 1, v.v);
@@ -568,7 +613,7 @@ shader shader_factory::create()
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-font font_factory::from_true_type(const std::string& path)
+font font_factory::from_true_type(const std::string& path, unsigned point)
 {
 	g::gfx::font font;
 
@@ -595,7 +640,7 @@ font font_factory::from_true_type(const std::string& path)
 
 	assert(!err_load);
 
-	size_t pix_per_glyph = 16;
+	size_t pix_per_glyph = point;
 	if (FT_Set_Pixel_Sizes(face,   /* handle to face object */
                            0,      /* pixel_width           */
                            pix_per_glyph ))   /* pixel_height          */
@@ -608,18 +653,17 @@ font font_factory::from_true_type(const std::string& path)
 		assert(false);
 	}
 
-	size_t rows = sqrt(256), cols = sqrt(256);
-	size_t row_pix = rows * pix_per_glyph;
-	size_t col_pix = cols * pix_per_glyph;
-	size_t bytes_per_pixel = 0;
-	size_t bytes_per_map_row = 0;
+	unsigned rows = sqrt(256), cols = sqrt(256);
+	unsigned row_pix = rows * pix_per_glyph;
+	unsigned col_pix = cols * pix_per_glyph;
+	unsigned bytes_per_pixel = 0;
+	unsigned bytes_per_map_row = 0;
 
-	uint8_t* buffer = nullptr;
+	unsigned char* buffer = nullptr;
 
-	for (unsigned ci = 0; ci < 256; ci++)
+	for (unsigned ci = 1; ci < 256; ci++)
 	{
-		auto glyph_index = FT_Get_Char_Index(face, ci);
-		if (FT_Load_Char(face, glyph_index, FT_LOAD_RENDER )) { continue; /* skip on err */ }
+		if (FT_Load_Char(face, ci, FT_LOAD_RENDER )) { continue; /* skip on err */ }
 		auto slot = face->glyph;
 
 		// allocate the full character set buffer
@@ -627,7 +671,7 @@ font font_factory::from_true_type(const std::string& path)
 		{
 			bytes_per_pixel = slot->bitmap.pitch / slot->bitmap.width;
 			bytes_per_map_row = col_pix * bytes_per_pixel;
-			buffer = new uint8_t[row_pix * bytes_per_map_row];
+			buffer = new unsigned char[row_pix * bytes_per_map_row];
 		}
 
 		auto glyph_row = ci / cols;
@@ -635,30 +679,49 @@ font font_factory::from_true_type(const std::string& path)
 
 		auto map_row = glyph_row * pix_per_glyph;
 
+		// printf("VV char '%c'\n", ci);
 		for (unsigned r = 0; r < slot->bitmap.rows; r++)
 		{
 			// write(1, slot->bitmap.buffer + r * slot->bitmap.pitch, slot->bitmap.pitch);
-			for (unsigned c = 0; c < slot->bitmap.width; c++)
-			{
-				putchar(slot->bitmap.buffer[r * slot->bitmap.pitch + c] > 0 ? 'x' : ' ');
-			}
-			putchar('\n');
+			// for (unsigned c = 0; c < slot->bitmap.width; c++)
+			// {
+			// 	putchar(slot->bitmap.buffer[r * slot->bitmap.pitch + c] > 0 ? 'x' : ' ');
+			// }
+			// putchar('\n');
 			auto row_off = (r + map_row) * bytes_per_map_row;
 			auto col_off = (glyph_col * pix_per_glyph) * bytes_per_pixel;
 			auto map_buf_ptr = &buffer[row_off + col_off];
 			memcpy(map_buf_ptr, &slot->bitmap.buffer[r * slot->bitmap.pitch], slot->bitmap.pitch);
 		}
+
+		// compute uvs for each glyph
+		auto uv_upper_left = vec<2>{(float)glyph_col, (float)(glyph_row)} * (pix_per_glyph / (float)row_pix);
+		auto uv_lower_right = uv_upper_left + vec<2>{ slot->bitmap.width / (float)row_pix, slot->bitmap.rows /(float)row_pix }; 
+		// auto uv_lower_right = vec<2>{glyph_col + 1.f, (glyph_row + 1)} * (pix_per_glyph / (float)row_pix);
+		font.char_map.insert({
+			ci, {
+				{ uv_upper_left[0], uv_upper_left[1]},
+				{ uv_lower_right[0], uv_lower_right[1]},
+				slot->bitmap.width,
+				slot->bitmap.rows
+			}
+		});
 	}
 
-	for(unsigned r = 0; r < 256; r+=1)
-	{
-		for(unsigned c = 0; c < 256; c+=1)
-		{
-			putchar(buffer[(r * bytes_per_map_row) + (c * 1)] > 0 ? 'x' : ' ');
-		}
-		putchar('\n');
-	}
-	std::cerr<<"done\n";
+	FT_Done_Face    ( face );
+	FT_Done_FreeType( library );
+
+	// for(unsigned r = 0; r < row_pix; r+=1)
+	// {
+	// 	for(unsigned c = 0; c < col_pix; c+=1)
+	// 	{
+	// 		putchar(buffer[(r * bytes_per_map_row) + (c * 1)] > 0 ? 'x' : ' ');
+	// 	}
+	// 	putchar('\n');
+	// }
+	// std::cerr<<"done\n";
+
+	font.face = texture_factory{col_pix, row_pix}.type(GL_UNSIGNED_BYTE).components(1).fill(buffer).pixelated().create();
 
 	return font;
 }
