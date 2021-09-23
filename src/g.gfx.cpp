@@ -583,7 +583,7 @@ font font_factory::from_true_type(const std::string& path)
 		std::cerr << G_TERM_RED "font_factory: " <<
 		"the font file could be opened and read, but it appears "
 		"that its font format is unsupported"
-		<< G_TERM_COLOR_OFF << std::endl; 
+		<< G_TERM_COLOR_OFF << std::endl;
 	}
 	else if (err_load)
 	{
@@ -602,7 +602,7 @@ font font_factory::from_true_type(const std::string& path)
 	{
 	/*
 	Usually, an error occurs with a fixed-size font format (like FNT or PCF)
-	when trying to set the pixel size to a value that is not listed in the 
+	when trying to set the pixel size to a value that is not listed in the
 	face->fixed_sizes array.
 	*/
 		assert(false);
@@ -633,25 +633,28 @@ font font_factory::from_true_type(const std::string& path)
 		auto glyph_row = ci / cols;
 		auto glyph_col = ci % cols;
 
+		auto map_row = glyph_row * pix_per_glyph;
+
 		for (unsigned r = 0; r < slot->bitmap.rows; r++)
 		{
-
 			// write(1, slot->bitmap.buffer + r * slot->bitmap.pitch, slot->bitmap.pitch);
 			for (unsigned c = 0; c < slot->bitmap.width; c++)
 			{
 				putchar(slot->bitmap.buffer[r * slot->bitmap.pitch + c] > 0 ? 'x' : ' ');
 			}
 			putchar('\n');
-			auto map_buf_row = &buffer[pix_per_glyph * ((glyph_row * bytes_per_map_row) + (glyph_col * bytes_per_pixel))];
-			memcpy(map_buf_row, slot->bitmap.buffer + r * slot->bitmap.pitch, slot->bitmap.pitch);
+			auto row_off = (r + map_row) * bytes_per_map_row;
+			auto col_off = (glyph_col * pix_per_glyph) * bytes_per_pixel;
+			auto map_buf_ptr = &buffer[row_off + col_off];
+			memcpy(map_buf_ptr, &slot->bitmap.buffer[r * slot->bitmap.pitch], slot->bitmap.pitch);
 		}
 	}
 
-	for(unsigned r = 0; r < 256; r+=4)
+	for(unsigned r = 0; r < 256; r+=1)
 	{
-		for(unsigned c = 0; c < 256; c+=2)
+		for(unsigned c = 0; c < 256; c+=1)
 		{
-			putchar(buffer[(r * bytes_per_map_row) + (c * bytes_per_pixel)] > 0 ? 'x' : ' ');
+			putchar(buffer[(r * bytes_per_map_row) + (c * 1)] > 0 ? 'x' : ' ');
 		}
 		putchar('\n');
 	}
