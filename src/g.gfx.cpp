@@ -570,6 +570,8 @@ shader shader_factory::create()
 
 font font_factory::from_true_type(const std::string& path)
 {
+	g::gfx::font font;
+
 	FT_Library  library;   /* handle to library     */
 	FT_Face     face;      /* handle to face object */
 
@@ -578,33 +580,83 @@ font font_factory::from_true_type(const std::string& path)
 	auto err_load = FT_New_Face(library, path.c_str(), 0, &face);
 	if (err_load == FT_Err_Unknown_File_Format)
 	{
-	// ... the font file could be opened and read, but it appears
-	// ... that its font format is unsupported
+		std::cerr << G_TERM_RED "font_factory: " <<
+		"the font file could be opened and read, but it appears "
+		"that its font format is unsupported"
+		<< G_TERM_COLOR_OFF << std::endl; 
 	}
 	else if (err_load)
 	{
-	// ... another error code means that the font file could not
-	// ... be opened or read, or that it is broken...
+		std::cerr << G_TERM_RED "font_factory: " <<
+		"another error code means that the font file could not "
+		"be opened or read, or that it is broken..."
+		<< G_TERM_COLOR_OFF << std::endl;
 	}
 
+	assert(!err_load);
+
+	size_t pix_per_glyph = 16;
 	if (FT_Set_Pixel_Sizes(face,   /* handle to face object */
-                               0,      /* pixel_width           */
-                               16 ))   /* pixel_height          */
+                           0,      /* pixel_width           */
+                           pix_per_glyph ))   /* pixel_height          */
 	{
 	/*
 	Usually, an error occurs with a fixed-size font format (like FNT or PCF)
 	when trying to set the pixel size to a value that is not listed in the 
 	face->fixed_sizes array.
 	*/
+		assert(false);
 	}
+
+	size_t rows = sqrt(256), cols = sqrt(256);
+	size_t row_pix = rows * pix_per_glyph;
+	size_t col_pix = cols * pix_per_glyph;
+	size_t bytes_per_pixel = 0;
+	size_t bytes_per_map_row = 0;
+
+	uint8_t* buffer = nullptr;
 
 	for (unsigned ci = 0; ci < 256; ci++)
 	{
 		auto glyph_index = FT_Get_Char_Index(face, ci);
-		if (FT_Load_Char(face, ci, FT_LOAD_RENDER )) { continue; /* skip on err */ }
+		if (FT_Load_Char(face, glyph_index, FT_LOAD_RENDER )) { continue; /* skip on err */ }
 		auto slot = face->glyph;
+
+		// allocate the full character set buffer
+		if (nullptr == buffer)
+		{
+			bytes_per_pixel = slot->bitmap.pitch / slot->bitmap.width;
+			bytes_per_map_row = col_pix * bytes_per_pixel;
+			buffer = new uint8_t[row_pix * bytes_per_map_row];
+		}
+
+		auto glyph_row = ci / cols;
+		auto glyph_col = ci % cols;
+
+		for (unsigned r = 0; r < slot->bitmap.rows; r++)
+		{
+
+			// write(1, slot->bitmap.buffer + r * slot->bitmap.pitch, slot->bitmap.pitch);
+			for (unsigned c = 0; c < slot->bitmap.width; c++)
+			{
+				putchar(slot->bitmap.buffer[r * slot->bitmap.pitch + c] > 0 ? 'x' : ' ');
+			}
+			putchar('\n');
+			auto map_buf_row = &buffer[pix_per_glyph * ((glyph_row * bytes_per_map_row) + (glyph_col * bytes_per_pixel))];
+			memcpy(map_buf_row, slot->bitmap.buffer + r * slot->bitmap.pitch, slot->bitmap.pitch);
+		}
 	}
 
+	for(unsigned r = 0; r < 256; r+=4)
+	{
+		for(unsigned c = 0; c < 256; c+=2)
+		{
+			putchar(buffer[(r * bytes_per_map_row) + (c * bytes_per_pixel)] > 0 ? 'x' : ' ');
+		}
+		putchar('\n');
+	}
+	std::cerr<<"done\n";
 
+	return font;
 }
 

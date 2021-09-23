@@ -20,6 +20,7 @@ add_executable(06.simple_multiplayer_game 06.simple_multiplayer_game.cpp)
 add_executable(07.voxels 07.voxels.cpp)
 add_executable(08.ray_march 08.ray_march.cpp)
 add_executable(09.gui 09.gui.cpp)
+add_executable(10.text 10.text.cpp)
 
 if (WIN32)
 message(STATUS ">>> Will copy data directory")
