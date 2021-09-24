@@ -18,9 +18,9 @@ struct my_core : public g::core
 
     virtual bool initialize()
     {
-        ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/UbuntuMono-B.ttf", 32);
+        ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/OpenSans-Regular.ttf", 32);
         plane = g::gfx::mesh_factory{}.plane();
-        cam.position = { 0, 0, -20 };
+        cam.position = { 0, 0, -10 };
         cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
         glDisable(GL_CULL_FACE);
         return true;
@@ -40,7 +40,7 @@ struct my_core : public g::core
         // auto str = "e";
 
         glDisable(GL_DEPTH_TEST);
-        g::gfx::primative::text{ubuntu}.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, mat4::translation({-10, 0, 0}));
+        g::gfx::primative::text{ubuntu}.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, mat4::translation({2, 0, 0}));
 
         // auto zero = ubuntu.char_map[str[c % str.length()]];
         // plane.using_shader(assets.shader("basic_gui.vs+basic_font.fs"))

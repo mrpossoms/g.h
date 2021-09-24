@@ -14,5 +14,6 @@ void main (void)
     vec2 uv = (vec2(1.0) - v_uv) * (u_uv_bottom_right - u_uv_top_left) + u_uv_top_left;
 
     float a = texture(u_texture, uv).r;
-    color = u_font_color * a;//vec4(1.0, 1.0, 1.0, a);
+    color = u_font_color;
+    color.a *= a;//vec4(1.0, 1.0, 1.0, a);
 }

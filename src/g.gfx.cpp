@@ -663,8 +663,25 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 
 	for (unsigned ci = 1; ci < 256; ci++)
 	{
-		if (FT_Load_Char(face, ci, FT_LOAD_RENDER )) { continue; /* skip on err */ }
+		auto glyph_idx = FT_Get_Char_Index(face, ci);
+		if (FT_Load_Glyph(face, glyph_idx, FT_LOAD_DEFAULT )) { continue; }
+		
+		font.kerning_map.insert({ci, {}}); // add a new map
+		for (unsigned cii = 1; cii < 256; cii++)
+		{
+			auto adj_glyph_idx = FT_Get_Char_Index(face, cii);
+
+			FT_Vector kern;
+			if (FT_Get_Kerning(face, glyph_idx, adj_glyph_idx, FT_KERNING_DEFAULT, &kern))
+			{
+				continue;
+			}
+
+			font.kerning_map[ci].insert({cii, {kern.x / (float)point, kern.y / (float)point}});
+		}
+
 		auto slot = face->glyph;
+		if (FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL )) { continue; /* skip on err */ }
 
 		// allocate the full character set buffer
 		if (nullptr == buffer)
@@ -682,12 +699,6 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 		// printf("VV char '%c'\n", ci);
 		for (unsigned r = 0; r < slot->bitmap.rows; r++)
 		{
-			// write(1, slot->bitmap.buffer + r * slot->bitmap.pitch, slot->bitmap.pitch);
-			// for (unsigned c = 0; c < slot->bitmap.width; c++)
-			// {
-			// 	putchar(slot->bitmap.buffer[r * slot->bitmap.pitch + c] > 0 ? 'x' : ' ');
-			// }
-			// putchar('\n');
 			auto row_off = (r + map_row) * bytes_per_map_row;
 			auto col_off = (glyph_col * pix_per_glyph) * bytes_per_pixel;
 			auto map_buf_ptr = &buffer[row_off + col_off];
@@ -700,11 +711,12 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 		// auto uv_lower_right = vec<2>{glyph_col + 1.f, (glyph_row + 1)} * (pix_per_glyph / (float)row_pix);
 		font.char_map.insert({
 			ci, {
-				{ uv_upper_left[0], uv_upper_left[1]},
-				{ uv_lower_right[0], uv_lower_right[1]},
-				slot->bitmap.width,
-				slot->bitmap.rows,
-				{ (float)slot->advance.x, (float)slot->advance.y },
+				{ uv_upper_left[0], uv_upper_left[1] },
+				{ uv_lower_right[0], uv_lower_right[1] },
+				slot->bitmap.width / (float)point,
+				slot->bitmap.rows / (float)point,
+				{ (float)slot->bitmap_left / (float)point, (float)slot->bitmap_top / (float)point },
+				{ (float)(slot->advance.x >> 6) / (float)point, (float)(slot->advance.y >> 6) / (float)point },
 			}
 		});
 	}
