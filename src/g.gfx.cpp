@@ -703,7 +703,8 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 				{ uv_upper_left[0], uv_upper_left[1]},
 				{ uv_lower_right[0], uv_lower_right[1]},
 				slot->bitmap.width,
-				slot->bitmap.rows
+				slot->bitmap.rows,
+				{ (float)slot->advance.x, (float)slot->advance.y },
 			}
 		});
 	}

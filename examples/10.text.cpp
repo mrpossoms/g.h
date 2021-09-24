@@ -14,36 +14,47 @@ struct my_core : public g::core
 
     g::gfx::mesh<vertex::pos_uv_norm> plane;
     g::gfx::font ubuntu;
+    g::game::camera_perspective cam;
 
     virtual bool initialize()
     {
         ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/UbuntuMono-B.ttf", 32);
         plane = g::gfx::mesh_factory{}.plane();
-
+        cam.position = { 0, 0, -20 };
+        cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
+        glDisable(GL_CULL_FACE);
         return true;
     }
 
     virtual void update(float dt)
     {
-        static char c = 'e';
+        static int c = 0;
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         auto I = mat4::I();
 
-        auto zero = ubuntu.char_map[c];
 
-        plane.using_shader(assets.shader("basic_gui.vs+basic_font.fs"))
-        ["u_model"].mat4(I)
-        ["u_view"].mat4(I)
-        ["u_proj"].mat4(I)
-        ["u_font_color"].vec4({1, 1, 1, 1})
-        ["u_uv_top_left"].vec2(zero.uv_top_left)
-        ["u_uv_bottom_right"].vec2(zero.uv_bottom_right)
-        ["u_texture"].texture(ubuntu.face)
-        .draw_tri_fan();
 
-        // c++;
+        std::string str = "Hello, world!";
+        // auto str = "e";
+
+        glDisable(GL_DEPTH_TEST);
+        g::gfx::primative::text{ubuntu}.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, mat4::translation({-10, 0, 0}));
+
+        // auto zero = ubuntu.char_map[str[c % str.length()]];
+        // plane.using_shader(assets.shader("basic_gui.vs+basic_font.fs"))
+        // ["u_model"].mat4(I)
+        // ["u_view"].mat4(I)
+        // ["u_proj"].mat4(I)
+        // ["u_font_color"].vec4({1, 1, 1, 1})
+        // ["u_uv_top_left"].vec2(zero.uv_top_left)
+        // ["u_uv_bottom_right"].vec2(zero.uv_bottom_right)
+        // ["u_texture"].texture(ubuntu.face)
+        // .draw_tri_fan();
+
+        sleep(1);
+        c++;
     }
 };
 

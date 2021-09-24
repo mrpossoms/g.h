@@ -665,7 +665,8 @@ struct font
 	{
 		vec<2> uv_top_left;
 		vec<2> uv_bottom_right;
-		unsigned width, height;
+		float width, height;
+		vec<2> advance;
 	};
 
 	texture face; /**< Texture containing all characters of the font face */
@@ -826,7 +827,7 @@ struct volume_slicer : public renderer<texture>
 struct text : public renderer<std::string>
 {
 	g::gfx::font& font;
-    static g::gfx::mesh<vertex::pos_uv_norm> plane;
+    g::gfx::mesh<vertex::pos_uv_norm> plane; // TODO: share a singlton plane across all text renderers
 
 	text(g::gfx::font& f) : font(f)
 	{
@@ -841,17 +842,27 @@ struct text : public renderer<std::string>
 	      const g::game::camera& cam,
 	      const mat<4, 4>& model)
 	{
+		vec<2> pen = {};
 		for (unsigned i = 0; i < str.length(); i++)
 		{
 			auto glyph = font.char_map[str[i]];
 
+	        auto I = mat<4, 4>::I();
+
 	        plane.using_shader(shader)
 	        .set_camera(cam)
+	        ["u_model"].mat4(mat<4, 4>::scale({-glyph.width/32.f, glyph.height/32.f, 1}) * mat<4, 4>::translation({-pen[0], pen[1], 0}))
+			// ["u_model"].mat4(I)
+			// ["u_view"].mat4(I)
+			// ["u_proj"].mat4(I)
+			// ["u_font_color"].vec4({1, 1, 1, 1})
 	        ["u_font_color"].vec4({1, 1, 1, 1})
 	        ["u_uv_top_left"].vec2(glyph.uv_top_left)
 	        ["u_uv_bottom_right"].vec2(glyph.uv_bottom_right)
 	        ["u_texture"].texture(font.face)
 	        .draw_tri_fan();
+
+			pen += glyph.advance * 0.1f;
 		}
 	}
 };
