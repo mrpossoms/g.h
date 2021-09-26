@@ -18,17 +18,19 @@ struct my_core : public g::core
 
     virtual bool initialize()
     {
-        ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/OpenSans-Regular.ttf", 32);
+        ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/UbuntuMono-B.ttf", 64);
         plane = g::gfx::mesh_factory{}.plane();
         cam.position = { 0, 0, -10 };
         cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
+        cam.aspect_ratio = g::gfx::aspect();
         glDisable(GL_CULL_FACE);
+        glPointSize(10);
+        // glLineWidth(2);
         return true;
     }
 
     virtual void update(float dt)
     {
-        static int c = 0;
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -36,11 +38,14 @@ struct my_core : public g::core
 
 
 
-        std::string str = "Hello, world!";
+        std::string str = "Hello, world!\nthis is a test\nof newlines. What\nDo you do when you\nhabe more lines?";
         // auto str = "e";
 
         glDisable(GL_DEPTH_TEST);
-        g::gfx::primative::text{ubuntu}.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, mat4::translation({2, 0, 0}));
+        auto text = g::gfx::primative::text{ubuntu};
+
+        auto dims = text.measure(str) * 1;
+        text.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, mat4::scale({1}) * mat4::translation({dims[0]/2, dims[1]/4, 0}));
 
         // auto zero = ubuntu.char_map[str[c % str.length()]];
         // plane.using_shader(assets.shader("basic_gui.vs+basic_font.fs"))
@@ -53,8 +58,6 @@ struct my_core : public g::core
         // ["u_texture"].texture(ubuntu.face)
         // .draw_tri_fan();
 
-        sleep(1);
-        c++;
     }
 };
 
