@@ -711,8 +711,8 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 		// auto uv_lower_right = vec<2>{glyph_col + 1.f, (glyph_row + 1)} * (pix_per_glyph / (float)row_pix);
 		font.char_map.insert({
 			ci, {
-				{ uv_upper_left[0], uv_upper_left[1] },
-				{ uv_lower_right[0], uv_lower_right[1] },
+				{ uv_lower_right[0], uv_upper_left[1] },
+				{ uv_upper_left[0], uv_lower_right[1] },
 				slot->bitmap.width / (float)point,
 				slot->bitmap.rows / (float)point,
 				{ (float)-slot->bitmap_left / (float)point, (float)slot->bitmap_top / (float)point },

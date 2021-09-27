@@ -55,9 +55,9 @@ void text::draw(g::gfx::shader& shader,
 		auto ctx = *itr;
 		auto& glyph = ctx.glyph;//font.char_map[str[i]];
 
-        auto p = ctx.pen + (ctx.glyph.left_top + itr.kerning())+ vec<2>{ctx.glyph.width/2, 0};
+        auto p = ctx.pen + ctx.glyph.left_top + itr.kerning() + vec<2>{ctx.glyph.width, 0};
 
-        auto glyph_model = mat<4, 4>::scale({-glyph.width, glyph.height, 1}) * mat<4, 4>::translation({-p[0], p[1], 0}) * model;
+        auto glyph_model = mat<4, 4>::scale({-glyph.width, glyph.height, 1}) * mat<4, 4>::translation({p[0], p[1], 0}) * model;
 
         plane.using_shader(shader)
         .set_camera(cam)
@@ -68,8 +68,8 @@ void text::draw(g::gfx::shader& shader,
         ["u_texture"].texture(font.face)
         .draw_tri_fan();
 
-        debug::print{&cam}.color({1, 0, 0, 1}).model(model).point(ctx.pen * vec<2>{-1, 1});
-        debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(ctx.pen * vec<2>{-1, 1}, (p - ctx.pen));
+        debug::print{&cam}.color({1, 0, 0, 1}).model(model).point(ctx.pen);
+        debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(ctx.pen, (p - ctx.pen));
 	}
 }
 
@@ -83,9 +83,9 @@ void text::measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out)
 	for (auto itr = it(str, font, 0); itr != end; ++itr)
 	{
 		auto ctx = *itr;
-		auto p = ctx.pen + (ctx.glyph.left_top + vec<2>{ctx.glyph.width/2, 0});
-		min = min.take_min(p + vec<2>{-ctx.glyph.width, ctx.glyph.height});
-		max = max.take_max(p + vec<2>{ctx.glyph.width, -ctx.glyph.height});
+		auto p = ctx.pen + ctx.glyph.left_top + itr.kerning();
+		min = min.take_min(p + vec<2>{-ctx.glyph.width, -ctx.glyph.height});
+		max = max.take_max(p + vec<2>{ctx.glyph.width, ctx.glyph.height});
 	
 		if (first)
 		{
@@ -93,6 +93,9 @@ void text::measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out)
 			first = false;
 		}
 	}
+
+	min *= vec<2>{1, -1};
+	max *= vec<2>{1, -1};
 
 	dims_out = (max - min);
 }

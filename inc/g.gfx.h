@@ -684,99 +684,25 @@ struct font_factory
 
 namespace debug
 {
-	static g::gfx::shader debug_shader;
-	static g::gfx::mesh<vertex::pos> debug_mesh;
-
 	struct print
 	{
-		const std::string vs_dbg_src =
-		"#version 410\n"
-		"in vec3 a_position;"
-		"uniform mat4 u_view;"
-		"uniform mat4 u_proj;"
-		"uniform mat4 u_model;"
-		"void main (void) {"
-		"gl_Position = u_proj * u_view * u_model * vec4(a_position, 1.0);"
-		"}";
-
-		const std::string fs_dbg_src =
-		"#version 410\n"
-		"uniform vec4 u_color;"
-		"out vec4 color;"
-		"void main (void) {"
-		"color = u_color;"
-		"}";
-
 		vec<4> cur_color;
 		const g::game::camera* cur_cam;
 		mat<4, 4> cur_model = mat<4, 4>::I();
 
-		print(const g::game::camera* cam)
-		{
-			if (!debug_shader.is_initialized())
-			{
-				debug_shader = shader_factory{}
-					.add_src<GL_VERTEX_SHADER>(vs_dbg_src)
-					.add_src<GL_FRAGMENT_SHADER>(fs_dbg_src)
-					.create();
-				debug_mesh = mesh_factory::empty_mesh<vertex::pos>();
-			}
+		print(const g::game::camera* cam);
 
-			cur_cam = cam;
-		}
+		print& color(const vec<4>& c);
 
-		print& color(const vec<4>& c)
-		{
-			cur_color = c;
-			return *this;
-		}
+		print& model(const mat<4, 4>& m);
 
-		print& model(const mat<4, 4>& m)
-		{
-			cur_model = m;
-			return *this;
-		}
+		void ray(const vec<2>& o, const vec<2>& d);
 
-		void ray(const vec<2>& o, const vec<2>& d)
-		{
-			ray(vec<3>{o[0], o[1], 0}, vec<3>{d[0], d[1], 0});
-		}
+		void ray(const vec<3>& o, const vec<3>& d);
 
-		void ray(const vec<3>& o, const vec<3>& d)
-		{
-			vertex::pos verts[2] = {
-				{ o },
-				{ o + d},
-			};
+		void point(const vec<2>& o);
 
-			debug_mesh.set_vertices(verts, 2);
-
-			debug_mesh.using_shader(debug_shader)
-			          .set_camera(*cur_cam)
-			          .set_uniform("u_color").vec4(cur_color)
-			          .set_uniform("u_model").mat4(cur_model)
-			          .draw<GL_LINES>();
-		}
-
-		void point(const vec<2>& o)
-		{
-			point(vec<3>{o[0], o[1], 0});
-		}
-
-		void point(const vec<3>& o)
-		{
-			vertex::pos verts[1] = {
-				{ o },
-			};
-
-			debug_mesh.set_vertices(verts, 1);
-
-						debug_mesh.using_shader(debug_shader)
-			          .set_camera(*cur_cam)
-			          .set_uniform("u_color").vec4(cur_color)
-			          .set_uniform("u_model").mat4(cur_model)
-			          .draw<GL_POINTS>();
-		}
+		void point(const vec<3>& o);
 	};
 }
 
@@ -866,36 +792,15 @@ struct text : public renderer<std::string>
 			vec<2> pen = {};			
 		};
 
-		it(const std::string &str, g::gfx::font& f, size_t pos=0) : _font(f), _str(str)
-		{
-			_pos = pos;
-			_ctx.glyph = _font.char_map[_str[_pos]];
-		}
+		it(const std::string &str, g::gfx::font& f, size_t pos=0);
 
-		void operator++()
-		{
-			_ctx.pen += _ctx.glyph.advance * 2;
-			_last_char = _str[_pos];
-			_pos++;
+		void operator++();
 
-			auto c = _str[_pos];
+		vec<2> kerning();
 
-			if ('\n' == c)
-			{
-				_ctx.pen[0] = 0;
-				_ctx.pen[1] -= 2;
-				_pos++;
-				c = _str[_pos];
-			}
+		bool operator!=(it &i);
 
-			_ctx.glyph = _font.char_map[c];
-		}
-
-		vec<2> kerning() { return _font.kerning_map[_last_char][_str[_pos]]; }
-
-		bool operator!=(it &i) {return _pos != i._pos || _str != i._str; }
-
-		text::it::ctx operator*() { return _ctx; }
+		text::it::ctx operator*();
 
 	protected:
 		const std::string& _str;
@@ -905,66 +810,14 @@ struct text : public renderer<std::string>
 		char _last_char;
 	};
 
-	text(g::gfx::font& f) : font(f)
-	{
-		if (!plane.is_initialized())
-		{
-			plane = g::gfx::mesh_factory{}.plane();
-		}
-	}
+	text(g::gfx::font& f);
 
 	void draw(g::gfx::shader& shader,
 		  const std::string& str,
 	      const g::game::camera& cam,
-	      const mat<4, 4>& model)
-	{
-		auto end = it(str, font, str.length());
-		for (auto itr = it(str, font, 0); itr != end; ++itr)
-		{
-			auto ctx = *itr;
-			auto& glyph = ctx.glyph;//font.char_map[str[i]];
+	      const mat<4, 4>& model);
 
-	        auto p = ctx.pen + (ctx.glyph.left_top + itr.kerning())+ vec<2>{ctx.glyph.width/2, 0};
-
-	        auto glyph_model = mat<4, 4>::scale({-glyph.width, glyph.height, 1}) * mat<4, 4>::translation({-p[0], p[1], 0}) * model;
-
-	        plane.using_shader(shader)
-	        .set_camera(cam)
-	        ["u_model"].mat4(glyph_model)
-	        ["u_font_color"].vec4({1, 1, 1, 1})
-	        ["u_uv_top_left"].vec2(glyph.uv_top_left)
-	        ["u_uv_bottom_right"].vec2(glyph.uv_bottom_right)
-	        ["u_texture"].texture(font.face)
-	        .draw_tri_fan();
-
-	        debug::print{&cam}.color({1, 0, 0, 1}).model(model).point(ctx.pen * vec<2>{-1, 1});
-	        debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(ctx.pen * vec<2>{-1, 1}, (p - ctx.pen) * vec<2>{-1, 1});
-		}
-	}
-
-	void measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out)
-	{
-		vec<2> min = {};
-		vec<2> max = {};
-
-		bool first = true;
-		auto end = it(str, font, str.length() - 1);
-		for (auto itr = it(str, font, 0); itr != end; ++itr)
-		{
-			auto ctx = *itr;
-			auto p = ctx.pen + (ctx.glyph.left_top + vec<2>{ctx.glyph.width/2, 0});
-			min = min.take_min(p + vec<2>{-ctx.glyph.width, ctx.glyph.height});
-			max = max.take_max(p + vec<2>{ctx.glyph.width, -ctx.glyph.height});
-		
-			if (first)
-			{
-				offset_out = p + vec<2>{-ctx.glyph.width, ctx.glyph.height};
-				first = false;
-			}
-		}
-
-		dims_out = (max - min);
-	}
+	void measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out);
 };
 
 }; // end namespace primative
