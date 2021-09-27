@@ -7,6 +7,7 @@ text::it::it(const std::string &str, g::gfx::font& f, size_t pos) : _font(f), _s
 {
 	_pos = pos;
 	_ctx.glyph = _font.char_map[_str[_pos]];
+	_ctx.pen = {0, -2};
 }
 
 void text::it::operator++()
