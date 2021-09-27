@@ -669,7 +669,7 @@ struct font
 		vec<2> left_top;
 		vec<2> advance;
 	};
-
+	unsigned point;
 	texture face; /**< Texture containing all characters of the font face */
 	std::unordered_map<unsigned char, glyph> char_map; /**< associates string characters with their corresponding glyph */
 	std::unordered_map<unsigned char, std::unordered_map<unsigned char, vec<2>>> kerning_map;
@@ -918,19 +918,15 @@ struct text : public renderer<std::string>
 	      const g::game::camera& cam,
 	      const mat<4, 4>& model)
 	{
-		static int t;
 		auto end = it(str, font, str.length());
 		for (auto itr = it(str, font, 0); itr != end; ++itr)
 		{
 			auto ctx = *itr;
 			auto& glyph = ctx.glyph;//font.char_map[str[i]];
 
-	        auto I = mat<4, 4>::I();
-	        auto p = ctx.pen + (ctx.glyph.left_top * vec<2>{-1, 1} + vec<2>{ctx.glyph.width/2, 0}) + itr.kerning();
+	        auto p = ctx.pen + (ctx.glyph.left_top + itr.kerning())+ vec<2>{ctx.glyph.width/2, 0};
 
-	        auto s = sin(t / 1000.f) * 0.5 + 1.0f;
-	        auto glyph_model = mat<4, 4>::scale({-glyph.width * s, glyph.height * s, 1}) * mat<4, 4>::translation({-p[0], p[1], 0}) * model;
-	        t++;
+	        auto glyph_model = mat<4, 4>::scale({-glyph.width, glyph.height, 1}) * mat<4, 4>::translation({-p[0], p[1], 0}) * model;
 
 	        plane.using_shader(shader)
 	        .set_camera(cam)
@@ -946,21 +942,28 @@ struct text : public renderer<std::string>
 		}
 	}
 
-	vec<2> measure(const std::string& str)
+	void measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out)
 	{
 		vec<2> min = {};
 		vec<2> max = {};
 
+		bool first = true;
 		auto end = it(str, font, str.length() - 1);
 		for (auto itr = it(str, font, 0); itr != end; ++itr)
 		{
 			auto ctx = *itr;
-			auto p = ctx.pen + (ctx.glyph.left_top * vec<2>{-1, 1} + vec<2>{ctx.glyph.width/2, 0});
-			min = min.take_min(p - vec<2>{ctx.glyph.width, ctx.glyph.height});
-			max = max.take_max(p + vec<2>{ctx.glyph.width, ctx.glyph.height});
+			auto p = ctx.pen + (ctx.glyph.left_top + vec<2>{ctx.glyph.width/2, 0});
+			min = min.take_min(p + vec<2>{-ctx.glyph.width, ctx.glyph.height});
+			max = max.take_max(p + vec<2>{ctx.glyph.width, -ctx.glyph.height});
+		
+			if (first)
+			{
+				offset_out = p + vec<2>{-ctx.glyph.width, ctx.glyph.height};
+				first = false;
+			}
 		}
 
-		return max - min;
+		dims_out = (max - min);
 	}
 };
 

@@ -715,7 +715,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 				{ uv_lower_right[0], uv_lower_right[1] },
 				slot->bitmap.width / (float)point,
 				slot->bitmap.rows / (float)point,
-				{ (float)slot->bitmap_left / (float)point, (float)slot->bitmap_top / (float)point },
+				{ (float)-slot->bitmap_left / (float)point, (float)slot->bitmap_top / (float)point },
 				{ (float)(slot->advance.x >> 6) / (float)point, (float)(slot->advance.y >> 6) / (float)point },
 			}
 		});
@@ -735,6 +735,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// std::cerr<<"done\n";
 
 	font.face = texture_factory{col_pix, row_pix}.type(GL_UNSIGNED_BYTE).components(1).fill(buffer).pixelated().create();
+	font.point = point;
 
 	return font;
 }

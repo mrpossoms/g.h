@@ -19,6 +19,7 @@ struct my_core : public g::core
     virtual bool initialize()
     {
         ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/UbuntuMono-B.ttf", 64);
+        // ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/OpenSans-Regular.ttf", 64);
         plane = g::gfx::mesh_factory{}.plane();
         cam.position = { 0, 0, -10 };
         cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
@@ -36,28 +37,36 @@ struct my_core : public g::core
 
         auto I = mat4::I();
 
-
-
         std::string str = "Hello, world!\nthis is a test\nof newlines. What\nDo you do when you\nhabe more lines?";
         // auto str = "e";
 
         glDisable(GL_DEPTH_TEST);
         auto text = g::gfx::primative::text{ubuntu};
 
-        auto dims = text.measure(str) * 1;
-        text.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, mat4::scale({1}) * mat4::translation({dims[0]/2, dims[1]/4, 0}));
-
-        // auto zero = ubuntu.char_map[str[c % str.length()]];
-        // plane.using_shader(assets.shader("basic_gui.vs+basic_font.fs"))
-        // ["u_model"].mat4(I)
-        // ["u_view"].mat4(I)
-        // ["u_proj"].mat4(I)
-        // ["u_font_color"].vec4({1, 1, 1, 1})
-        // ["u_uv_top_left"].vec2(zero.uv_top_left)
-        // ["u_uv_bottom_right"].vec2(zero.uv_bottom_right)
-        // ["u_texture"].texture(ubuntu.face)
+        vec<2> dims, offset; 
+        text.measure(str, dims, offset);
+        //offset = (dims * 0.5);// - offset * 0.5;
+        
+        // plane.using_shader(assets.shader("basic_gui.vs+flat_color.fs"))
+        // .set_camera(cam)
+        // ["u_model"].mat4(mat4::scale({dims[0] * 0.5, dims[1] * 0.5, 1}))
+        // ["u_color"].vec4({1, 0, 1, 1})
         // .draw_tri_fan();
+        // 
+        auto model = mat4::translation({offset[0], offset[1], 0});
 
+        text.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, model);
+        debug::print{&cam}.color({0, 1, 0, 1}).model(I).point(offset);
+        // static unsigned frames;
+        // static time_t last;
+        // auto now = time(NULL);
+        // if (now != last)
+        // {
+        //     std::cerr << frames << " fps\n";
+        //     frames = 0;
+        //     last = now;
+        // }
+        // frames++;
     }
 };
 
