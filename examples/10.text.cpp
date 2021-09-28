@@ -18,7 +18,7 @@ struct my_core : public g::core
 
     virtual bool initialize()
     {
-        ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/UbuntuMono-B.ttf", 64);
+        ubuntu = assets.font("UbuntuMono-B.ttf");
         // ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/OpenSans-Regular.ttf", 64);
         plane = g::gfx::mesh_factory{}.plane();
         cam.position = { 0, 0, -15 };
@@ -44,24 +44,16 @@ struct my_core : public g::core
         glDisable(GL_DEPTH_TEST);
         auto text = g::gfx::primative::text{ubuntu};
 
-        vec<2> dims, offset; 
+        vec<2> dims, offset;
         text.measure(str, dims, offset);
-        offset = (dims * -0.5) * (sin(t += dt) + 1);// - offset * 0.5;
-        
+        offset = (dims * -0.5);// - offset * 0.5;
 
-
-        // plane.using_shader(assets.shader("basic_gui.vs+flat_color.fs"))
-        // .set_camera(cam)
-        // ["u_model"].mat4(mat4::scale({dims[0] * 0.5, dims[1] * 0.5, 1}))
-        // ["u_color"].vec4({1, 0, 1, 1})
-        // .draw_tri_fan();
-        // 
-        auto model = mat4::translation({offset[0], offset[1], 0});
+        auto model = mat4::translation({offset[0], offset[1], 0}) * mat4::rotation({0,0,1}, t+=dt);
 
         text.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, model);
         debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(vec<2>{}, dims);
         // debug::print{&cam}.color({0, 1, 0, 1}).model(model).point(offset + dims);
-     
+
         // static unsigned frames;
         // static time_t last;
         // auto now = time(NULL);
