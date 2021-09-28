@@ -1,5 +1,6 @@
 #include "g.gfx.h"
 
+using namespace g::gfx;
 using namespace g::gfx::primative;
 
 
@@ -45,7 +46,7 @@ text::text(g::gfx::font& f) : font(f)
 	}
 }
 
-void text::draw(g::gfx::shader& shader,
+shader::usage text::using_shader(g::gfx::shader& shader,
 	  const std::string& str,
       const g::game::camera& cam,
       const mat<4, 4>& model)
@@ -60,19 +61,39 @@ void text::draw(g::gfx::shader& shader,
 
         auto glyph_model = mat<4, 4>::scale({-glyph.width, glyph.height, 1}) * mat<4, 4>::translation({p[0], p[1], 0}) * model;
 
-        plane.using_shader(shader)
+        auto usage = plane.using_shader(shader)
         .set_camera(cam)
         ["u_model"].mat4(glyph_model)
         ["u_font_color"].vec4({1, 1, 1, 1})
         ["u_uv_top_left"].vec2(glyph.uv_top_left)
         ["u_uv_bottom_right"].vec2(glyph.uv_bottom_right)
-        ["u_texture"].texture(font.face)
-        .draw_tri_fan();
+        ["u_texture"].texture(font.face);
+	
+		usage.draw_tri_fan();
 
+#ifdef DEBUG_TEXT_RENDERING
         debug::print{&cam}.color({1, 0, 0, 1}).model(model).point(ctx.pen);
         debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(ctx.pen, (p - ctx.pen));
+#endif
 	}
+
+	// TODO: the only way to return the shader::usage here
+	// such that the caller can adjust the shader's uniforms
+	// would be to create a mesh from the desired string at
+	// construction. That way a single draw call would be
+	// sufficent to render the string, for now, we return
+	// an empty usage just to adhere to the same interface
+	return plane.using_shader(shader);
 }
+
+void text::draw(g::gfx::shader& shader,
+	  const std::string& str,
+      const g::game::camera& cam,
+      const mat<4, 4>& model)
+{
+	using_shader(shader, str, cam, model);//.draw_tri_fan();
+}
+
 
 void text::measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out)
 {

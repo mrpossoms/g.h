@@ -713,6 +713,7 @@ namespace primative
 template <typename D>
 struct renderer
 {
+	virtual shader::usage using_shader(g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
 	virtual void draw(g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
 
@@ -728,10 +729,10 @@ struct volume_slicer : public renderer<texture>
         slices = g::gfx::mesh_factory::slice_cube(num_slices);
 	}
 
-	void draw(g::gfx::shader& shader,
-			  const g::gfx::texture& vox,
-	          const g::game::camera& cam,
-	          const mat<4, 4>& model)
+	shader::usage using_shader(g::gfx::shader& shader,
+					  const g::gfx::texture& vox,
+			          const g::game::camera& cam,
+			          const mat<4, 4>& model)
 	{
 		assert(vox.is_3D());
 
@@ -767,14 +768,20 @@ struct volume_slicer : public renderer<texture>
 
         const vec<3> delta = { 1.f/(float)vox.size[0], 1.f/(float)vox.size[1], 1.f/(float)vox.size[2] };
 
-        slices.using_shader(shader)
-             .set_camera(cam)
-             ["u_model"].mat4(T * R_align)
-             ["u_rotation"].mat4(R_orient)
-             ["u_uvw_step"].vec3(delta)
-             ["u_voxels"].texture(vox)
-             .draw<GL_TRIANGLES>();
-        // auto tranform =
+        return slices.using_shader(shader)
+               .set_camera(cam)
+               ["u_model"].mat4(T * R_align)
+               ["u_rotation"].mat4(R_orient)
+               ["u_uvw_step"].vec3(delta)
+               ["u_voxels"].texture(vox);
+	}
+
+	void draw(g::gfx::shader& shader,
+		      const g::gfx::texture& vox,
+			  const g::game::camera& cam,
+			  const mat<4, 4>& model)
+	{
+		using_shader(shader, vox, cam, model).draw<GL_TRIANGLES>();
 	}
 };
 
@@ -811,6 +818,11 @@ struct text : public renderer<std::string>
 	};
 
 	text(g::gfx::font& f);
+
+	shader::usage using_shader(g::gfx::shader& shader,
+		const std::string& str,
+		const g::game::camera& cam,
+		const mat<4, 4>& model);
 
 	void draw(g::gfx::shader& shader,
 		  const std::string& str,

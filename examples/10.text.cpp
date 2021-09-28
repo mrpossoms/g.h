@@ -13,12 +13,10 @@ struct my_core : public g::core
     g::asset::store assets;
 
     g::gfx::mesh<vertex::pos_uv_norm> plane;
-    g::gfx::font ubuntu;
     g::game::camera_perspective cam;
 
     virtual bool initialize()
     {
-        ubuntu = assets.font("UbuntuMono-B.ttf");
         // ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/OpenSans-Regular.ttf", 64);
         plane = g::gfx::mesh_factory{}.plane();
         cam.position = { 0, 0, -15 };
@@ -42,7 +40,7 @@ struct my_core : public g::core
         // auto str = "e";
 
         glDisable(GL_DEPTH_TEST);
-        auto text = g::gfx::primative::text{ubuntu};
+        auto text = g::gfx::primative::text{assets.font("UbuntuMono-B.ttf")};
 
         vec<2> dims, offset;
         text.measure(str, dims, offset);
@@ -51,19 +49,8 @@ struct my_core : public g::core
         auto model = mat4::translation({offset[0], offset[1], 0}) * mat4::rotation({0,0,1}, t+=dt);
 
         text.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, model);
-        debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(vec<2>{}, dims);
+        // debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(vec<2>{}, dims);
         // debug::print{&cam}.color({0, 1, 0, 1}).model(model).point(offset + dims);
-
-        // static unsigned frames;
-        // static time_t last;
-        // auto now = time(NULL);
-        // if (now != last)
-        // {
-        //     std::cerr << frames << " fps\n";
-        //     frames = 0;
-        //     last = now;
-        // }
-        // frames++;
     }
 };
 

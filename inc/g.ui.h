@@ -27,6 +27,7 @@ struct layer
         mat<4, 4> transform = mat<4, 4>::I();
         std::string program_collection;
         // shader::usage shader_usage;
+        std::string font;
     };
 
 protected:
@@ -63,11 +64,29 @@ public:
         ctx.transform *= trans;
     }
 
+    layer& set_font(const std::string& font_asset)
+    {
+        ctx.font = font_asset;
+        return *this;
+    }
+
+    layer& set_shaders(const std::string& program_collection)
+    {
+        ctx.program_collection = program_collection;
+        return *this;
+    }
+
     layer child(const vec<2>& dimensions, const vec<3>& position)
     {
         auto transform = mat<4, 4>::scale({dimensions[0], dimensions[1], 0.1f}) * mat<4, 4>::translation(position);
 
         return { *this, transform };
+    }
+
+    // TODO: this should return a usage instead
+    void text(const std::string& str, g::game::camera& cam)
+    {
+        g::gfx::primative::text{ctx.assets->font(ctx.font)}.draw(ctx.assets->shader(ctx.program_collection), str, cam, ctx.transform);
     }
 
     shader::usage using_shader()

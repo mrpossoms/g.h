@@ -45,19 +45,19 @@ struct my_core : public g::core
         const auto speed = 4.0f;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * dt * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(-dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
         cam.aspect_ratio = g::gfx::aspect();
 
         g::ui::layer root(&assets, "basic_gui.vs+basic_gui.fs");
 
-        root.using_shader().set_camera(cam).draw_tri_fan();
+        root.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("test.png")).draw_tri_fan();
 
         auto button0 = root.child({0.25f + (cosf(t[0] * 2) * 0.05f), 0.25f + (cosf(t[0] * 2) * 0.05f)}, {-0.55f, 0, -0.1f});
         auto button1 = root.child({0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f)}, {0.55f, 0, -0.1f});
@@ -74,8 +74,11 @@ struct my_core : public g::core
             t[1] += dt;
         }
 
-        button0.using_shader().set_camera(cam).draw_tri_fan();
-        button1.using_shader().set_camera(cam).draw_tri_fan();
+        button0.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
+        auto b0_text = button0.child({1, 1, 1}, {0, 0, -0.1f}).set_font("UbuntuMono-B.ttf").set_shaders("basic_gui.vs+basic_font.fs");
+        b0_text.text("hover", cam);
+
+        button1.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
 
         // debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
 
