@@ -15,5 +15,5 @@ void main (void)
 
     float a = texture(u_texture, uv).r;
     color = u_font_color;
-    color.a *= a;//vec4(1.0, 1.0, 1.0, a);
+    color.r *= a;//vec4(1.0, 1.0, 1.0, a);
 }

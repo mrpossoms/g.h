@@ -33,6 +33,7 @@ struct my_core : public g::core
         cam.position = { 0, 0, -2 };
         cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
         glDisable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
         glPointSize(10);
         return true;
     }
@@ -57,34 +58,32 @@ struct my_core : public g::core
 
         g::ui::layer root(&assets, "basic_gui.vs+basic_gui.fs");
 
+        root.set_font("UbuntuMono-B.ttf");
         root.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("test.png")).draw_tri_fan();
-
-        auto button0 = root.child({0.25f + (cosf(t[0] * 2) * 0.05f), 0.25f + (cosf(t[0] * 2) * 0.05f)}, {-0.55f, 0, -0.1f});
-        auto button1 = root.child({0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f)}, {0.55f, 0, -0.1f});
 
         // auto ray_o = g::ui::origin_from_mouse(&cam);
         auto pointer = g::ui::pointer_from_mouse(&cam);
+        auto button0 = root.child({ 0.25f + (cosf(t[0] * 2) * 0.05f), 0.25f + (cosf(t[0] * 2) * 0.05f) }, { -0.55f, 0, -0.1f });
         if (button0.hover(pointer))
         {
             t[0] += dt;
         }
+        button0.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
+        auto b0_text = button0.child({ 1, 1, 1 }, { 0, 0, -0.1f }).set_shaders("basic_gui.vs+basic_font.fs");
+        b0_text.text("hover", cam);
 
+        auto button1 = root.child({ 0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f) }, { 0.55f, 0, -0.1f });
         if (button1.select(pointer, 1))
         {
             t[1] += dt;
         }
-
-        button0.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
-        auto b0_text = button0.child({1, 1, 1}, {0, 0, -0.1f}).set_font("UbuntuMono-B.ttf").set_shaders("basic_gui.vs+basic_font.fs");
-        b0_text.text("hover", cam);
-
         button1.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
-        auto b1_text = button1.child({1, 1, 1}, {0, 0, -0.1f}).set_font("UbuntuMono-B.ttf").set_shaders("basic_gui.vs+basic_font.fs");
-        b1_text.text("click", cam);
+        auto b1_text = button1.child({1, 1, 1}, {0, 0, -0.1f}).set_shaders("basic_gui.vs+basic_font.fs");
+        b1_text.set_font("OpenSans-Regular.ttf").text("click & hold!", cam);
 
         // debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
 
-        debug::print(&cam).color({ 0, 1, 0, 1 }).point(pointer.position + (pointer.direction * vec<3>{1, 1, 1}));
+        //debug::print(&cam).color({ 0, 1, 0, 1 }).point(pointer.position + (pointer.direction * vec<3>{1, 1, 1}));
         debug::print(&cam).color({ 1, 0, 0, 1 }).ray(pointer.position + pointer.direction, pointer.direction);
     }
 };

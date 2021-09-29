@@ -795,6 +795,7 @@ struct text : public renderer<std::string>
 	public:
 		struct ctx
 		{
+			char c;
 			g::gfx::font::glyph glyph;
 			vec<2> pen = {};
 		};
