@@ -86,7 +86,24 @@ public:
     // TODO: this should return a usage instead
     void text(const std::string& str, g::game::camera& cam)
     {
-        g::gfx::primative::text{ctx.assets->font(ctx.font)}.draw(ctx.assets->shader(ctx.program_collection), str, cam, ctx.transform);
+        // vec<2> dims, offset;
+        // g::gfx::primative::text{ctx.assets->font(ctx.font)}.measure(str, dims, offset);
+        // dims *= -0.5f;
+
+        static float t;
+        // t++;
+        // auto model = mat<4, 4>::rotation({0, 0, 1}, t * 0.01f) * mat<4, 4>::translation({dims[0], dims[1]});//ctx.transform;
+
+        vec<2> dims, offset;
+        g::gfx::primative::text{ctx.assets->font(ctx.font)}.measure(str, dims, offset);
+        offset = (dims * -0.5);// - offset * 0.5;
+
+        auto model = mat<4,4>::translation({offset[0], offset[1], 0}) * mat<4,4>::scale({2/dims[0], -2/dims[1], 0});
+
+
+        g::gfx::primative::text{ctx.assets->font(ctx.font)}.draw(ctx.assets->shader(ctx.program_collection), str, cam, model * ctx.transform);
+        debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(vec<2>{}, dims);
+        debug::print{&cam}.color({0, 1, 0, 1}).model(model).point(offset + dims);
     }
 
     shader::usage using_shader()

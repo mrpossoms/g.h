@@ -71,10 +71,10 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 	
 		usage.draw_tri_fan();
 
-#ifdef DEBUG_TEXT_RENDERING
+// #ifdef DEBUG_TEXT_RENDERING
         debug::print{&cam}.color({1, 0, 0, 1}).model(model).point(ctx.pen);
         debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(ctx.pen, (p - ctx.pen));
-#endif
+// #endif
 	}
 
 	// TODO: the only way to return the shader::usage here

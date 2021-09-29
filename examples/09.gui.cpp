@@ -79,6 +79,8 @@ struct my_core : public g::core
         b0_text.text("hover", cam);
 
         button1.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
+        auto b1_text = button1.child({1, 1, 1}, {0, 0, -0.1f}).set_font("UbuntuMono-B.ttf").set_shaders("basic_gui.vs+basic_font.fs");
+        b1_text.text("click", cam);
 
         // debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
 
