@@ -4,6 +4,9 @@ using namespace g::gfx;
 using namespace g::gfx::primative;
 
 
+g::gfx::mesh<vertex::pos_uv_norm> g::gfx::primative::text::plane;
+
+
 text::it::it(const std::string &str, g::gfx::font& f, size_t pos) : _font(f), _str(str)
 {
 	_pos = pos;
@@ -68,7 +71,7 @@ shader::usage text::using_shader(g::gfx::shader& shader,
         ["u_uv_top_left"].vec2(glyph.uv_top_left)
         ["u_uv_bottom_right"].vec2(glyph.uv_bottom_right)
         ["u_texture"].texture(font.face);
-	
+
 		usage.draw_tri_fan();
 
 // #ifdef DEBUG_TEXT_RENDERING
@@ -108,7 +111,7 @@ void text::measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out)
 		auto p = ctx.pen + ctx.glyph.left_top + itr.kerning();
 		min = min.take_min(p + vec<2>{-ctx.glyph.width, -ctx.glyph.height});
 		max = max.take_max(p + vec<2>{ctx.glyph.width, ctx.glyph.height});
-	
+
 		if (first)
 		{
 			offset_out = p + vec<2>{-ctx.glyph.width, ctx.glyph.height};

@@ -788,7 +788,7 @@ struct volume_slicer : public renderer<texture>
 struct text : public renderer<std::string>
 {
 	g::gfx::font& font;
-    g::gfx::mesh<vertex::pos_uv_norm> plane; // TODO: share a singlton plane across all text renderers
+    static g::gfx::mesh<vertex::pos_uv_norm> plane;
 
 	struct it
 	{
@@ -796,7 +796,7 @@ struct text : public renderer<std::string>
 		struct ctx
 		{
 			g::gfx::font::glyph glyph;
-			vec<2> pen = {};			
+			vec<2> pen = {};
 		};
 
 		it(const std::string &str, g::gfx::font& f, size_t pos=0);
