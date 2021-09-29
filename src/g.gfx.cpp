@@ -666,7 +666,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 		auto glyph_idx = FT_Get_Char_Index(face, ci);
 		if (FT_Load_Glyph(face, glyph_idx, FT_LOAD_DEFAULT )) { continue; }
 		
-		font.kerning_map.insert({ci, {}}); // add a new map
+		font.kerning_map.insert({(unsigned char)ci, {}}); // add a new map
 		for (unsigned cii = 1; cii < 256; cii++)
 		{
 			auto adj_glyph_idx = FT_Get_Char_Index(face, cii);
@@ -677,7 +677,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 				continue;
 			}
 
-			font.kerning_map[ci].insert({cii, {kern.x / (float)point, kern.y / (float)point}});
+			font.kerning_map[ci].insert({(unsigned char)cii, {kern.x / (float)point, kern.y / (float)point}});
 		}
 
 		auto slot = face->glyph;
@@ -710,7 +710,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 		auto uv_lower_right = uv_upper_left + vec<2>{ slot->bitmap.width / (float)row_pix, slot->bitmap.rows /(float)row_pix }; 
 		// auto uv_lower_right = vec<2>{glyph_col + 1.f, (glyph_row + 1)} * (pix_per_glyph / (float)row_pix);
 		font.char_map.insert({
-			ci, {
+			(unsigned char)ci, {
 				{ uv_lower_right[0], uv_upper_left[1] },
 				{ uv_upper_left[0], uv_lower_right[1] },
 				slot->bitmap.width / (float)point,

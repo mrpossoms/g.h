@@ -97,8 +97,9 @@ public:
         vec<2> dims, offset;
         g::gfx::primative::text{ctx.assets->font(ctx.font)}.measure(str, dims, offset);
         offset = (dims * -0.5);// - offset * 0.5;
+        auto text_aspect = dims[1] / dims[0];
 
-        auto model = mat<4,4>::translation({offset[0], offset[1], 0}) * mat<4,4>::scale({2/dims[0], -2/dims[1], 0});
+        auto model = mat<4,4>::translation({offset[0], offset[1], 0}) * mat<4,4>::scale({2/dims[0], text_aspect * 2/dims[1], 0});
 
 
         g::gfx::primative::text{ctx.assets->font(ctx.font)}.draw(ctx.assets->shader(ctx.program_collection), str, cam, model * ctx.transform);
