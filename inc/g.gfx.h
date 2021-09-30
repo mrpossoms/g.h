@@ -113,6 +113,8 @@ struct texture
 	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
 
 	void bind() const;
+
+	void unbind() const;
 };
 
 
@@ -227,11 +229,11 @@ struct shader
 	 */
 	struct usage
 	{
-		shader& shader_ref;
+		shader* shader_ref = nullptr;
 		size_t vertices, indices;
 		int texture_unit;
 
-		usage (shader& ref, size_t verts, size_t inds);
+		usage (shader* ref, size_t verts, size_t inds);
 
 		template<typename MV>
 		usage attach_attributes(const shader& shader)
@@ -503,7 +505,7 @@ struct mesh
 		}
 
 		shader.bind();
-		shader::usage usage = {shader, vertex_count, index_count};
+		shader::usage usage = {&shader, vertex_count, index_count};
 		usage.attach_attributes<V>(shader);
 		return usage;
 	}

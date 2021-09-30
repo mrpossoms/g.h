@@ -59,21 +59,25 @@ struct my_core : public g::core
         g::ui::layer root(&assets, "basic_gui.vs+basic_gui.fs");
 
         root.set_font("UbuntuMono-B.ttf");
-        root.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("test.png")).draw_tri_fan();
+        root.using_shader().set_camera(cam)
+        ["u_border_thickness"].flt(0.01)
+        ["u_border_color"].vec4({1, 1, 1, 1})
+        ["u_color"].vec4({0.1, 0.1, 0.1, 1})
+        .draw_tri_fan();
 
         // auto ray_o = g::ui::origin_from_mouse(&cam);
         auto pointer = g::ui::pointer_from_mouse(&cam);
-        auto button0 = root.child({ 0.25f + (cosf(t[0] * 2) * 0.05f), 0.25f + (cosf(t[0] * 2) * 0.05f) }, { -0.55f, 0, -0.1f });
+        auto button0 = root.child({ 0.25f + (cosf(t[0] * 2) * 0.05f), 0.125f + (cosf(t[0] * 2) * 0.05f) }, { -0.55f, 0, -0.1f });
         if (button0.hover(pointer))
         {
             t[0] += dt;
         }
-        button0.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
+        button0.using_shader().set_camera(cam).draw_tri_fan();
         auto b0_text = button0.child({ 0.8, 0.8, 1 }, { 0, 0, -0.01f }).set_shaders("basic_gui.vs+basic_font.fs");
         b0_text.text("hover", cam);
 
         auto button1 = root.child({ 0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f) }, { 0.55f, 0, -0.1f });
-        button1.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
+        button1.using_shader().set_camera(cam).draw_tri_fan();
         if (button1.select(pointer, 1))
         {
             t[1] += dt;

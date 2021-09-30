@@ -109,7 +109,7 @@ void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLen
 
 void texture::bind() const { glBindTexture(type, hnd); }
 
-
+void texture::unbind() const { glBindTexture(type, 0); }
 
 texture_factory::texture_factory(unsigned w, unsigned h)
 {
@@ -418,7 +418,7 @@ framebuffer framebuffer_factory::create()
 shader& shader::bind() { glUseProgram(program); return *this; }
 
 
-shader::usage::usage (shader& ref, size_t verts, size_t inds) : shader_ref(ref)
+shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 {
 	vertices = verts;
 	indices = inds;
@@ -438,17 +438,19 @@ shader::usage shader::usage::set_camera(const g::game::camera& cam)
 
 shader::uniform_usage shader::usage::set_uniform(const std::string& name)
 {
+	if (nullptr == shader_ref) { return {*this, 0xffffffff}; }
+
 	GLint loc;
-	auto it = shader_ref.uni_locs.find(name);
-	if (it == shader_ref.uni_locs.end())
+	auto it = shader_ref->uni_locs.find(name);
+	if (it == shader_ref->uni_locs.end())
 	{
-		loc = glGetUniformLocation(shader_ref.program, name.c_str());
+		loc = glGetUniformLocation(shader_ref->program, name.c_str());
 
 		if (loc < 0)
 		{
 			// TODO: handle the missing uniform better
 			std::cerr << "uniform '" << name << "' doesn't exist\n";
-			shader_ref.uni_locs[name] = loc;
+			shader_ref->uni_locs[name] = loc;
 		}
 	}
 	else

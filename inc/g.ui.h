@@ -11,6 +11,13 @@ namespace g
 namespace ui
 {
 
+enum class event
+{
+    hover,
+    click,
+    draw,
+};
+
 struct pointer
 {
     vec<3> position;
@@ -21,6 +28,12 @@ struct pointer
 
 struct layer
 {
+    struct itr
+    {
+        ui::event event;
+        shader::usage draw;
+    };
+
 protected:
     g::asset::store* assets;
     mat<4, 4> transform = mat<4, 4>::I();
@@ -88,28 +101,21 @@ public:
     // TODO: this should return a usage instead
     void text(const std::string& str, g::game::camera& cam)
     {
-        // vec<2> dims, offset;
-        // g::gfx::primative::text{assets->font(font)}.measure(str, dims, offset);
-        // dims *= -0.5f;
-
-        static float t;
-        // t++;
-        // auto model = mat<4, 4>::rotation({0, 0, 1}, t * 0.01f) * mat<4, 4>::translation({dims[0], dims[1]});//transform;
+        auto text = g::gfx::primative::text{assets->font(font)};
 
         vec<2> dims, offset;
-        g::gfx::primative::text{assets->font(font)}.measure(str, dims, offset);
+        text.measure(str, dims, offset);
+
         auto text_aspect = dims[1] / dims[0];
         auto scl = vec<2>{ 2 / dims[0], text_aspect * 2 / dims[1] };
         // offset *= scl;
         offset[1] = 0;
         auto trans = (dims * -0.5);// +offset;// - offset * 0.5;
-
         auto model = mat<4, 4>::translation({ trans[0], trans[1], 0}) * mat<4, 4>::scale({ scl[0], scl[1], 0 });
 
+        text.draw(assets->shader(program_collection), str, cam, model * transform);
 
-        g::gfx::primative::text{assets->font(font)}.draw(assets->shader(program_collection), str, cam, model * transform);
-        // debug::print{&cam}.color({0, 1, 0, 1}).model(model * transform).ray(vec<2>{}, dims);
-        //debug::print{&cam}.color({0, 1, 0, 1}).model(model * transform).point(dims);
+        assets->font(font).face.unbind();
     }
 
     shader::usage using_shader()
