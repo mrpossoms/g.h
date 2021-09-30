@@ -69,17 +69,16 @@ struct my_core : public g::core
             t[0] += dt;
         }
         button0.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
-        auto b0_text = button0.child({ 0.8, 0.8, 1 }, { 0, 0, -0.1f }).set_shaders("basic_gui.vs+basic_font.fs");
-        b0_text.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("test.png")).draw_tri_fan();
+        auto b0_text = button0.child({ 0.8, 0.8, 1 }, { 0, 0, -0.01f }).set_shaders("basic_gui.vs+basic_font.fs");
         b0_text.text("hover", cam);
 
         auto button1 = root.child({ 0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f) }, { 0.55f, 0, -0.1f });
+        button1.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
         if (button1.select(pointer, 1))
         {
             t[1] += dt;
         }
-        button1.using_shader().set_camera(cam)["u_texture"].texture(assets.tex("brick.color.png")).draw_tri_fan();
-        auto b1_text = button1.child({0.8, 0.8, 1}, {0, 0, -0.1f}).set_shaders("basic_gui.vs+basic_font.fs");
+        auto b1_text = button1.child({0.8, 0.8, 1}, {0, 0, -0.01f}).set_shaders("basic_gui.vs+basic_font.fs");
         b1_text.set_font("OpenSans-Regular.ttf").text("click & hold!", cam);
 
         // debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });

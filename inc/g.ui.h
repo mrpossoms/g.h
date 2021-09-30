@@ -21,17 +21,12 @@ struct pointer
 
 struct layer
 {
-    struct context
-    {
-        g::asset::store* assets;
-        mat<4, 4> transform = mat<4, 4>::I();
-        std::string program_collection;
-        // shader::usage shader_usage;
-        std::string font;
-    };
-
 protected:
-    context ctx;
+    g::asset::store* assets;
+    mat<4, 4> transform = mat<4, 4>::I();
+    std::string program_collection;
+    // shader::usage shader_usage;
+    std::string font;
 
     mesh<vertex::pos_uv_norm>& plane()
     {
@@ -47,42 +42,45 @@ protected:
 public:
     layer(g::asset::store* store, const std::string& program_collection)
     {
-        ctx.assets = store;
-        ctx.program_collection = program_collection;
+        assets = store;
+        this->program_collection = program_collection;
     }
 
     layer(g::asset::store* store, const std::string& program_collection, const mat<4, 4>& trans)
     {
-        ctx.assets = store;
-        ctx.program_collection = program_collection;
-        ctx.transform = trans;
+        assets = store;
+        this->program_collection = program_collection;
+        transform = trans;
     }
 
     layer(const g::ui::layer& parent, const mat<4, 4>& trans)
     {
-        ctx = parent.ctx;
-        ctx.transform *= trans;
+        assets = parent.assets;
+        transform = parent.transform;
+        program_collection = parent.program_collection;
+        font = parent.font;
+        transform *= trans;
     }
 
     layer& set_font(const std::string& font_asset)
     {
-        ctx.font = font_asset;
+        font = font_asset;
         return *this;
     }
 
     layer& set_shaders(const std::string& program_collection)
     {
-        ctx.program_collection = program_collection;
+        this->program_collection = program_collection;
         return *this;
     }
 
     layer child(const vec<2>& dimensions, const vec<3>& position)
     {
-        auto transform = mat<4, 4>::translation(position) * mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f });
+        auto trans = mat<4, 4>::translation(position) * mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f });
 
-        layer c(*this, transform);
+        layer c(*this, trans);
 
-        c.ctx.transform = mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f }) * ctx.transform * mat<4, 4>::translation(position);
+        c.transform = mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f }) * transform * mat<4, 4>::translation(position);
 
         return c;
     }
@@ -91,15 +89,15 @@ public:
     void text(const std::string& str, g::game::camera& cam)
     {
         // vec<2> dims, offset;
-        // g::gfx::primative::text{ctx.assets->font(ctx.font)}.measure(str, dims, offset);
+        // g::gfx::primative::text{assets->font(font)}.measure(str, dims, offset);
         // dims *= -0.5f;
 
         static float t;
         // t++;
-        // auto model = mat<4, 4>::rotation({0, 0, 1}, t * 0.01f) * mat<4, 4>::translation({dims[0], dims[1]});//ctx.transform;
+        // auto model = mat<4, 4>::rotation({0, 0, 1}, t * 0.01f) * mat<4, 4>::translation({dims[0], dims[1]});//transform;
 
         vec<2> dims, offset;
-        g::gfx::primative::text{ctx.assets->font(ctx.font)}.measure(str, dims, offset);
+        g::gfx::primative::text{assets->font(font)}.measure(str, dims, offset);
         auto text_aspect = dims[1] / dims[0];
         auto scl = vec<2>{ 2 / dims[0], text_aspect * 2 / dims[1] };
         // offset *= scl;
@@ -109,35 +107,35 @@ public:
         auto model = mat<4, 4>::translation({ trans[0], trans[1], 0}) * mat<4, 4>::scale({ scl[0], scl[1], 0 });
 
 
-        g::gfx::primative::text{ctx.assets->font(ctx.font)}.draw(ctx.assets->shader(ctx.program_collection), str, cam, model * ctx.transform);
-        // debug::print{&cam}.color({0, 1, 0, 1}).model(model * ctx.transform).ray(vec<2>{}, dims);
-        //debug::print{&cam}.color({0, 1, 0, 1}).model(model * ctx.transform).point(dims);
+        g::gfx::primative::text{assets->font(font)}.draw(assets->shader(program_collection), str, cam, model * transform);
+        // debug::print{&cam}.color({0, 1, 0, 1}).model(model * transform).ray(vec<2>{}, dims);
+        //debug::print{&cam}.color({0, 1, 0, 1}).model(model * transform).point(dims);
     }
 
     shader::usage using_shader()
     {
         const auto I = mat<4, 4>::I();
 
-        return plane().using_shader(ctx.assets->shader(ctx.program_collection))
-        ["u_model"].mat4(ctx.transform)
+        return plane().using_shader(assets->shader(program_collection))
+        ["u_model"].mat4(transform)
         ["u_view"].mat4(I)
         ["u_proj"].mat4(I);
     }
 
     shader::usage using_shader(const std::string& program_collection)
     {
-        ctx.program_collection = program_collection;
+        this->program_collection = program_collection;
         return using_shader();
     }
 
     float intersects(const vec<3>& ray_o, const vec<3>& ray_d) const
     {
-        auto t = vec<3>{ ctx.transform[3][0], ctx.transform[3][1], ctx.transform[3][1] };
+        auto t = vec<3>{ transform[3][0], transform[3][1], transform[3][1] };
 
         vec<3> half_lengths[3] = {
-            { ctx.transform[0][0], ctx.transform[0][1], ctx.transform[0][2] },
-            { ctx.transform[1][0], ctx.transform[1][1], ctx.transform[1][2] },
-            { ctx.transform[2][0], ctx.transform[2][1], ctx.transform[2][2] },
+            { transform[0][0], transform[0][1], transform[0][2] },
+            { transform[1][0], transform[1][1], transform[1][2] },
+            { transform[2][0], transform[2][1], transform[2][2] },
         };
 
         return intersect::ray_box(ray_o, ray_d, t, half_lengths);
