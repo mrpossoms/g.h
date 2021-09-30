@@ -626,6 +626,8 @@ struct mesh_factory
 		return c;
 	}
 
+	static mesh<vertex::pos_uv_norm> from_obj(const std::string& path);
+
 	template<typename VERT>
 	static mesh<VERT> from_voxels(g::game::voxels_paletted& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> converter)
 	{
@@ -662,7 +664,6 @@ struct mesh_factory
 
 		return m;
 	}
-
 
 	template<typename V>
 	static mesh<V> empty_mesh()
