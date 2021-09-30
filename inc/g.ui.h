@@ -78,9 +78,13 @@ public:
 
     layer child(const vec<2>& dimensions, const vec<3>& position)
     {
-        auto transform = mat<4, 4>::scale({dimensions[0], dimensions[1], 0.1f}) * mat<4, 4>::translation(position);
+        auto transform = mat<4, 4>::translation(position) * mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f });
 
-        return { *this, transform };
+        layer c(*this, transform);
+
+        c.ctx.transform = mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f }) * ctx.transform * mat<4, 4>::translation(position);
+
+        return c;
     }
 
     // TODO: this should return a usage instead
