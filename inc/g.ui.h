@@ -14,8 +14,9 @@ namespace ui
 enum class event
 {
     hover,
-    click,
+    select,
     draw,
+    last,
 };
 
 struct pointer
@@ -30,12 +31,61 @@ struct layer
 {
     struct itr
     {
-        ui::event event;
-        shader::usage draw;
+        struct context
+        {
+            ui::event event;
+            shader::usage draw;
+            bool triggered;
+
+            context(ui::event e)
+            {
+                event = e;
+            }
+        };
+
+        unsigned i;
+        layer& layer_ref;
+        const ui::pointer* pointer_ptr;
+
+        itr(layer& l, const ui::pointer* p, event e) : layer_ref(l), pointer_ptr(p)
+        {
+            i = static_cast<unsigned>(e);
+        }
+
+        bool operator!=(const itr& it) { return it.i != i; }
+
+        void operator++(){ i++; }
+
+        context operator*()
+        {
+            context ctx(static_cast<ui::event>(i));
+
+            switch(ctx.event)
+            {
+                case event::hover:
+                    if (nullptr != pointer_ptr)
+                    {
+                        ctx.triggered = layer_ref.hover(*pointer_ptr);
+                    }
+                    break;
+                case event::select:
+                    if (nullptr != pointer_ptr)
+                    {
+                        ctx.triggered = layer_ref.select(*pointer_ptr);
+                    }
+                    break;
+                case event::draw:
+                    ctx.draw = layer_ref.using_shader();
+                    break;
+            }
+
+            return ctx;
+        }
     };
 
 protected:
-    g::asset::store* assets;
+    g::asset::store* assets = nullptr;
+    ui::pointer* cur_pointer = nullptr;
     mat<4, 4> transform = mat<4, 4>::I();
     std::string program_collection;
     // shader::usage shader_usage;
@@ -75,9 +125,18 @@ public:
         transform *= trans;
     }
 
+    layer::itr begin() { return { *this, cur_pointer, event::hover, }; }
+    layer::itr end() { return { *this, cur_pointer, event::last, }; }
+
     layer& set_font(const std::string& font_asset)
     {
         font = font_asset;
+        return *this;
+    }
+
+    layer& set_pointer(ui::pointer* pointer)
+    {
+        cur_pointer = pointer;
         return *this;
     }
 

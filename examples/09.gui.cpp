@@ -67,15 +67,25 @@ struct my_core : public g::core
 
         // auto ray_o = g::ui::origin_from_mouse(&cam);
         auto pointer = g::ui::pointer_from_mouse(&cam);
-        auto button0 = root.child({ 0.25f + (cosf(t[0] * 2) * 0.05f), 0.125f + (cosf(t[0] * 2) * 0.05f) }, { -0.55f, 0, -0.1f });
-        if (button0.hover(pointer))
-        {
-            t[0] += dt;
-        }
-        button0.using_shader().set_camera(cam).draw_tri_fan();
-        auto b0_text = button0.child({ 0.8, 0.8, 1 }, { 0, 0, -0.01f }).set_shaders("basic_gui.vs+basic_font.fs");
-        b0_text.text("hover", cam);
+        auto button0 = root.child(vec<2>{ 0.25f , 0.125f} + vec<2>{ 0.25f , 0.125f} * (cosf(t[0] * 2) * 0.5f), { -0.55f, 0, -0.1f });
 
+        for (auto event : button0)
+        {
+            switch(event.event)
+            {
+                case g::ui::event::hover:
+                    t[0] += dt;
+                    break;
+                case g::ui::event::draw:
+                {        
+                    event.draw.set_camera(cam).draw_tri_fan();
+                    auto b0_text = button0.child({ 0.8, 0.8, 1 }, { 0, 0, -0.01f }).set_shaders("basic_gui.vs+basic_font.fs");
+                    b0_text.text("hover", cam);
+                }
+                    break;
+            }
+        }
+        
         auto button1 = root.child({ 0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f) }, { 0.55f, 0, -0.1f });
         button1.using_shader().set_camera(cam).draw_tri_fan();
         if (button1.select(pointer, 1))

@@ -230,9 +230,10 @@ struct shader
 	struct usage
 	{
 		shader* shader_ref = nullptr;
-		size_t vertices, indices;
-		int texture_unit;
+		size_t vertices = 0, indices = 0;
+		int texture_unit = 0;
 
+		usage() = default;
 		usage (shader* ref, size_t verts, size_t inds);
 
 		template<typename MV>
