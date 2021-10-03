@@ -2,6 +2,7 @@
 
 #include "g.gfx.h"
 #include "g.assets.h"
+#include "g.utils.h"
 
 using namespace xmath;
 using namespace g::gfx;
@@ -33,9 +34,11 @@ struct layer
     {
         struct context
         {
-            ui::event event;
+            ui::event event = ui::event::hover;
             shader::usage draw;
-            bool triggered;
+            bool triggered = false;
+
+            context() = default;
 
             context(ui::event e)
             {
@@ -46,6 +49,7 @@ struct layer
         unsigned i;
         layer& layer_ref;
         const ui::pointer* pointer_ptr;
+        context ctx;
 
         itr(layer& l, const ui::pointer* p, event e) : layer_ref(l), pointer_ptr(p)
         {
@@ -54,31 +58,38 @@ struct layer
 
         bool operator!=(const itr& it) { return it.i != i; }
 
-        void operator++(){ i++; }
-
-        context operator*()
-        {
-            context ctx(static_cast<ui::event>(i));
-
-            switch(ctx.event)
+        void operator++()
+        { 
+            g::utils::inc_at_end<unsigned> inc(i);
+            
+            while(i <= static_cast<unsigned>(event::draw))
             {
-                case event::hover:
-                    if (nullptr != pointer_ptr)
-                    {
-                        ctx.triggered = layer_ref.hover(*pointer_ptr);
-                    }
-                    break;
-                case event::select:
-                    if (nullptr != pointer_ptr)
-                    {
-                        ctx.triggered = layer_ref.select(*pointer_ptr);
-                    }
-                    break;
-                case event::draw:
-                    ctx.draw = layer_ref.using_shader();
-                    break;
-            }
+                ctx = {static_cast<ui::event>(i)};
+                switch(ctx.event)
+                {
+                    case event::hover:
+                        if (nullptr != pointer_ptr)
+                        {
+                            if (ctx.triggered = layer_ref.hover(*pointer_ptr)) return;
+                        }
+                        break;
+                    case event::select:
+                        if (nullptr != pointer_ptr)
+                        {
+                            if (ctx.triggered = layer_ref.select(*pointer_ptr)) return;
+                        }
+                        break;
+                    case event::draw:
+                        ctx.draw = layer_ref.using_shader();
+                        return;
+                }
 
+                i++;
+            }
+        }
+
+        context& operator*()
+        {
             return ctx;
         }
     };
