@@ -56,9 +56,11 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
         cam.aspect_ratio = g::gfx::aspect();
 
+        auto pointer = g::ui::pointer_from_mouse(&cam);
         g::ui::layer root(&assets, "basic_gui.vs+basic_gui.fs");
 
         root.set_font("UbuntuMono-B.ttf");
+        root.set_pointer(&pointer);
         root.using_shader().set_camera(cam)
         ["u_border_thickness"].flt(0.01)
         ["u_border_color"].vec4({1, 1, 1, 1})
@@ -66,7 +68,6 @@ struct my_core : public g::core
         .draw_tri_fan();
 
         // auto ray_o = g::ui::origin_from_mouse(&cam);
-        auto pointer = g::ui::pointer_from_mouse(&cam);
         auto button0 = root.child(vec<2>{ 0.25f , 0.125f} + vec<2>{ 0.25f , 0.125f} * (cosf(t[0] * 2) * 0.5f), { -0.55f, 0, -0.1f });
 
         for (auto event : button0)

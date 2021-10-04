@@ -14,6 +14,7 @@ namespace ui
 
 enum class event
 {
+    none,
     hover,
     select,
     draw,
@@ -34,7 +35,7 @@ struct layer
     {
         struct context
         {
-            ui::event event = ui::event::hover;
+            ui::event event = ui::event::none;
             shader::usage draw;
             bool triggered = false;
 
@@ -56,35 +57,42 @@ struct layer
             i = static_cast<unsigned>(e);
         }
 
-        bool operator!=(const itr& it) { return it.i != i; }
+        bool operator!=(const itr& it)
+        { 
+            return it.i != i; 
+        }
 
         void operator++()
         { 
-            g::utils::inc_at_end<unsigned> inc(i);
+            //g::utils::inc_at_end<unsigned> inc(i);
             
-            while(i <= static_cast<unsigned>(event::draw))
+            while(i < static_cast<unsigned>(event::last))
             {
+                i++;
                 ctx = {static_cast<ui::event>(i)};
+                ctx.triggered = false;
                 switch(ctx.event)
                 {
                     case event::hover:
                         if (nullptr != pointer_ptr)
                         {
-                            if (ctx.triggered = layer_ref.hover(*pointer_ptr)) return;
+                            ctx.triggered = layer_ref.hover(*pointer_ptr);
+                            if (ctx.triggered) {
+                                return;
+                            }
                         }
                         break;
                     case event::select:
                         if (nullptr != pointer_ptr)
                         {
-                            if (ctx.triggered = layer_ref.select(*pointer_ptr)) return;
+                            ctx.triggered = layer_ref.select(*pointer_ptr);
+                            if (ctx.triggered) return;
                         }
                         break;
                     case event::draw:
                         ctx.draw = layer_ref.using_shader();
                         return;
                 }
-
-                i++;
             }
         }
 
@@ -94,13 +102,19 @@ struct layer
         }
     };
 
+    struct description
+    {
+        std::string program_collection;
+        std::string font;
+    
+        std::function<void (shader::usage&)> draw;
+    };
+
 protected:
     g::asset::store* assets = nullptr;
     ui::pointer* cur_pointer = nullptr;
     mat<4, 4> transform = mat<4, 4>::I();
-    std::string program_collection;
-    // shader::usage shader_usage;
-    std::string font;
+    description desc;
 
     mesh<vertex::pos_uv_norm>& plane()
     {
@@ -117,13 +131,13 @@ public:
     layer(g::asset::store* store, const std::string& program_collection)
     {
         assets = store;
-        this->program_collection = program_collection;
+        desc.program_collection = program_collection;
     }
 
     layer(g::asset::store* store, const std::string& program_collection, const mat<4, 4>& trans)
     {
         assets = store;
-        this->program_collection = program_collection;
+        desc.program_collection = program_collection;
         transform = trans;
     }
 
@@ -131,17 +145,18 @@ public:
     {
         assets = parent.assets;
         transform = parent.transform;
-        program_collection = parent.program_collection;
-        font = parent.font;
+        desc.program_collection = parent.desc.program_collection;
+        desc.font = parent.desc.font;
+        cur_pointer = parent.cur_pointer;
         transform *= trans;
     }
 
-    layer::itr begin() { return { *this, cur_pointer, event::hover, }; }
+    layer::itr begin() { return { *this, cur_pointer, event::none, }; }
     layer::itr end() { return { *this, cur_pointer, event::last, }; }
 
     layer& set_font(const std::string& font_asset)
     {
-        font = font_asset;
+        desc.font = font_asset;
         return *this;
     }
 
@@ -153,7 +168,7 @@ public:
 
     layer& set_shaders(const std::string& program_collection)
     {
-        this->program_collection = program_collection;
+        desc.program_collection = program_collection;
         return *this;
     }
 
@@ -171,7 +186,7 @@ public:
     // TODO: this should return a usage instead
     void text(const std::string& str, g::game::camera& cam)
     {
-        auto text = g::gfx::primative::text{assets->font(font)};
+        auto text = g::gfx::primative::text{assets->font(desc.font)};
 
         vec<2> dims, offset;
         text.measure(str, dims, offset);
@@ -183,16 +198,16 @@ public:
         auto trans = (dims * -0.5);// +offset;// - offset * 0.5;
         auto model = mat<4, 4>::translation({ trans[0], trans[1], 0}) * mat<4, 4>::scale({ scl[0], scl[1], 0 });
 
-        text.draw(assets->shader(program_collection), str, cam, model * transform);
+        text.draw(assets->shader(desc.program_collection), str, cam, model * transform);
 
-        assets->font(font).face.unbind();
+        assets->font(desc.font).face.unbind();
     }
 
     shader::usage using_shader()
     {
         const auto I = mat<4, 4>::I();
 
-        return plane().using_shader(assets->shader(program_collection))
+        return plane().using_shader(assets->shader(desc.program_collection))
         ["u_model"].mat4(transform)
         ["u_view"].mat4(I)
         ["u_proj"].mat4(I);
@@ -200,7 +215,7 @@ public:
 
     shader::usage using_shader(const std::string& program_collection)
     {
-        this->program_collection = program_collection;
+        desc.program_collection = program_collection;
         return using_shader();
     }
 
@@ -240,9 +255,6 @@ static pointer pointer_from_mouse(g::game::camera* cam)
 
     auto eps = 0.000001f;
     auto proj = cam->projection();
-    // auto is_proj_ortho = fabs(proj[0].dot(proj[1])) < eps &&
-    //                      fabs(proj[1].dot(proj[2])) < eps &&
-    //                      fabs(proj[2].dot(proj[0])) < eps;
 
     const int buttons[] = {
         GLFW_MOUSE_BUTTON_1,
