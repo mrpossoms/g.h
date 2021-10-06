@@ -56,32 +56,56 @@ shader::usage text::using_shader(g::gfx::shader& shader,
       const mat<4, 4>& model)
 {
 	auto M = mat<4, 4>::translation({ 0, 0.5, 0 }) * model;
+	static std::vector<vertex::pos_uv_norm> verts;
 
+	vertex::pos_uv_norm tri_quad[] = {
+		{{-1,-1, 0}, {1, 0}, {0, 0, 1}},
+		{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
+		{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
+
+		{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
+		{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
+		{{-1, 1, 0}, {1, 1}, {0, 0, 1}},
+	};
+
+	verts.clear();
 	auto end = it(str, font, str.length());
 	for (auto itr = it(str, font, 0); itr != end; ++itr)
 	{
 		auto ctx = *itr;
 		auto& glyph = ctx.glyph;//font.char_map[str[i]];
-
 		auto p = ctx.pen + ctx.glyph.left_top + itr.kerning() + vec<2>{ctx.glyph.width, 0};
+		auto glyph_model = mat<4, 4>::scale({-glyph.width, glyph.height, 1}) * mat<4, 4>::translation({p[0], p[1], 0});// * M;
 
-		auto glyph_model = mat<4, 4>::scale({-glyph.width, glyph.height, 1}) * mat<4, 4>::translation({p[0], p[1], 0}) * M;
+		for (unsigned i = 0; i < 6; i++)
+		{
+			auto vert = tri_quad[i];
+			auto pos_aug = vec<4>{ vert.position[0], vert.position[1], vert.position[2], 1 };
+			vert.position = (glyph_model * pos_aug).slice<3>();
 
-		auto usage = plane.using_shader(shader)
-		.set_camera(cam)
-		["u_model"].mat4(glyph_model)
-		["u_font_color"].vec4({1, 1, 1, 1})
-		["u_uv_top_left"].vec2(glyph.uv_top_left)
-		["u_uv_bottom_right"].vec2(glyph.uv_bottom_right)
-		["u_texture"].texture(font.face);
+			vert.uv = (vert.uv * glyph.uv_bottom_right) + glyph.uv_top_left;
 
-		usage.draw_tri_fan();
+			// TODO: still need to manipulate the UVs
+			verts.push_back(vert);
+		}
 
 #ifdef DEBUG_TEXT_RENDERING
         debug::print{&cam}.color({1, 0, 0, 1}).model(M).point(ctx.pen);
         debug::print{&cam}.color({0, 1, 0, 1}).model(M).ray(ctx.pen, (p - ctx.pen));
 #endif
 	}
+
+	plane.set_vertices(verts);
+
+	auto usage = plane.using_shader(shader)
+	.set_camera(cam)
+	["u_model"].mat4(M)
+	["u_font_color"].vec4({1, 1, 1, 1})
+	// ["u_uv_top_left"].vec2(glyph.uv_top_left)
+	// ["u_uv_bottom_right"].vec2(glyph.uv_bottom_right)
+	["u_texture"].texture(font.face);
+
+	usage.draw_tri_fan();
 
 	// TODO: the only way to return the shader::usage here
 	// such that the caller can adjust the shader's uniforms
