@@ -57,18 +57,17 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 {
 	auto M = mat<4, 4>::translation({ 0, 0.5, 0 }) * model;
 	static std::vector<vertex::pos_uv_norm> verts;
+	static std::vector<uint32_t> inds;
 
-	vertex::pos_uv_norm tri_quad[] = {
+	const vertex::pos_uv_norm tri_quad[] = {
 		{{-1,-1, 0}, {1, 0}, {0, 0, 1}},
 		{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
 		{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
-
-		{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
-		{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
 		{{-1, 1, 0}, {1, 1}, {0, 0, 1}},
 	};
 
 	verts.clear();
+	inds.clear();
 	auto end = it(str, font, str.length());
 	for (auto itr = it(str, font, 0); itr != end; ++itr)
 	{
@@ -77,15 +76,21 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 		auto p = ctx.pen + ctx.glyph.left_top + itr.kerning() + vec<2>{ctx.glyph.width, 0};
 		auto glyph_model = mat<4, 4>::scale({-glyph.width, glyph.height, 1}) * mat<4, 4>::translation({p[0], p[1], 0});// * M;
 
-		for (unsigned i = 0; i < 6; i++)
+		auto ct = verts.size();
+		inds.push_back(ct + 2);
+		inds.push_back(ct + 3);
+		inds.push_back(ct + 0); 
+		inds.push_back(ct + 1);
+		inds.push_back(ct + 2);
+		inds.push_back(ct + 0);
+
+		for (unsigned i = 0; i < 4; i++)
 		{
 			auto vert = tri_quad[i];
 			auto pos_aug = vec<4>{ vert.position[0], vert.position[1], vert.position[2], 1 };
-			vert.position = (glyph_model * pos_aug).slice<3>();
+			vert.position = (glyph_model.transpose() * pos_aug).slice<3>();
+			vert.uv = (vec<2>{1.0, 1.0} - vert.uv) * (glyph.uv_bottom_right - glyph.uv_top_left) + glyph.uv_top_left;
 
-			vert.uv = (vert.uv * glyph.uv_bottom_right) + glyph.uv_top_left;
-
-			// TODO: still need to manipulate the UVs
 			verts.push_back(vert);
 		}
 
@@ -96,24 +101,15 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 	}
 
 	plane.set_vertices(verts);
+	plane.set_indices(inds);
 
 	auto usage = plane.using_shader(shader)
 	.set_camera(cam)
 	["u_model"].mat4(M)
 	["u_font_color"].vec4({1, 1, 1, 1})
-	// ["u_uv_top_left"].vec2(glyph.uv_top_left)
-	// ["u_uv_bottom_right"].vec2(glyph.uv_bottom_right)
 	["u_texture"].texture(font.face);
 
-	usage.draw_tri_fan();
-
-	// TODO: the only way to return the shader::usage here
-	// such that the caller can adjust the shader's uniforms
-	// would be to create a mesh from the desired string at
-	// construction. That way a single draw call would be
-	// sufficent to render the string, for now, we return
-	// an empty usage just to adhere to the same interface
-	return plane.using_shader(shader);
+	return usage;
 }
 
 void text::draw(g::gfx::shader& shader,
@@ -121,7 +117,7 @@ void text::draw(g::gfx::shader& shader,
       const g::game::camera& cam,
       const mat<4, 4>& model)
 {
-	using_shader(shader, str, cam, model);//.draw_tri_fan();
+	using_shader(shader, str, cam, model).draw<GL_TRIANGLES>();//.draw_tri_fan();
 }
 
 

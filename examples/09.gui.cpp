@@ -81,7 +81,7 @@ struct my_core : public g::core
                 {        
                     event.draw.set_camera(cam).draw_tri_fan();
                     auto b0_text = button0.child({ 0.8, 0.8, 1 }, { 0, 0, -0.01f }).set_shaders("basic_gui.vs+basic_font.fs");
-                    b0_text.text("hover", cam);
+                    b0_text.text("hover", cam).draw<GL_TRIANGLES>();
                 }
                     break;
             }
@@ -94,7 +94,7 @@ struct my_core : public g::core
             t[1] += dt;
         }
         auto b1_text = button1.child({0.8, 0.8, 1}, {0, 0, -0.01f}).set_shaders("basic_gui.vs+basic_font.fs");
-        b1_text.set_font("OpenSans-Regular.ttf").text("click & hold!", cam);
+        b1_text.set_font("OpenSans-Regular.ttf").text("click & hold!", cam).draw<GL_TRIANGLES>();
 
         // debug::print(&cam).color({ 0, 1, 0, 1 }).ray({ 0, 0, 0 }, { 0, 0, 1 });
 

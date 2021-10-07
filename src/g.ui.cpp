@@ -128,7 +128,7 @@ layer layer::child(const vec<2>& dimensions, const vec<3>& position)
 }
 
 // TODO: this should return a usage instead
-void layer::text(const std::string& str, g::game::camera& cam)
+shader::usage layer::text(const std::string& str, g::game::camera& cam)
 {
     auto text = g::gfx::primative::text{assets->font(desc.font)};
 
@@ -142,9 +142,8 @@ void layer::text(const std::string& str, g::game::camera& cam)
     auto trans = (dims * -0.5);// +offset;// - offset * 0.5;
     auto model = mat<4, 4>::translation({ trans[0], trans[1], 0}) * mat<4, 4>::scale({ scl[0], scl[1], 0 });
 
-    text.draw(assets->shader(desc.program_collection), str, cam, model * transform);
-
-    assets->font(desc.font).face.unbind();
+    return text.using_shader(assets->shader(desc.program_collection), str, cam, model * transform);
+    // assets->font(desc.font).face.unbind();
 }
 
 shader::usage layer::using_shader()

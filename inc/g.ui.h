@@ -96,7 +96,7 @@ public:
     layer child(const vec<2>& dimensions, const vec<3>& position);
 
     // TODO: this should return a usage instead
-    void text(const std::string& str, g::game::camera& cam);
+    shader::usage text(const std::string& str, g::game::camera& cam);
 
     shader::usage using_shader();
 
