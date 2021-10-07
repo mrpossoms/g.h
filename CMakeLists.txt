@@ -47,6 +47,8 @@ execute_process(COMMAND cmake --build out/build/glew --target install --config R
 if (WIN32)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 endif ()
 
 message("CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
