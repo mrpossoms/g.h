@@ -61,6 +61,18 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 }
 
 
+g::gfx::font& g::asset::store::font(const std::string& partial_path)
+{
+	auto itr = fonts.find(partial_path);
+	if (itr == fonts.end())
+	{
+		fonts[partial_path] = {time(nullptr), g::gfx::font_factory{}.from_true_type(root + "/font/" + partial_path, 128)};
+	}
+
+	return fonts[partial_path].get();
+}
+
+
 g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path)
 {
 	auto itr = voxels.find(partial_path);

@@ -67,7 +67,7 @@ struct camera : public view_point
 		return _view = mat<4, 4>::look_at((position = pos) * -1.0, forward, up);
 	}
 
-	mat<4, 4> view() const
+	virtual mat<4, 4> view() const
 	{
 		if (_view[3][3] != 0) { return _view; }
 		return mat<4, 4>::translation(position * -1) * orientation.to_matrix();

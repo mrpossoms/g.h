@@ -50,6 +50,15 @@ sources:
     link: deps/sha1
     scripts:
       - make static
+  - name: freetype 
+    type: git
+    repo: git@github.com:freetype/freetype.git
+    sparse_paths:
+      -
+    rev: 2.6.5
+    scripts:
+      -
+
 default_group: ''
 groups:
   -

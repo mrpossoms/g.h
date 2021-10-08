@@ -6,6 +6,13 @@ namespace g {
 
 namespace utils {
 
+template<typename I>
+struct inc_at_end
+{
+	I& incer;
+	inc_at_end(I& i) : incer(i) {}
+	~inc_at_end() { incer++; }
+};
 
 struct split
 {

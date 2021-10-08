@@ -87,6 +87,8 @@ struct texture
 	GLuint hnd = -1;
 	unsigned char* data = nullptr;
 
+	inline bool is_initialized() const { return hnd != -1; }
+
 	void release_bitmap();
 
 	void create(GLenum texture_type);
@@ -111,6 +113,8 @@ struct texture
 	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
 
 	void bind() const;
+
+	void unbind() const;
 };
 
 
@@ -154,34 +158,9 @@ struct texture_factory
 
 	texture_factory& repeating();
 
-	texture_factory& fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler)
-	{
-		// void* pixels;
+	texture_factory& fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler);
 
-		auto bytes_per_textel = bytes_per_component * component_count;
-		auto textels_per_row = size[2];
-		auto textels_per_plane = size[1] * size[2];
-		data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
-
-		for (unsigned i = 0; i < size[0]; i++)
-		{
-			for (unsigned j = 0; j < size[1]; j++)
-			{
-				for (unsigned k = 0; k < size[2]; k++)
-				{
-					// unsigned vi = i * textels_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
-					// unsigned vi = (i * textels_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
-					// filler(i, j, k, data + vi);
-
-		            unsigned vi = ((i * textels_per_plane) + (j * textels_per_row) + k) * bytes_per_textel;
-
-		            filler(i, j, k, data + vi);
-				}
-			}
-		}
-
-		return *this;
-	}
+	texture_factory& fill(unsigned char* buffer);
 
 	texture create();
 };
@@ -236,8 +215,10 @@ struct framebuffer_factory
  */
 struct shader
 {
-	GLuint program;
+	GLuint program = 0;
 	std::unordered_map<std::string, GLint> uni_locs;
+
+	inline bool is_initialized() const { return program != 0; }
 
 	shader& bind();
 
@@ -248,11 +229,12 @@ struct shader
 	 */
 	struct usage
 	{
-		shader& shader_ref;
-		size_t vertices, indices;
-		int texture_unit;
+		shader* shader_ref = nullptr;
+		size_t vertices = 0, indices = 0;
+		int texture_unit = 0;
 
-		usage (shader& ref, size_t verts, size_t inds);
+		usage() = default;
+		usage (shader* ref, size_t verts, size_t inds);
 
 		template<typename MV>
 		usage attach_attributes(const shader& shader)
@@ -307,7 +289,11 @@ struct shader
 
 		usage mat3 (const mat<3, 3>& m);
 
+		usage vec2 (const vec<2>& v);
+
 		usage vec3 (const vec<3>& v);
+
+		usage vec4(const vec<4>& v);
 
 		usage flt(float f);
 
@@ -460,11 +446,13 @@ struct mesh
 	size_t index_count = 0;
 	size_t vertex_count = 0;
 
+
+	inline bool is_initialized() const { return vbo != 0; }
+
 	mesh& set_vertices(const std::vector<V>& verts)
 	{
 		return set_vertices(verts.data(), verts.size());
 	}
-
 
 	mesh& set_vertices(const V* verts, size_t count)
 	{
@@ -518,8 +506,15 @@ struct mesh
 		}
 
 		shader.bind();
-		shader::usage usage = {shader, vertex_count, index_count};
+		shader::usage usage = {&shader, vertex_count, index_count};
 		usage.attach_attributes<V>(shader);
+
+		// unbind any previously bound textures to prevent
+		// unexpected behavior
+		glBindTexture(GL_TEXTURE_1D, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_3D, 0);
+
 		return usage;
 	}
 };
@@ -533,10 +528,10 @@ struct mesh_factory
 		glGenBuffers(2, &p.vbo);
 
 		p.set_vertices({
-			{{-1, 1, 0}, {1, 1}, {0, 0, 1}},
-			{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
-			{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
 			{{-1,-1, 0}, {1, 0}, {0, 0, 1}},
+			{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
+			{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
+			{{-1, 1, 0}, {1, 1}, {0, 0, 1}},
 		});
 
 		return p;
@@ -651,7 +646,12 @@ struct mesh_factory
 		{
 			verts[i] = converter(mesh->vertices + i);
 		}
-		memcpy(inds, mesh->indices, sizeof(uint32_t) * mesh->index_count);
+
+		// reverse index order so backface culling works correctly
+		for (unsigned i = 0; i < mesh->index_count; i++)
+		{
+			inds[i] = mesh->indices[(mesh->index_count - 1) - i];
+		}
 
 		m.set_vertices(verts, mesh->vertex_count);
 		m.set_indices(inds, mesh->index_count);
@@ -673,12 +673,62 @@ struct mesh_factory
 	}
 };
 
+
+struct font
+{
+	struct glyph
+	{
+		vec<2> uv_top_left;
+		vec<2> uv_bottom_right;
+		float width, height;
+		vec<2> left_top;
+		vec<2> advance;
+	};
+	unsigned point;
+	texture face; /**< Texture containing all characters of the font face */
+	std::unordered_map<unsigned char, glyph> char_map; /**< associates string characters with their corresponding glyph */
+	std::unordered_map<unsigned char, std::unordered_map<unsigned char, vec<2>>> kerning_map;
+};
+
+
+struct font_factory
+{
+	font from_true_type(const std::string& path, unsigned point=16);
+};
+
+
+namespace debug
+{
+	struct print
+	{
+		vec<4> cur_color;
+		const g::game::camera* cur_cam;
+		mat<4, 4> cur_model = mat<4, 4>::I();
+
+		print(const g::game::camera* cam);
+
+		print& color(const vec<4>& c);
+
+		print& model(const mat<4, 4>& m);
+
+		void ray(const vec<2>& o, const vec<2>& d);
+
+		void ray(const vec<3>& o, const vec<3>& d);
+
+		void point(const vec<2>& o);
+
+		void point(const vec<3>& o);
+	};
+}
+
+
 namespace primative
 {
 
 template <typename D>
 struct renderer
 {
+	virtual shader::usage using_shader(g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
 	virtual void draw(g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
 
@@ -694,10 +744,10 @@ struct volume_slicer : public renderer<texture>
         slices = g::gfx::mesh_factory::slice_cube(num_slices);
 	}
 
-	void draw(g::gfx::shader& shader,
-			  const g::gfx::texture& vox,
-	          const g::game::camera& cam,
-	          const mat<4, 4>& model)
+	shader::usage using_shader(g::gfx::shader& shader,
+					  const g::gfx::texture& vox,
+			          const g::game::camera& cam,
+			          const mat<4, 4>& model)
 	{
 		assert(vox.is_3D());
 
@@ -733,17 +783,71 @@ struct volume_slicer : public renderer<texture>
 
         const vec<3> delta = { 1.f/(float)vox.size[0], 1.f/(float)vox.size[1], 1.f/(float)vox.size[2] };
 
-        slices.using_shader(shader)
-             .set_camera(cam)
-             ["u_model"].mat4(T * R_align)
-             ["u_rotation"].mat4(R_orient)
-             ["u_uvw_step"].vec3(delta)
-             ["u_voxels"].texture(vox)
-             .draw<GL_TRIANGLES>();
-        // auto tranform =
+        return slices.using_shader(shader)
+               .set_camera(cam)
+               ["u_model"].mat4(T * R_align)
+               ["u_rotation"].mat4(R_orient)
+               ["u_uvw_step"].vec3(delta)
+               ["u_voxels"].texture(vox);
+	}
+
+	void draw(g::gfx::shader& shader,
+		      const g::gfx::texture& vox,
+			  const g::game::camera& cam,
+			  const mat<4, 4>& model)
+	{
+		using_shader(shader, vox, cam, model).draw<GL_TRIANGLES>();
 	}
 };
 
-}; // end namespace renderer
+struct text : public renderer<std::string>
+{
+	g::gfx::font& font;
+    static g::gfx::mesh<vertex::pos_uv_norm> plane;
+
+	struct it
+	{
+	public:
+		struct ctx
+		{
+			char c;
+			g::gfx::font::glyph glyph;
+			vec<2> pen = {};
+		};
+
+		it(const std::string &str, g::gfx::font& f, size_t pos=0);
+
+		void operator++();
+
+		vec<2> kerning();
+
+		bool operator!=(it &i);
+
+		text::it::ctx operator*();
+
+	protected:
+		const std::string& _str;
+		g::gfx::font& _font;
+		it::ctx _ctx;
+		size_t _pos = 0;
+		char _last_char;
+	};
+
+	text(g::gfx::font& f);
+
+	shader::usage using_shader(g::gfx::shader& shader,
+		const std::string& str,
+		const g::game::camera& cam,
+		const mat<4, 4>& model);
+
+	void draw(g::gfx::shader& shader,
+		  const std::string& str,
+	      const g::game::camera& cam,
+	      const mat<4, 4>& model);
+
+	void measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out);
+};
+
+}; // end namespace primative
 }; // end namespace gfx
 }; // end namespace g

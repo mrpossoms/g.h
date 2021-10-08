@@ -109,7 +109,7 @@ void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLen
 
 void texture::bind() const { glBindTexture(type, hnd); }
 
-
+void texture::unbind() const { glBindTexture(type, 0); }
 
 texture_factory::texture_factory(unsigned w, unsigned h)
 {
@@ -263,6 +263,43 @@ texture_factory& texture_factory::repeating()
 }
 
 
+texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler)
+{
+	// void* pixels;
+
+	auto bytes_per_textel = bytes_per_component * component_count;
+	auto textels_per_row = size[2];
+	auto textels_per_plane = size[1] * size[2];
+	data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
+
+	for (unsigned i = 0; i < size[0]; i++)
+	{
+		for (unsigned j = 0; j < size[1]; j++)
+		{
+			for (unsigned k = 0; k < size[2]; k++)
+			{
+				// unsigned vi = i * textels_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
+				// unsigned vi = (i * textels_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
+				// filler(i, j, k, data + vi);
+
+	            unsigned vi = ((i * textels_per_plane) + (j * textels_per_row) + k) * bytes_per_textel;
+
+	            filler(i, j, k, data + vi);
+			}
+		}
+	}
+
+	return *this;
+}
+
+texture_factory& texture_factory::fill(unsigned char* buffer)
+{
+	data = buffer;
+
+	return *this;
+}
+
+
 texture texture_factory::create()
 {
 	texture out;
@@ -287,6 +324,7 @@ texture texture_factory::create()
 
 	return out;
 }
+
 
 framebuffer_factory::framebuffer_factory(unsigned w, unsigned h)
 {
@@ -380,7 +418,7 @@ framebuffer framebuffer_factory::create()
 shader& shader::bind() { glUseProgram(program); return *this; }
 
 
-shader::usage::usage (shader& ref, size_t verts, size_t inds) : shader_ref(ref)
+shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 {
 	vertices = verts;
 	indices = inds;
@@ -400,17 +438,19 @@ shader::usage shader::usage::set_camera(const g::game::camera& cam)
 
 shader::uniform_usage shader::usage::set_uniform(const std::string& name)
 {
+	if (nullptr == shader_ref) { return {*this, 0xffffffff}; }
+
 	GLint loc;
-	auto it = shader_ref.uni_locs.find(name);
-	if (it == shader_ref.uni_locs.end())
+	auto it = shader_ref->uni_locs.find(name);
+	if (it == shader_ref->uni_locs.end())
 	{
-		loc = glGetUniformLocation(shader_ref.program, name.c_str());
+		loc = glGetUniformLocation(shader_ref->program, name.c_str());
 
 		if (loc < 0)
 		{
 			// TODO: handle the missing uniform better
 			std::cerr << "uniform '" << name << "' doesn't exist\n";
-			shader_ref.uni_locs[name] = loc;
+			shader_ref->uni_locs[name] = loc;
 		}
 	}
 	else
@@ -443,9 +483,23 @@ shader::usage shader::uniform_usage::mat3 (const mat<3, 3>& m)
 	return parent_usage;
 }
 
+shader::usage shader::uniform_usage::vec2 (const vec<2>& v)
+{
+	glUniform2fv(uni_loc, 1, v.v);
+
+	return parent_usage;
+}
+
 shader::usage shader::uniform_usage::vec3 (const vec<3>& v)
 {
 	glUniform3fv(uni_loc, 1, v.v);
+
+	return parent_usage;
+}
+
+shader::usage shader::uniform_usage::vec4(const vec<4>& v)
+{
+	glUniform4fv(uni_loc, 1, v.v);
 
 	return parent_usage;
 }
@@ -546,10 +600,6 @@ shader shader_factory::create()
 		}
 		exit(-1);
 	}
-	else
-	{
-		std::cerr << "Linked program " << out.program << std::endl;
-	}
 
 	assert(gl_get_error());
 
@@ -561,3 +611,137 @@ shader shader_factory::create()
 
 	return out;
 }
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
+font font_factory::from_true_type(const std::string& path, unsigned point)
+{
+	g::gfx::font font;
+
+	FT_Library  library;   /* handle to library     */
+	FT_Face     face;      /* handle to face object */
+
+	auto err_init = FT_Init_FreeType( &library );
+
+	auto err_load = FT_New_Face(library, path.c_str(), 0, &face);
+	if (err_load == FT_Err_Unknown_File_Format)
+	{
+		std::cerr << G_TERM_RED "font_factory: " <<
+		"the font file could be opened and read, but it appears "
+		"that its font format is unsupported"
+		<< G_TERM_COLOR_OFF << std::endl;
+	}
+	else if (err_load)
+	{
+		std::cerr << G_TERM_RED "font_factory: " <<
+		"another error code means that the font file could not "
+		"be opened or read, or that it is broken..."
+		<< G_TERM_COLOR_OFF << std::endl;
+	}
+
+	assert(!err_load);
+
+	size_t pix_per_glyph = point;
+	if (FT_Set_Pixel_Sizes(face,   /* handle to face object */
+                           0,      /* pixel_width           */
+                           pix_per_glyph ))   /* pixel_height          */
+	{
+	/*
+	Usually, an error occurs with a fixed-size font format (like FNT or PCF)
+	when trying to set the pixel size to a value that is not listed in the
+	face->fixed_sizes array.
+	*/
+		assert(false);
+	}
+
+	unsigned rows = sqrt(256), cols = sqrt(256);
+	unsigned row_pix = rows * pix_per_glyph;
+	unsigned col_pix = cols * pix_per_glyph;
+	unsigned bytes_per_pixel = 0;
+	unsigned bytes_per_map_row = 0;
+	unsigned map_size = 0;
+	unsigned char* map_buffer = nullptr;
+
+	for (unsigned ci = 1; ci < 256; ci++)
+	{
+		auto glyph_idx = FT_Get_Char_Index(face, ci);
+		if (FT_Load_Glyph(face, glyph_idx, FT_LOAD_DEFAULT )) { continue; }
+
+		font.kerning_map.insert({(unsigned char)ci, {}}); // add a new map
+		for (unsigned cii = 1; cii < 256; cii++)
+		{
+			auto adj_glyph_idx = FT_Get_Char_Index(face, cii);
+
+			FT_Vector kern;
+			if (FT_Get_Kerning(face, glyph_idx, adj_glyph_idx, FT_KERNING_DEFAULT, &kern))
+			{
+				continue;
+			}
+
+			font.kerning_map[ci].insert({(unsigned char)cii, {kern.x / (float)point, kern.y / (float)point}});
+		}
+
+		auto slot = face->glyph;
+		if (FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL )) { continue; /* skip on err */ }
+
+		// allocate the full character set buffer
+		if (nullptr == map_buffer)
+		{
+			bytes_per_pixel = slot->bitmap.pitch / slot->bitmap.width;
+			bytes_per_map_row = col_pix * bytes_per_pixel;
+			map_size = row_pix * bytes_per_map_row;
+			map_buffer = new unsigned char[map_size];
+		}
+
+		auto glyph_row = ci / cols;
+		auto glyph_col = ci % cols;
+
+		auto map_row = glyph_row * pix_per_glyph;
+
+		// printf("VV char '%c'\n", ci);
+		for (unsigned r = 0; r < slot->bitmap.rows; r++)
+		{
+			if (slot->bitmap.rows > pix_per_glyph) { break; }
+			auto row_off = (r + map_row) * bytes_per_map_row;
+			auto col_off = (glyph_col * pix_per_glyph) * bytes_per_pixel;
+			assert(row_off + col_off < map_size);
+			auto map_buf_ptr = &map_buffer[row_off + col_off];
+			memcpy(map_buf_ptr, &slot->bitmap.buffer[r * slot->bitmap.pitch], slot->bitmap.pitch);
+		}
+
+		// compute uvs for each glyph
+		auto uv_upper_left = vec<2>{(float)glyph_col, (float)(glyph_row)} * (pix_per_glyph / (float)row_pix);
+		auto uv_lower_right = uv_upper_left + vec<2>{ slot->bitmap.width / (float)row_pix, slot->bitmap.rows /(float)row_pix };
+		// auto uv_lower_right = vec<2>{glyph_col + 1.f, (glyph_row + 1)} * (pix_per_glyph / (float)row_pix);
+		font.char_map.insert({
+			(unsigned char)ci, {
+				{ uv_lower_right[0], uv_upper_left[1] },
+				{ uv_upper_left[0], uv_lower_right[1] },
+				slot->bitmap.width / (float)point,
+				slot->bitmap.rows / (float)point,
+				{ (float)-slot->bitmap_left / (float)point, (float)slot->bitmap_top / (float)point },
+				{ (float)(slot->advance.x >> 6) / (float)point, (float)(slot->advance.y >> 6) / (float)point },
+			}
+		});
+	}
+
+	FT_Done_Face    ( face );
+	FT_Done_FreeType( library );
+
+	// for(unsigned r = 0; r < row_pix; r+=1)
+	// {
+	// 	for(unsigned c = 0; c < col_pix; c+=1)
+	// 	{
+	// 		putchar(buffer[(r * bytes_per_map_row) + (c * 1)] > 0 ? 'x' : ' ');
+	// 	}
+	// 	putchar('\n');
+	// }
+	// std::cerr<<"done\n";
+
+	font.face = texture_factory{col_pix, row_pix}.type(GL_UNSIGNED_BYTE).components(1).fill(map_buffer).pixelated().create();
+	font.point = point;
+
+	return font;
+}
+
