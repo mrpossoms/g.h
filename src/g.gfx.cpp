@@ -660,14 +660,14 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	unsigned col_pix = cols * pix_per_glyph;
 	unsigned bytes_per_pixel = 0;
 	unsigned bytes_per_map_row = 0;
-
-	unsigned char* buffer = nullptr;
+	unsigned map_size = 0;
+	unsigned char* map_buffer = nullptr;
 
 	for (unsigned ci = 1; ci < 256; ci++)
 	{
 		auto glyph_idx = FT_Get_Char_Index(face, ci);
 		if (FT_Load_Glyph(face, glyph_idx, FT_LOAD_DEFAULT )) { continue; }
-		
+
 		font.kerning_map.insert({(unsigned char)ci, {}}); // add a new map
 		for (unsigned cii = 1; cii < 256; cii++)
 		{
@@ -686,11 +686,12 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 		if (FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL )) { continue; /* skip on err */ }
 
 		// allocate the full character set buffer
-		if (nullptr == buffer)
+		if (nullptr == map_buffer)
 		{
 			bytes_per_pixel = slot->bitmap.pitch / slot->bitmap.width;
 			bytes_per_map_row = col_pix * bytes_per_pixel;
-			buffer = new unsigned char[row_pix * bytes_per_map_row];
+			map_size = row_pix * bytes_per_map_row;
+			map_buffer = new unsigned char[map_size];
 		}
 
 		auto glyph_row = ci / cols;
@@ -701,15 +702,17 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 		// printf("VV char '%c'\n", ci);
 		for (unsigned r = 0; r < slot->bitmap.rows; r++)
 		{
+			if (slot->bitmap.rows > pix_per_glyph) { break; }
 			auto row_off = (r + map_row) * bytes_per_map_row;
 			auto col_off = (glyph_col * pix_per_glyph) * bytes_per_pixel;
-			auto map_buf_ptr = &buffer[row_off + col_off];
+			assert(row_off + col_off < map_size);
+			auto map_buf_ptr = &map_buffer[row_off + col_off];
 			memcpy(map_buf_ptr, &slot->bitmap.buffer[r * slot->bitmap.pitch], slot->bitmap.pitch);
 		}
 
 		// compute uvs for each glyph
 		auto uv_upper_left = vec<2>{(float)glyph_col, (float)(glyph_row)} * (pix_per_glyph / (float)row_pix);
-		auto uv_lower_right = uv_upper_left + vec<2>{ slot->bitmap.width / (float)row_pix, slot->bitmap.rows /(float)row_pix }; 
+		auto uv_lower_right = uv_upper_left + vec<2>{ slot->bitmap.width / (float)row_pix, slot->bitmap.rows /(float)row_pix };
 		// auto uv_lower_right = vec<2>{glyph_col + 1.f, (glyph_row + 1)} * (pix_per_glyph / (float)row_pix);
 		font.char_map.insert({
 			(unsigned char)ci, {
@@ -736,7 +739,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// }
 	// std::cerr<<"done\n";
 
-	font.face = texture_factory{col_pix, row_pix}.type(GL_UNSIGNED_BYTE).components(1).fill(buffer).pixelated().create();
+	font.face = texture_factory{col_pix, row_pix}.type(GL_UNSIGNED_BYTE).components(1).fill(map_buffer).pixelated().create();
 	font.point = point;
 
 	return font;

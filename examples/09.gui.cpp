@@ -78,7 +78,7 @@ struct my_core : public g::core
                     t[0] += dt;
                     break;
                 case g::ui::event::draw:
-                {        
+                {
                     event.draw.set_camera(cam).draw_tri_fan();
                     auto b0_text = button0.child({ 0.8, 0.8, 1 }, { 0, 0, -0.01f }).set_shaders("basic_gui.vs+basic_font.fs");
                     b0_text.text("hover", cam).draw<GL_TRIANGLES>();
@@ -86,7 +86,7 @@ struct my_core : public g::core
                     break;
             }
         }
-        
+
         auto button1 = root.child({ 0.25f + (cosf(t[1] * 2) * 0.05f), 0.25f + (cosf(t[1] * 2) * 0.05f) }, { 0.55f, 0, -0.1f });
         button1.using_shader().set_camera(cam).draw_tri_fan();
         if (button1.select(pointer, 1))

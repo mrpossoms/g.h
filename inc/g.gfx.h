@@ -508,6 +508,13 @@ struct mesh
 		shader.bind();
 		shader::usage usage = {&shader, vertex_count, index_count};
 		usage.attach_attributes<V>(shader);
+
+		// unbind any previously bound textures to prevent
+		// unexpected behavior
+		glBindTexture(GL_TEXTURE_1D, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(GL_TEXTURE_3D, 0);
+
 		return usage;
 	}
 };
@@ -639,7 +646,12 @@ struct mesh_factory
 		{
 			verts[i] = converter(mesh->vertices + i);
 		}
-		memcpy(inds, mesh->indices, sizeof(uint32_t) * mesh->index_count);
+
+		// reverse index order so backface culling works correctly
+		for (unsigned i = 0; i < mesh->index_count; i++)
+		{
+			inds[i] = mesh->indices[(mesh->index_count - 1) - i];
+		}
 
 		m.set_vertices(verts, mesh->vertex_count);
 		m.set_indices(inds, mesh->index_count);
