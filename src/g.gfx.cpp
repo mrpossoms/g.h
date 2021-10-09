@@ -1,5 +1,6 @@
 #include "g.gfx.h"
 #include <lodepng.h>
+#include <algorithm>
 
 #ifdef _WIN32
 #include <corecrt_wio.h>
@@ -885,6 +886,7 @@ bool parse_line(int fd, obj_line& line)
 //------------------------------------------------------------------------------
 mesh<vertex::pos_uv_norm> mesh_factory::from_obj(const std::string& path)
 {
+	mesh<vertex::pos_uv_norm> mesh;
 	std::unordered_map<std::string, uint32_t> index_map;
 
 	std::vector<vec<3>> positions, normals, params;
@@ -956,7 +958,12 @@ mesh<vertex::pos_uv_norm> mesh_factory::from_obj(const std::string& path)
 		}
 	}
 
+	std::reverse(indices.begin(), indices.end());
+
+	glGenBuffers(2, &mesh.vbo);
+	mesh.set_vertices(vertices);
+	mesh.set_indices(indices);
 	// compute_tangents();
 
-	return {};
+	return mesh;
 }
