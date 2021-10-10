@@ -33,10 +33,8 @@
 #endif
 
 #ifdef __APPLE__
-#undef __gl_h_
 #include <unistd.h>
 #include <GL/glew.h>
-#include <OpenGL/gl3.h>
 #endif
 
 #include <GLFW/glfw3.h>
@@ -522,109 +520,11 @@ struct mesh
 
 struct mesh_factory
 {
-	static mesh<vertex::pos_uv_norm> plane()
-	{
-		mesh<vertex::pos_uv_norm> p;
-		glGenBuffers(2, &p.vbo);
+	static mesh<vertex::pos_uv_norm> plane();
 
-		p.set_vertices({
-			{{-1,-1, 0}, {1, 0}, {0, 0, 1}},
-			{{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
-			{{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
-			{{-1, 1, 0}, {1, 1}, {0, 0, 1}},
-		});
+	static mesh<vertex::pos> slice_cube(unsigned slices);
 
-		return p;
-	}
-
-	static mesh<vertex::pos> slice_cube(unsigned slices)
-	{
-		mesh<vertex::pos> c;
-		std::vector<vertex::pos> verts;
-		std::vector<uint32_t> indices;
-		glGenBuffers(2, &c.vbo);
-
-		const float h = 0.5 * sqrt(3);
-		float dz = (2.f * h) / static_cast<float>(slices);
-
-		for (;slices--;)
-		{
-			auto n = verts.size();
-			indices.push_back(n + 0);
-			indices.push_back(n + 3);
-			indices.push_back(n + 2);
-			indices.push_back(n + 0);
-			indices.push_back(n + 2);
-			indices.push_back(n + 1);
-
-			auto z = dz * slices;
-			verts.push_back({{-h, h, -h + z}});
-			verts.push_back({{ h, h, -h + z}});
-			verts.push_back({{ h,-h, -h + z}});
-			verts.push_back({{-h,-h, -h + z}});
-
-		}
-
-		c.set_vertices(verts);
-		c.set_indices(indices);
-
-		return c;
-	}
-
-	static mesh<vertex::pos_uv_norm> cube()
-	{
-		mesh<vertex::pos_uv_norm> c;
-		glGenBuffers(1, &c.vbo);
-		c.set_vertices({
-			// +x face
-			{{ 1,-1, 1}, {1, 1}, {1, 0, 0}},
-			{{ 1, 1, 1}, {0, 1}, {1, 0, 0}},
-			{{ 1, 1,-1}, {0, 0}, {1, 0, 0}},
-			{{ 1,-1,-1}, {1, 0}, {1, 0, 0}},
-
-			// -x face
-			{{-1,-1, 1}, {1, 1}, {-1, 0, 0}},
-			{{-1, 1, 1}, {0, 1}, {-1, 0, 0}},
-			{{-1, 1,-1}, {0, 0}, {-1, 0, 0}},
-			{{-1,-1,-1}, {1, 0}, {-1, 0, 0}},
-
-			// +y face
-			{{-1, 1, 1}, {1, 1}, {0, 1, 0}},
-			{{ 1, 1, 1}, {0, 1}, {0, 1, 0}},
-			{{ 1, 1,-1}, {0, 0}, {0, 1, 0}},
-			{{-1, 1,-1}, {1, 0}, {0, 1, 0}},
-
-			// -y face
-			{{-1,-1, 1}, {1, 1}, {0,-1, 0}},
-			{{ 1,-1, 1}, {0, 1}, {0,-1, 0}},
-			{{ 1,-1,-1}, {0, 0}, {0,-1, 0}},
-			{{-1,-1,-1}, {1, 0}, {0,-1, 0}},
-
-			// +z face
-			{{-1, 1, 1}, {1, 1}, {0, 0, 1}},
-			{{ 1, 1, 1}, {0, 1}, {0, 0, 1}},
-			{{ 1,-1, 1}, {0, 0}, {0, 0, 1}},
-			{{-1,-1, 1}, {1, 0}, {0, 0, 1}},
-
-			// -z face
-			{{-1, 1,-1}, {1, 1}, {0, 0, -1}},
-			{{ 1, 1,-1}, {0, 1}, {0, 0, -1}},
-			{{ 1,-1,-1}, {0, 0}, {0, 0, -1}},
-			{{-1,-1,-1}, {1, 0}, {0, 0, -1}},
-		});
-
-		glGenBuffers(1, &c.ibo);
-		c.set_indices({
-			(0) + 2, (0) + 3, (0) + 0, (0) + 1, (0) + 2, (0) + 0,
-			(4) + 0, (4) + 3, (4) + 2, (4) + 0, (4) + 2, (4) + 1,
-			(8) + 0, (8) + 3, (8) + 2, (8) + 0, (8) + 2, (8) + 1,
-			(12) + 2, (12) + 3, (12) + 0, (12) + 1, (12) + 2, (12) + 0,
-			(16) + 2, (16) + 3, (16) + 0, (16) + 1, (16) + 2, (16) + 0,
-			(20) + 0, (20) + 3, (20) + 2, (20) + 0, (20) + 2, (20) + 1,
-		});
-
-		return c;
-	}
+	static mesh<vertex::pos_uv_norm> cube();
 
 	static mesh<vertex::pos_uv_norm> from_obj(const std::string& path);
 
@@ -661,6 +561,15 @@ struct mesh_factory
 		ogt_mesh_destroy(&empty_ctx, mesh);
 		delete[] verts;
 		delete[] inds;
+
+		return m;
+	}
+
+	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, unsigned x, unsigned y, unsigned z)> converter)
+	{
+		mesh<VERT> m;
+
+		// TODO
 
 		return m;
 	}

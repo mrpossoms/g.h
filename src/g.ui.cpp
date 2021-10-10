@@ -20,14 +20,14 @@ layer::itr::itr(layer& l, const ui::pointer* p, event e) : layer_ref(l), pointer
 }
 
 bool layer::itr::operator!=(const itr& it)
-{ 
-    return it.i != i; 
+{
+    return it.i != i;
 }
 
 void layer::itr::operator++()
-{ 
+{
     //g::utils::inc_at_end<unsigned> inc(i);
-    
+
     while(i < static_cast<unsigned>(event::last))
     {
         i++;
@@ -54,6 +54,7 @@ void layer::itr::operator++()
             case event::draw:
                 ctx.draw = layer_ref.using_shader();
                 return;
+            default: break;
         }
     }
 }
