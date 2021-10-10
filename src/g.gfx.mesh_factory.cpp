@@ -1,5 +1,9 @@
 #include "g.gfx.h"
 
+#ifdef _WIN32
+# define strtok_r strtok_s
+#endif // _WIN32
+
 
 using namespace g::gfx;
 
@@ -199,7 +203,7 @@ bool parse_line(int fd, obj_line& line)
             vec_size = 3;
             break;
         case FACE:
-        bzero(&line.face, sizeof(line.face));
+        memset(&line.face, 0, sizeof(line.face));
         for(int i = 0; i < 3; ++i)
         {
             token = strtok_r(nullptr, " ", &save_ptr);

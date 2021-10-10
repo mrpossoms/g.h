@@ -565,6 +565,7 @@ struct mesh_factory
 		return m;
 	}
 
+	template<typename VERT>
 	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, unsigned x, unsigned y, unsigned z)> converter)
 	{
 		mesh<VERT> m;
