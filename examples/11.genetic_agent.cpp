@@ -1,4 +1,5 @@
 #include <g.h>
+#include "g.ai.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -13,6 +14,7 @@ struct my_core : public g::core
 {
     g::asset::store assets;
     g::game::camera_perspective cam;
+    g::ai::mlp<3, 2> brain;
 
     virtual bool initialize()
     {
@@ -39,6 +41,8 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
         cam.aspect_ratio = g::gfx::aspect();
+
+        auto y = brain.evaluate({1, 2, 3});
 
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
