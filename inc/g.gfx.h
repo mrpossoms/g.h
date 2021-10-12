@@ -515,6 +515,29 @@ struct mesh
 
 		return usage;
 	}
+
+
+	static void compute_normals(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
+	{
+		for(unsigned i = 0; i < indices.size(); i += 3)
+		{
+			vec<3> diff[2] = {
+				vertices[indices[i + 0]].position - vertices[indices[i + 1]].position,
+				vertices[indices[i + 0]].position - v[indices[i + 2]].position,
+			};
+
+			auto& vert = vertices[indices[i]];
+			auto cross = vec<3>::cross(diff[0], diff[1]);
+			vert.normal = cross.unit();
+
+			if(isnan(vert.normal[0]) || isnan(vert.normal[1]) || isnan(vert.normal[2]))
+			{
+				// assert(0);
+			}
+
+			i = (i + 1) - 1;
+		}
+	}
 };
 
 
@@ -529,7 +552,7 @@ struct mesh_factory
 	static mesh<vertex::pos_uv_norm> from_obj(const std::string& path);
 
 	template<typename VERT>
-	static mesh<VERT> from_voxels(g::game::voxels_paletted& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> converter)
+	static mesh<VERT> from_voxels(g::game::voxels_paletted& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
 	{
 		ogt_voxel_meshify_context empty_ctx = {};
 		mesh<VERT> m;
@@ -546,7 +569,7 @@ struct mesh_factory
 		uint32_t* inds = new uint32_t[mesh->index_count];
 		for (unsigned i = 0; i < mesh->vertex_count; i++)
 		{
-			verts[i] = converter(mesh->vertices + i);
+			verts[i] = generator(mesh->vertices + i);
 		}
 
 		// reverse index order so backface culling works correctly
@@ -566,11 +589,50 @@ struct mesh_factory
 	}
 
 	template<typename VERT>
-	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, unsigned x, unsigned y, unsigned z)> converter)
+	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, int x, int y)> generator)
 	{
 		mesh<VERT> m;
 
-		// TODO
+		std::vector<VERT> vertices;
+		std::vector<uint32_t> indices;
+
+		float dx = 1 / (float)tex.size[0];
+		float dy = 1 / (float)tex.size[1];
+
+		for (int i = 0; i < tex.size[0]; i++)
+		for (int j = 0; j < tex.size[1]; j++)
+		{
+			// float x = dx * i - 0.5f, y = dy * j - 0.5f;
+			// Vertex v = {
+			// 	.position = { 
+			// 		(x / tex.size[0]) - tex.size[0] * 0.5,
+			// 		0, 
+			// 		(y / tex.size[1]) - tex.size[1] * 0.5 },
+			// 	.normal = { 0, 1, 0 },
+			// 	.tangent = { 1, 0, 0 },
+			// 	.texture = { dx * i * size, dy * j * size, 0 }
+			// };
+
+			vertices.push_back(generator(tex, i, j));
+		}
+
+		for (int y = 0; y < tex.size[0] - 1; y++)
+		for (int x = 0; x < tex.size[1] - 1; x++)
+		{
+			int i = x + y * (tex.size[0]);
+			int j = x + (y + 1) * (tex.size[0]);
+			indices.push_back(i);
+			indices.push_back(i + 1);
+			indices.push_back(j);
+
+			indices.push_back(j + 1);
+			indices.push_back(j);
+			indices.push_back(i + 1);
+		}
+
+		mesh<VERT>::compute_normals(vertices, indices);
+		m.set_vertices(vertices);
+		m.set_indices(indices);
 
 		return m;
 	}
