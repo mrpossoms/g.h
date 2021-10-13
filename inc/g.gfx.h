@@ -637,6 +637,37 @@ struct mesh_factory
 		return m;
 	}
 
+	static mesh<vertex::pos_uv_norm> from_heightmap(const texture& tex)
+	{
+		return from_heightmap(tex, [](const texture& tex, int x, int y) -> vertex::pos_uv_norm {
+			// Vertex v = {
+			// 	.position = { 
+			// 		(x / tex.size[0]) - tex.size[0] * 0.5,
+			// 		0, 
+			// 		(y / tex.size[1]) - tex.size[1] * 0.5 },
+			// 	.normal = { 0, 1, 0 },
+			// 	.tangent = { 1, 0, 0 },
+			// 	.texture = { dx * i * size, dy * j * size, 0 }
+			// };
+
+			return {
+				// position
+				{
+					(x / tex.size[0]) - tex.size[0] * 0.5,
+					tex.sample(x, y)[0],
+					(y / tex.size[1]) - tex.size[1] * 0.5,
+				},
+				// uv
+				{ 
+					x / (float)tex.size[0],
+					y / (float)tex.size[1],
+				},
+				// normal
+				{ 0, 1, 0 }
+			};
+		});
+	}
+
 	template<typename V>
 	static mesh<V> empty_mesh()
 	{
