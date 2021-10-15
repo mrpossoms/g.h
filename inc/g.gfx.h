@@ -523,7 +523,7 @@ struct mesh
 		{
 			vec<3> diff[2] = {
 				vertices[indices[i + 0]].position - vertices[indices[i + 1]].position,
-				vertices[indices[i + 0]].position - v[indices[i + 2]].position,
+				vertices[indices[i + 0]].position - vertices[indices[i + 2]].position,
 			};
 
 			auto& vert = vertices[indices[i]];
@@ -592,6 +592,10 @@ struct mesh_factory
 	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, int x, int y)> generator)
 	{
 		mesh<VERT> m;
+		
+		glGenBuffers(2, &m.vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, m.vbo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.ibo);
 
 		std::vector<VERT> vertices;
 		std::vector<uint32_t> indices;
@@ -639,7 +643,9 @@ struct mesh_factory
 
 	static mesh<vertex::pos_uv_norm> from_heightmap(const texture& tex)
 	{
-		return from_heightmap(tex, [](const texture& tex, int x, int y) -> vertex::pos_uv_norm {
+
+
+		return from_heightmap<vertex::pos_uv_norm>(tex, [](const texture& tex, int x, int y) -> vertex::pos_uv_norm {
 			// Vertex v = {
 			// 	.position = { 
 			// 		(x / tex.size[0]) - tex.size[0] * 0.5,
@@ -653,9 +659,9 @@ struct mesh_factory
 			return {
 				// position
 				{
-					(x / tex.size[0]) - tex.size[0] * 0.5,
-					tex.sample(x, y)[0],
-					(y / tex.size[1]) - tex.size[1] * 0.5,
+					x - tex.size[0] * 0.5f,
+					static_cast<float>(tex.sample(x, y)[0] * 0.25f),
+					y - tex.size[1] * 0.5f,
 				},
 				// uv
 				{ 

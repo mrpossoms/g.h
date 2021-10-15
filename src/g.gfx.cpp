@@ -139,6 +139,7 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	std::cerr << "loading texture '" <<  path << "'... ";
 
 	unsigned width, height;
+	// TODO: use a more robust lodepng_decode call which can handle textures of various channels and bit depths
 	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
 
 	// If there's an error, display it.

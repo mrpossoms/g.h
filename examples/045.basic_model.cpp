@@ -14,13 +14,14 @@ const std::string vs_src =
 "in vec2 a_uv;"
 "in vec3 a_normal;"
 "uniform mat4 u_model;"
+"uniform mat4 u_view;"
 "uniform mat4 u_proj;"
 "out vec2 v_uv;"
 "out vec3 v_normal;"
 "void main (void) {"
 "v_uv = a_uv;"
 "v_normal = a_normal;"
-"gl_Position = u_proj * u_model * vec4(a_position * 0.5, 1.0);"
+"gl_Position = u_proj * u_view * u_model * vec4(a_position * 0.5, 1.0);"
 "}";
 
 const std::string fs_src =
@@ -37,8 +38,10 @@ const std::string fs_src =
 struct my_core : public g::core
 {
     g::gfx::shader basic_shader;
-    g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
-    g::gfx::texture grid_tex;
+    g::asset::store assets;
+    g::game::camera_perspective cam;
+    g::gfx::mesh<g::gfx::vertex::pos_uv_norm> car;
+    g::gfx::mesh<g::gfx::vertex::pos_uv_norm> terrain;
 
     virtual bool initialize()
     {
@@ -48,11 +51,11 @@ struct my_core : public g::core
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
                                                .create();
 
-        plane = g::gfx::mesh_factory::from_obj("data/geo/car.obj");
+        car = assets.geo("car.obj");
+        terrain = g::gfx::mesh_factory::from_heightmap(assets.tex("heightmap.png"));
 
-        grid_tex = g::gfx::texture_factory{}.from_png("data/tex/brick.color.png").create();
-
-        // glDisable(GL_CULL_FACE);
+        cam.position = {0, 2, 4};
+        glDisable(GL_CULL_FACE);
 
         return true;
     }
@@ -62,16 +65,30 @@ struct my_core : public g::core
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        t += dt;
+        const auto speed = 4.0f;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
         auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, -1, -2});
         auto proj = mat4::perspective(0.1, 10, M_PI / 2, g::gfx::aspect());
 
-        plane.using_shader(basic_shader)
-        ["u_model"].mat4(model)
-        ["u_proj"].mat4(proj)
-        ["u_tex"].texture(grid_tex)
-        .draw<GL_TRIANGLES>();
+        terrain.using_shader(basic_shader)
+            ["u_model"].mat4(model)
+            .set_camera(cam)
+            .draw<GL_TRIANGLES>();
+
+        car.using_shader(basic_shader)
+            ["u_model"].mat4(model)
+            .set_camera(cam)
+            .draw<GL_TRIANGLES>();
     }
 
     float t;
