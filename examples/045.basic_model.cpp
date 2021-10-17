@@ -41,7 +41,6 @@ struct my_core : public g::core
     g::asset::store assets;
     g::game::camera_perspective cam;
     g::gfx::mesh<g::gfx::vertex::pos_uv_norm> car;
-    g::gfx::mesh<g::gfx::vertex::pos_uv_norm> terrain;
 
     virtual bool initialize()
     {
@@ -52,7 +51,6 @@ struct my_core : public g::core
                                                .create();
 
         car = assets.geo("car.obj");
-        terrain = g::gfx::mesh_factory::from_heightmap(assets.tex("heightmap.png"));
 
         cam.position = {0, 2, 4};
         glDisable(GL_CULL_FACE);
@@ -80,11 +78,6 @@ struct my_core : public g::core
         auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, -1, -2});
         auto proj = mat4::perspective(0.1, 10, M_PI / 2, g::gfx::aspect());
 
-        terrain.using_shader(basic_shader)
-            ["u_model"].mat4(model)
-            .set_camera(cam)
-            .draw<GL_TRIANGLES>();
-
         car.using_shader(basic_shader)
             ["u_model"].mat4(model)
             .set_camera(cam)
@@ -106,7 +99,7 @@ int main (int argc, const char* argv[])
 //  core.start({ "04.basic_draw", true, 512, 512 });
 //  emscripten_set_main_loop(main_loop, 144, 1);
 // #else
-    core.start({ "04.basic_draw", true, 512, 512 });
+    core.start({ "045.basic_model", true, 512, 512 });
 // #endif
 
     return 0;

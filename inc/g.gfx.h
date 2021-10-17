@@ -538,6 +538,20 @@ struct mesh
 			i = (i + 1) - 1;
 		}
 	}
+
+	static void compute_tangents(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
+	{
+		for(unsigned int i = 0; i < indices.size(); i += 3)
+		{
+
+			vertices[indices[i + 0]].tangent = vertices[indices[i]].position - vertices[indices[i + 1]].position;
+
+			for(int j = 3; j--;)
+			{
+				vertices[indices[i + j]].tangent = vertices[indices[i + j]].tangent.unit();
+			}
+		}
+	}
 };
 
 
@@ -625,13 +639,13 @@ struct mesh_factory
 		{
 			int i = x + y * (tex.size[0]);
 			int j = x + (y + 1) * (tex.size[0]);
+			indices.push_back(j);
+			indices.push_back(i + 1);
 			indices.push_back(i);
-			indices.push_back(i + 1);
-			indices.push_back(j);
 
-			indices.push_back(j + 1);
-			indices.push_back(j);
 			indices.push_back(i + 1);
+			indices.push_back(j);
+			indices.push_back(j + 1);
 		}
 
 		mesh<VERT>::compute_normals(vertices, indices);
@@ -646,16 +660,6 @@ struct mesh_factory
 
 
 		return from_heightmap<vertex::pos_uv_norm>(tex, [](const texture& tex, int x, int y) -> vertex::pos_uv_norm {
-			// Vertex v = {
-			// 	.position = { 
-			// 		(x / tex.size[0]) - tex.size[0] * 0.5,
-			// 		0, 
-			// 		(y / tex.size[1]) - tex.size[1] * 0.5 },
-			// 	.normal = { 0, 1, 0 },
-			// 	.tangent = { 1, 0, 0 },
-			// 	.texture = { dx * i * size, dy * j * size, 0 }
-			// };
-
 			return {
 				// position
 				{
