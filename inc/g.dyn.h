@@ -1,5 +1,10 @@
 #pragma once
 
+#include <limits>
+
+#ifndef XMTYPE
+#define XMTYPE float
+#endif
 #include <xmath.h>
 
 namespace g {
@@ -75,5 +80,37 @@ public:
     }
 };
 
+namespace cd
+{
+
+struct intersect
+{
+    float time = std::numeric_limits<float>::quiet_NaN();
+    vec<3> position = {}, normal = {};
+
+    intersect() = default;
+
+    intersect(float t, const vec<3>& p, const vec<3>& n) : time(t), position(p), normal(n) {}
+};
+
+struct ray
+{ 
+    vec<3> position, direction; 
+
+    inline vec<3> point_at(float t) const { return position + direction * t; }
+};
+
+static intersect ray_plane(const ray& r, const vec<3>& plane_o, const vec<3>& plane_n)
+{
+    auto t = xmath::intersect::ray_plane(r.position, r.direction, plane_o, plane_n);
+
+    return {
+        t,
+        r.point_at(t),
+        plane_n
+    };
+}
+
+} // end namespace cd
 } // end namespace dyn
 } // end namespace g

@@ -54,5 +54,9 @@ my_get_file_buffer (const char* path, size_t* buf_size, uint64_t* ckhsum)
 	return mapped_file_buf;
 }
 
+bool near(double x, double y, double tol=0.000001f)
+{
+	return fabs(x - y) <= tol;
+}
 
 #define TEST int main (int argc, const char* argv[])

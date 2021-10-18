@@ -1,5 +1,5 @@
 #include ".test.h"
-#include "g.game.h"
+#include "g.h"
 
 /**
  * A test is nothing more than a stripped down C program
