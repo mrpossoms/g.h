@@ -87,3 +87,4 @@ target_link_libraries(${PROJECT_NAME} freetype)
 target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 
 add_subdirectory(examples)
+add_subdirectory(tests)

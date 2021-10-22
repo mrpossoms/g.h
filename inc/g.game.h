@@ -204,7 +204,7 @@ struct voxels
 	uint32_t hash()
 	{
 		auto data_len = width * height * depth * sizeof(DAT);
-		uint32_t* data = static_cast<uint32_t*>(v);
+		uint32_t* data = static_cast<uint32_t*>(v.data());
 		uint32_t h = 0;
 
 	    const uint32_t m = 0x5bd1e995;
