@@ -557,7 +557,7 @@ struct mesh
 
 struct mesh_factory
 {
-	static mesh<vertex::pos_uv_norm> plane();
+	static mesh<vertex::pos_uv_norm> plane(const vec<3>& normal={0, 0, 1}, const vec<2>& size={1, 1});
 
 	static mesh<vertex::pos> slice_cube(unsigned slices);
 

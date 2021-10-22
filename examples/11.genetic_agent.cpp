@@ -14,6 +14,7 @@ struct my_core : public g::core
 {
     g::asset::store assets;
     g::game::camera_perspective cam;
+    g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
     g::ai::mlp<3, 2> brain;
 
     virtual bool initialize()
@@ -22,6 +23,7 @@ struct my_core : public g::core
 
         // glDisable(GL_CULL_FACE);
         cam.position = {0, 2, 4};
+        plane = g::gfx::mesh_factory::plane({ 0, 1, 0 }, { 100, 100 });
 
         return true;
     }
@@ -48,6 +50,11 @@ struct my_core : public g::core
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         t += dt;
+
+        plane.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
+        .set_camera(cam)
+        ["u_model"].mat4(mat4::I())
+        .draw<GL_TRIANGLE_FAN>();
 
         assets.geo("car.obj").using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
         .set_camera(cam)

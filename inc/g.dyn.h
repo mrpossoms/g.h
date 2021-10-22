@@ -100,6 +100,14 @@ struct ray
     inline vec<3> point_at(float t) const { return position + direction * t; }
 };
 
+struct box
+{
+    vec<3> position;
+    vec<3> half_x;
+    vec<3> half_y;
+    vec<3> half_z;
+};
+
 static intersect ray_plane(const ray& r, const vec<3>& plane_o, const vec<3>& plane_n)
 {
     auto t = xmath::intersect::ray_plane(r.position, r.direction, plane_o, plane_n);
@@ -108,6 +116,19 @@ static intersect ray_plane(const ray& r, const vec<3>& plane_o, const vec<3>& pl
         t,
         r.point_at(t),
         plane_n
+    };
+}
+
+static intersect ray_box(const ray& r, const box& b)
+{
+    vec<3> half_lengths[] = {b.half_x, b.half_y, b.half_z};
+    auto t = xmath::intersect::ray_box(r.position, r.direction, b.position, half_lengths);
+    auto face_normal = vec<3>{}; // TODO: compute normal here
+
+    return {
+        t,
+        r.point_at(t),
+        face_normal
     };
 }
 

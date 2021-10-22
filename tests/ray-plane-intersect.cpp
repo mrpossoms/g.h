@@ -15,8 +15,8 @@ TEST
         assert(near(inter.time, 1));
 
         // ray positioned randomly above the plane
-        auto y = (random() % 100) + 1.f;
-        inter = cd::ray_plane(cd::ray{{(random() % 100) - 50.f, y, (random() % 100) - 50.f}, { 0, -1, 0}}, {0, 0, 0}, {0, 1, 0});
+        auto y = (rand() % 100) + 1.f;
+        inter = cd::ray_plane(cd::ray{{(rand() % 100) - 50.f, y, (rand() % 100) - 50.f}, { 0, -1, 0}}, {0, 0, 0}, {0, 1, 0});
         assert(near(inter.time, y));
 
         // ray over the origin

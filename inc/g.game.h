@@ -330,19 +330,5 @@ struct voxels_paletted : public voxels<uint8_t>
 	}
 };
 
-struct ray { vec<3> o, d; };
-
-namespace collision
-{
-
-struct intersection
-{
-	vec<3> location, normal;
-	float t;
-};
-
-intersection ray_height_map()
-
-} // end namespace collision
 } // end namespace game
 } // end namespace g
