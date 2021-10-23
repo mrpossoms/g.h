@@ -43,6 +43,19 @@ public:
 	vec<3> angular_momentum = {};
 	quat<> orientation = {0, 0, 0, 1};
 
+    void update_inertia_tensor()
+    {
+        mat<3, 3> L = {
+            {mass, 0, 0},
+            {0, mass, 0},
+            {0, 0, mass},
+        };
+
+        _inertia_tensor = L;
+        _inertia_tensor_inv = L;
+        _inertia_tensor_inv.invert_inplace();
+    }
+
 	void update_inertia_tensor(const mat<3, 3>& L)
 	{
         _inertia_tensor = L;
@@ -52,11 +65,14 @@ public:
 
 	void dyn_step(float dt)
 	{
-        if (_net_d_l.magnitude() >= 0.1 || _net_f.magnitude() >= 0.1)
+        if (_net_d_l.magnitude() >= 0.001 || _net_f.magnitude() >= 0.001)
         { // apply net angular momentum and velocity changes
             auto w = _inertia_tensor * _net_d_l;
             angular_momentum += orientation.inverse().rotate(w);
             velocity += orientation.inverse().rotate(_net_f * dt) / mass;
+
+            _net_f = {};
+            _net_d_l = {};
         }
 
 		position += velocity * dt;
