@@ -35,8 +35,8 @@ private:
         { 0, 0, 1 },
     };
 
-    vec<3> _net_f = {};
-    vec<3> _net_d_l = {};
+    vec<3> _net_f = {}; /**< Net force applied to the body wrt its CoM */
+    vec<3> _net_t = {}; /**< Net torque applied to the body wrt its CoM */
 
 public:
 	float mass;
@@ -65,14 +65,15 @@ public:
 
 	void dyn_step(float dt)
 	{
-        if (_net_d_l.magnitude() >= 0.001 || _net_f.magnitude() >= 0.001)
+        if (_net_t.magnitude() >= 0.001 || _net_f.magnitude() >= 0.001)
         { // apply net angular momentum and velocity changes
-            auto w = _inertia_tensor * _net_d_l;
-            angular_momentum += orientation.inverse().rotate(w);
+            // auto w = _inertia_tensor * _net_t;
+            //angular_momentum += orientation.inverse().rotate(w);
+            angular_momentum += _net_t * dt;
             velocity += orientation.inverse().rotate(_net_f * dt) / mass;
 
             _net_f = {};
-            _net_d_l = {};
+            _net_t = {};
         }
 
 		position += velocity * dt;
@@ -89,9 +90,9 @@ public:
     void dyn_apply_force(const vec<3>& point, const vec<3>& force)
     {
         auto& r = point;
-        auto d_l = (vec<3>::cross(r, force));
+        auto t = (vec<3>::cross(r, force));
 
-        _net_d_l += d_l;
+        _net_t += t;
         _net_f += force;
     }
 };
@@ -110,8 +111,8 @@ struct intersect
 };
 
 struct ray
-{ 
-    vec<3> position, direction; 
+{
+    vec<3> position, direction;
 
     inline vec<3> point_at(float t) const { return position + direction * t; }
 };

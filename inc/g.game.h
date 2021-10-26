@@ -57,7 +57,7 @@ struct camera : public view_point
 
 	vec<3> up() const { return orientation.rotate({0, 1, 0}); }
 
-	mat<4, 4>& look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
+	void look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
 	{
 		auto forward = (position - subject).unit();
 		auto d = forward.dot({ 0, 0, 1 });
@@ -74,17 +74,16 @@ struct camera : public view_point
 		{
 			auto angle = acosf(d);
 			auto axis = vec<3>::cross({ 0, 0, 1 }, forward).unit();
-			
+
 			orientation = quat<>::from_axis_angle(axis, angle);
 		}
 
-		return orientation.to_matrix();
 		//return _view = mat<4, 4>::look_at(position, (position - subject).unit(), up);
 	}
 
-	mat<4, 4>& look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up)
+	void look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up)
 	{
-		return _view = mat<4, 4>::look_at((position = pos), forward, up);
+		mat<4, 4>::look_at((position = pos), forward, up);
 	}
 
 	virtual mat<4, 4> view() const
