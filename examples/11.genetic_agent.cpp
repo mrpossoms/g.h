@@ -36,8 +36,8 @@ struct car : g::dyn::rigid_body
 
     inline void update(float dt, g::game::camera* cam)
     {
-        throttle = std::min(1.f, std::max(-1.f, throttle));
-        steering = std::min(1.f, std::max(-1.f, steering));
+        throttle = std::min<float>(1.f, std::max<float>(-1.f, throttle));
+        steering = std::min<float>(1.f, std::max<float>(-1.f, steering));
         auto steering_angle = steering * M_PI / 4;
         auto steering_q = quat<>::from_axis_angle(up(), steering_angle);
 
