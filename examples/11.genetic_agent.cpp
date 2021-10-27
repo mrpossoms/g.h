@@ -18,7 +18,7 @@ struct car : g::dyn::rigid_body
 
     car()
     {
-        mass = 1000;
+        mass = 1;
         update_inertia_tensor();
     }
 
@@ -30,7 +30,7 @@ struct car : g::dyn::rigid_body
             float steer_strength = (velocity.magnitude() * a) / velocity.magnitude();
             steer_strength = std::min<float>(1.f, steer_strength);
             auto force = left() * steer_strength;
-            dyn_apply_force(forward(), force);
+            dyn_apply_local_force(forward(), force);
         }
     }
 
@@ -41,59 +41,69 @@ struct car : g::dyn::rigid_body
         auto steering_angle = steering * M_PI / 4;
         auto steering_q = quat<>::from_axis_angle(up(), steering_angle);
 
-        { // forces from steering and throttle
-            auto accel = vec<3>{ 0, 0, throttle * 1000 };
-            dyn_apply_force(forward() * -0.5f, accel);
-            auto powered_steer = steering_q.rotate(accel);
-            dyn_apply_force(forward() * 0.5f, powered_steer);
+        vec<3> positions[4] = {
+            {-1, 0, -2}, // rear left
+            { 1, 0, -2}, // rear right
+            {-1, 0,  2}, // front left
+            { 1, 0,  2}, // front right
+        };
+
+        vec<3> forwards[4] = {
+            {0, 0, 1}, // rear left
+            {0, 0, 1}, // rear right
+            steering_q.rotate({0, 0, 1}), // front left
+            steering_q.rotate({0, 0, 1}), // front right
+        };
+
+        vec<3> lefts[4] = {
+            {-1, 0, 0}, // rear left
+            {+1, 0, 0}, // rear right
+            steering_q.rotate({-1, 0, 0}), // front left
+            steering_q.rotate({+1, 0, 0}), // front right
+        };
+
+        vec<4> colors[4] = {
+            {0.5f, 0, 0, 1},
+            {1.0f, 0, 0, 1},
+            {0.5f, 0, 1, 1},
+            {1.0f, 0, 1, 1},
+        };
+
+        glDisable(GL_DEPTH_TEST);
+
+        for (unsigned i = 0; i < 4; i++)
+        {
+            g::gfx::debug::print(cam).color(colors[i]).point(position + to_global(positions[i]));
+            g::gfx::debug::print(cam).color(colors[i]).ray(position + to_global(positions[i]), up());
+            g::gfx::debug::print(cam).color(colors[i]).ray(position + to_global(positions[i]), to_global(lefts[i]));
+            dyn_apply_local_force(positions[i], forwards[i] * throttle * 10);
+
+            auto lin_vel_local = to_local(linear_velocity_at(positions[i]));
+            auto lin_speed = lin_vel_local.magnitude();
+            if (lin_speed > 0)
+            {
+                auto lin_vel_local_dir = lin_vel_local / lin_speed;
+                auto ldv = lefts[i].dot(lin_vel_local_dir);
+                auto fdv = forwards[i].dot(lin_vel_local_dir);
+                g::gfx::debug::print(cam).color({lin_vel_local[0], 0, lin_vel_local[2], 1}).ray(position + to_global(positions[i]), to_global(lin_vel_local));
+
+                auto drag = -lin_vel_local * (fabsf(fdv) * 0.01f + pow(fabsf(ldv), 1) * 0.95f);// * fdv * 1.f;// + -lefts[i] * sqrt(ldv);
+                g::gfx::debug::print(cam).color({drag[0], 1, drag[2], 1}).ray(position + to_global(positions[i]), to_global(drag));
+                dyn_apply_local_force(positions[i], drag);
+            }
         }
-
-        { // tire drag (causes redirection)
-            auto wheel_left = steering_q.rotate(left());
-
-            auto left_dot_vel = left().dot(velocity);
-            auto skid_force = -left() * (1000 * (pow(left_dot_vel, 3) + left_dot_vel));
-
-            glDisable(GL_DEPTH_TEST);
-            g::gfx::debug::print(cam).color({ 0, 0, 0, 1 }).ray(position - left() + forward() * 2, wheel_left * 2);
-            g::gfx::debug::print(cam).color({ 0, 0, 0, 1 }).ray(position - left() - forward() * 2, wheel_left * 2);
-            g::gfx::debug::print(cam).color({ 0, 0, 1, 1 }).ray(position - forward(), skid_force);
-
-            g::gfx::debug::print(cam).color({ 0, 0, 0, 1 }).ray(position, forward());
-            g::gfx::debug::print(cam).color({ 1, 0, 0, 1 }).ray(position, velocity);
-
-            glEnable(GL_DEPTH_TEST);
-
-            dyn_apply_force({}, skid_force);
-            // dyn_apply_force(forward() * 0.5f, steer_force * 1000);
-
-            dyn_apply_force(forward() * -2.f, left() * steering * -1000);
-            dyn_apply_force(forward() * 2.f, left() * steering * 1000);
-
-        }
-
-        { // parasitic forces
-            auto v = velocity.magnitude();
-            auto drag = vec<3>{ 0, 0, -(pow(v, 2.f) + v * 2) };
-            dyn_apply_force({ 0, 0, 0 }, drag);
-        }
-
-        //auto tire_forces = left() * left().dot(velocity) * pow(velocity.magnitude() * 10, 2);
-        //dyn_apply_force({ 0, 0, 0 }, tire_forces);
-        angular_momentum -= angular_momentum * dt;
-
-        //velocity = forward() * forward().dot(velocity);
+        glEnable(GL_DEPTH_TEST);
 
         dyn_step(dt);
     }
-
-    inline vec<3> local_velocity() { return orientation.inverse().rotate(velocity); }
 
     inline vec<3> forward() { return orientation.inverse().rotate({0, 0, 1}); }
 
     inline vec<3> up() { return orientation.inverse().rotate({ 0, 1, 0 }); }
 
-    inline vec<3> left() { return orientation.inverse().rotate({ 1, 0, 0 }); }
+    inline vec<3> left() {
+        return orientation.inverse().rotate({ 1, 0, 0 });
+    }
 
     inline mat4 transform()
     {
@@ -116,17 +126,19 @@ struct my_core : public g::core
         std::cout << "initialize your game state here.\n";
 
         // glDisable(GL_CULL_FACE);
-        cam.position = {0, 10, 4};
+        cam.position = {0, 50, 4};
         plane = g::gfx::mesh_factory::plane({ 0, 1, 0 }, { 100, 100 });
-
+        glPointSize(4);
         cars.push_back({});
+
+        cars[0].angular_momentum = {0, 1, 0};
 
         return true;
     }
 
     virtual void update(float dt)
     {
-        const auto speed = 4.0f;
+        const auto speed = 8.0f;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
@@ -137,7 +149,7 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
-
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) { cars[0].velocity *= 0; cars[0].angular_momentum *= 0; }
         //cam.position = cam.position * (1 - dt) + (cars[0].position + cars[0].forward() * -4 + cars[0].up() * 2) * dt;
         //cam.orientation = (cam.orientation * (1 - dt) + cars[0].orientation.inverse() * dt).unit();
         //cam.look_at(cars[0].position);
@@ -208,7 +220,7 @@ int main (int argc, const char* argv[])
 //  core.start({ "04.basic_draw", true, 512, 512 });
 //  emscripten_set_main_loop(main_loop, 144, 1);
 // #else
-    core.start({ "11.genetic_agent", true, 512, 512 });
+    core.start({ "11.genetic_agent", true, 1024, 768 });
 // #endif
 
     return 0;

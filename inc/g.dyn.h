@@ -35,8 +35,8 @@ private:
         { 0, 0, 1 },
     };
 
-    vec<3> _net_f = {}; /**< Net force applied to the body wrt its CoM */
-    vec<3> _net_t = {}; /**< Net torque applied to the body wrt its CoM */
+    vec<3> _net_f_local = {}; /**< Net force applied to the body wrt its CoM */
+    vec<3> _net_t_local = {}; /**< Net torque applied to the body wrt its CoM */
 
 public:
 	float mass;
@@ -56,6 +56,16 @@ public:
         _inertia_tensor_inv.invert_inplace();
     }
 
+    inline vec<3> angular_velocity()
+    {
+        return _inertia_tensor_inv * angular_momentum;
+    }
+
+    inline vec<3> linear_velocity_at(const vec<3>& local_point)
+    {
+        return vec<3>::cross(angular_velocity(), to_global(local_point)) + velocity;
+    }
+
 	void update_inertia_tensor(const mat<3, 3>& L)
 	{
         _inertia_tensor = L;
@@ -65,35 +75,48 @@ public:
 
 	void dyn_step(float dt)
 	{
-        if (_net_t.magnitude() >= 0.001 || _net_f.magnitude() >= 0.001)
-        { // apply net angular momentum and velocity changes
-            // auto w = _inertia_tensor * _net_t;
-            //angular_momentum += orientation.inverse().rotate(w);
-            angular_momentum += _net_t * dt;
-            velocity += orientation.inverse().rotate(_net_f * dt) / mass;
+        if (_net_t_local.magnitude() >= 0.001)
+        {
+            angular_momentum += _net_t_local * dt;
+            _net_t_local = {};
+        }
 
-            _net_f = {};
-            _net_t = {};
+        if(_net_f_local.magnitude() >= 0.001)
+        { // apply net angular momentum and velocity changes
+            // auto w = _inertia_tensor * _net_t_local;
+            //angular_momentum += orientation.inverse().rotate(w);
+            velocity += orientation.inverse().rotate(_net_f_local * dt) / mass;
+            _net_f_local = {};
         }
 
 		position += velocity * dt;
-        auto w = _inertia_tensor_inv * angular_momentum;
-        auto ang_mag = angular_momentum.magnitude();
+        auto w = angular_velocity();
+        auto rad_sec = w.magnitude();
 
-        if (ang_mag > 0)
+        if (rad_sec > 0)
         {
-            auto axis = angular_momentum / ang_mag;
-            orientation *= quat<>::from_axis_angle(axis, w.magnitude() * dt);
+            auto axis = w / rad_sec;
+            orientation *= quat<>::from_axis_angle(axis, rad_sec * dt);
         }
 	}
 
-    void dyn_apply_force(const vec<3>& point, const vec<3>& force)
+    vec<3> to_local(const vec<3>& global)
+    {
+        return orientation.rotate(global);
+    }
+
+    vec<3> to_global(const vec<3>& local)
+    {
+        return orientation.inverse().rotate(local);
+    }
+
+    void dyn_apply_local_force(const vec<3>& point, const vec<3>& force)
     {
         auto& r = point;
         auto t = (vec<3>::cross(r, force));
 
-        _net_t += t;
-        _net_f += force;
+        _net_t_local += t;
+        _net_f_local += force;
     }
 };
 
