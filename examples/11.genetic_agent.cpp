@@ -254,7 +254,7 @@ struct my_core : public g::core
             .draw<GL_TRIANGLES>();
 
             auto target = car.to_local(waypoint_positions[car.waypoint_index]  - car.position);
-            auto x = vec<4>{target[0], target[2], car.velocity.magnitude(), 1, 1};
+            auto x = vec<4>{target[0], target[2], car.velocity.magnitude(), 1};
             auto y = car.model.evaluate(x);
 
             car.throttle = y[0];
