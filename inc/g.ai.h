@@ -1,6 +1,7 @@
 #pragma once
 #define XMTYPE float
 #include <xmath.h>
+#include <random>
 
 namespace g
 {
@@ -29,6 +30,27 @@ struct mlp
         }
 
         return w_out * a;
+    }
+
+    void initialize()
+    {
+        static std::default_random_engine generator;
+        std::normal_distribution<double> distribution(0.f, 0.5f);
+
+        w_in.initialize([&](float r, float c) {
+            return distribution(generator);
+        });
+
+        for (unsigned i = LAYERS; i--;)
+        {
+            w_hidden[i].initialize([&](float r, float c) {
+                return distribution(generator);
+            });
+        }
+
+        w_out.initialize([&](float r, float c) {
+            return distribution(generator);
+        });
     }
 };
 
