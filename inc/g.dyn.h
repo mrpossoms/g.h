@@ -75,28 +75,31 @@ public:
 
 	void dyn_step(float dt)
 	{
-        if (_net_t_local.magnitude() >= 0.001)
+        auto apply_torque = _net_t_local.magnitude() >= 0.001; 
+        auto apply_force = _net_f_local.magnitude() >= 0.001;
+        // if (apply_torque)
         {
-            angular_momentum += _net_t_local * dt;
-            _net_t_local = {};
+            // apply angular momentum changes
+            angular_momentum += (_net_t_local * dt) * apply_torque;
+            _net_t_local = _net_t_local * (1 - apply_torque);
         }
 
-        if(_net_f_local.magnitude() >= 0.001)
-        { // apply net angular momentum and velocity changes
-            // auto w = _inertia_tensor * _net_t_local;
-            //angular_momentum += orientation.inverse().rotate(w);
-            velocity += orientation.inverse().rotate(_net_f_local * dt) / mass;
-            _net_f_local = {};
+        //if(apply_force)
+        { 
+            // apply velocity changes
+            velocity += (orientation.inverse().rotate(_net_f_local * dt) / mass) * apply_force;
+            _net_f_local = _net_f_local * (1 - apply_force);
         }
 
 		position += velocity * dt;
         auto w = angular_velocity();
         auto rad_sec = w.magnitude();
+        auto is_spinning = rad_sec > 0;
 
-        if (rad_sec > 0)
+        // if (is_spinning)
         {
-            auto axis = w / rad_sec;
-            orientation *= quat<>::from_axis_angle(axis, rad_sec * dt);
+            auto axis = (w / rad_sec) * is_spinning;
+            orientation *= quat<>::from_axis_angle(axis, rad_sec * dt * is_spinning);
         }
 	}
 

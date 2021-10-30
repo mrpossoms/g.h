@@ -9,16 +9,20 @@
 #define EGL_EGLEXT_PROTOTYPES
 #endif
 
+// #define DRAW_DEBUG_VECS
+#define GENERATION_SIZE 2000
+
 using mat4 = xmath::mat<4,4>;
 
 struct car : g::dyn::rigid_body
 {
-    g::ai::mlp<3, 2> model;
+    g::ai::mlp<6, 2> model;
     float throttle = 0, steering = 0;
     unsigned waypoint_index = 1;
 
     float time = 0;
-    unsigned waypoints_reached = 0;
+    vec<3> displacement = {};
+    float waypoints_reached = 0;
 
     car()
     {
@@ -30,9 +34,11 @@ struct car : g::dyn::rigid_body
     inline void reset()
     {
         waypoints_reached = 0;
+        waypoint_index = 1;
         time = 0;
         position = { (float)(rand() % 10 - 5), 0, (float)(rand() % 10 - 5) };
         velocity *= 0;
+        displacement = {};
     }
 
     inline void steer(float a)
@@ -81,13 +87,17 @@ struct car : g::dyn::rigid_body
             {1.0f, 0, 1, 1},
         };
 
+#ifdef DRAW_DEBUG_VECS
         glDisable(GL_DEPTH_TEST);
+#endif
 
         for (unsigned i = 0; i < 4; i++)
         {
+#ifdef DRAW_DEBUG_VECS
             g::gfx::debug::print(cam).color(colors[i]).point(position + to_global(positions[i]));
             g::gfx::debug::print(cam).color(colors[i]).ray(position + to_global(positions[i]), up());
             g::gfx::debug::print(cam).color(colors[i]).ray(position + to_global(positions[i]), to_global(lefts[i]));
+#endif            
             dyn_apply_local_force(positions[i], forwards[i] * throttle * 10);
 
             auto lin_vel_local = to_local(linear_velocity_at(positions[i]));
@@ -97,51 +107,26 @@ struct car : g::dyn::rigid_body
                 auto lin_vel_local_dir = lin_vel_local / lin_speed;
                 auto ldv = lefts[i].dot(lin_vel_local_dir);
                 auto fdv = forwards[i].dot(lin_vel_local_dir);
-                g::gfx::debug::print(cam).color({lin_vel_local[0], 0, lin_vel_local[2], 1}).ray(position + to_global(positions[i]), to_global(lin_vel_local));
-
                 auto drag = -lin_vel_local * (fabsf(fdv) * 0.01f + pow(fabsf(ldv), 1) * 0.95f);// * fdv * 1.f;// + -lefts[i] * sqrt(ldv);
+#ifdef DRAW_DEBUG_VECS
+                g::gfx::debug::print(cam).color({lin_vel_local[0], 0, lin_vel_local[2], 1}).ray(position + to_global(positions[i]), to_global(lin_vel_local));
                 g::gfx::debug::print(cam).color({drag[0], 1, drag[2], 1}).ray(position + to_global(positions[i]), to_global(drag));
+#endif
                 dyn_apply_local_force(positions[i], drag);
             }
         }
+#ifdef DRAW_DEBUG_VECS
         glEnable(GL_DEPTH_TEST);
-
+#endif
         dyn_step(dt);
 
+        displacement += velocity * dt;
         time += dt;
     }
 
-    car breed(const car& mate, float mutation_rate=0.2f)
-    {
-        car child;
+    uint8_t* genome_buf() { return (uint8_t*)&model; }
+    size_t genome_size() { return sizeof(model); }
 
-        uint8_t* my_model = (uint8_t*)&model;
-        uint8_t* mate_model = (uint8_t*)&mate.model;
-        uint8_t* child_model = (uint8_t*)&child.model;
-
-        for (unsigned i = 0; i < sizeof(model); i++)
-        {
-            if(rand() % 2 == 0)
-            {
-                child_model[i] = my_model[i];
-            }
-            else
-            {
-                child_model[i] = mate_model[i];
-            }
-
-            for (unsigned j = 0; j < 8; j++)
-            {
-                float r = (rand() % 100) / 100.f;
-                if (r < mutation_rate)
-                {
-                    child_model[i] ^= 1 << j;
-                }
-            }
-        }
-
-        return child;
-    }
 
     inline vec<3> forward() { return orientation.inverse().rotate({0, 0, 1}); }
 
@@ -167,7 +152,9 @@ struct my_core : public g::core
     std::vector<car> cars;
     std::vector<mat4> waypoint_models;
     std::vector<vec<3>> waypoint_positions;
+    std::vector<vec<3>> waypoint_dir;
 
+    int skip = 1;
     float time = 0;
     unsigned generation = 0;
 
@@ -198,9 +185,10 @@ struct my_core : public g::core
             };
 
             waypoint_models.push_back(rotate * mat4::translation(p_0 + vec<3>{0, 2, 0}));
+            waypoint_dir.push_back(f);
         }
 
-        for (unsigned i = 100; i--;)
+        for (unsigned i = GENERATION_SIZE; i--;)
         {
             car c = {};
             c.model.initialize();
@@ -226,6 +214,9 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_MINUS) == GLFW_PRESS) skip = std::max<int>(1, skip - 1);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS) skip += 1;
+
         cam.aspect_ratio = g::gfx::aspect();
 
         glClearColor(0, 0, 1, 1);
@@ -233,28 +224,39 @@ struct my_core : public g::core
 
         time += dt;
 
-        plane.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
+        auto& shader = assets.shader("basic_gui.vs+debug_normal.fs");
+
+        plane.using_shader(shader)
         .set_camera(cam)
         ["u_model"].mat4(mat4::I())
         .draw<GL_TRIANGLE_FAN>();
 
+        auto& waypoint_mesh = assets.geo("waypoint.obj"); 
         for (const auto& w : waypoint_models)
         {
-            assets.geo("waypoint.obj").using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
-                .set_camera(cam)
-                ["u_model"].mat4(w)
-                .draw<GL_TRIANGLES>();
+            waypoint_mesh.using_shader(shader)
+            .set_camera(cam)
+            ["u_model"].mat4(w)
+            .draw<GL_TRIANGLES>();
         }
 
-        for (auto& car : cars)
+        auto& car_mesh = assets.geo("car.obj");
+        for (unsigned i = 0; i < cars.size(); i++)
         {
-            assets.geo("car.obj").using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
+            auto& car = cars[i];
+
+            if (time > 10 && car.score() == 0) { continue; }
+
+            if (i % skip == 0)
+            car_mesh.using_shader(shader)
             .set_camera(cam)
             ["u_model"].mat4(car.transform())
             .draw<GL_TRIANGLES>();
 
-            auto target = car.to_local(waypoint_positions[car.waypoint_index]  - car.position);
-            auto x = vec<4>{target[0], target[2], car.velocity.magnitude(), 1};
+            auto target = car.to_local(waypoint_positions[car.waypoint_index] - car.position);
+            auto target_dir = car.to_local(waypoint_dir[car.waypoint_index]);
+            auto vel_local = car.to_local(car.velocity);
+            auto x = vec<7>{target[0], target[2], target_dir[0], target_dir[2], vel_local[0], vel_local[2], 1};
             auto y = car.model.evaluate(x);
 
             car.throttle = y[0];
@@ -263,24 +265,20 @@ struct my_core : public g::core
             car.update(dt, &cam);
 
             // advance to the next waypoint if the car made it
-            if ((car.position - waypoint_positions[car.waypoint_index]).magnitude() < 8)
+            auto dist_to_waypoint = (car.position - waypoint_positions[car.waypoint_index]).magnitude();
+            if (dist_to_waypoint < 8)
             {
                 car.waypoint_index = (car.waypoint_index + 1) % waypoint_positions.size();
-                car.waypoints_reached++;
+                car.waypoints_reached += 1 / (dist_to_waypoint + 1.f);
             }
         }
 
         if (time > 30)
         {
-            std::sort(cars.begin(), cars.end(), [](const car& a, const car& b){
-                return a.score() > b.score();
-            });
-
             std::vector<car> next_generation;
-
+            g::ai::evolution::generation<car>(cars, next_generation, {});
+            
             std::cerr << "generation " << generation << " top scores" << std::endl;
-
-            // take top 10 and add them to the next generation
             for (unsigned i = 0; i < 10; i++)
             {
                 std::cerr << "#" << i << ": " << cars[i].score() << std::endl;
@@ -288,14 +286,7 @@ struct my_core : public g::core
                 next_generation.push_back(cars[i]);
             }
 
-            // breed the top performers
-            while(next_generation.size() < 100)
-            {
-                unsigned i = rand() % 10, j = rand() % 10;
-
-                next_generation.push_back(cars[i].breed(cars[j], 0.01));
-            }
-
+            for (auto& car : next_generation) { car.reset(); }
             cars = next_generation;
             time = 0;
             generation++;

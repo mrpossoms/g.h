@@ -54,5 +54,82 @@ struct mlp
     }
 };
 
+
+namespace evolution
+{
+
+struct generation_desc
+{
+    float select_top=0.1f;
+    float mutation_rate=0.01f;
+};
+
+template<typename T>
+T breed(T& a, T& b, float mutation_rate)
+{
+    T child = rand() % 2 ? a : b;
+
+    uint8_t* a_genome = a.genome_buf();
+    uint8_t* b_genome = b.genome_buf();
+    uint8_t* child_genome = child.genome_buf();
+
+    for (unsigned i = 0; i < child.genome_size(); i++)
+    {
+        if(rand() % 2 == 0)
+        {
+            child_genome[i] = a_genome[i];
+        }
+        else
+        {
+            child_genome[i] = b_genome[i];
+        }
+
+        for (unsigned j = 0; j < 8; j++)
+        {
+            float r = (rand() % 100) / 100.f;
+            if (r < mutation_rate)
+            {
+                child_genome[i] ^= 1 << j;
+            }
+        }
+    }
+
+    return child;
 }
+
+template<typename T>
+void generation(std::vector<T>& g_0, std::vector<T>& g_1, const generation_desc& desc)
+{
+    g_1.resize(0); // empty without freeing
+
+    // sort the input generation
+    std::sort(g_0.begin(), g_0.end(), [](const T& a, const T& b){
+        return a.score() > b.score();
+    });
+
+
+    // take top 10 and add them to the next generation
+    auto top_performer_count = static_cast<unsigned>(g_0.size() * desc.select_top);
+    for (unsigned i = 0; i < top_performer_count; i++)
+    {
+        g_1.push_back(g_0[i]);
+    }
+
+    static std::default_random_engine generator;
+    std::normal_distribution<float> distribution(0, top_performer_count * 0.3);
+
+    // breed the top performers
+    while(g_1.size() < g_0.size())
+    {
+        unsigned i = std::min<float>(abs(distribution(generator)), g_1.size()-1);
+        unsigned j = std::min<float>(abs(distribution(generator)), g_1.size()-1);
+        g_1.push_back(breed(g_1[i], g_1[j], desc.mutation_rate));
+    }
 }
+
+} // end namespace evolution
+
+
+
+} // end namespace ai
+} // end namespace g
