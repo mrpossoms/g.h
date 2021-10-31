@@ -10,7 +10,7 @@
 #endif
 
 // #define DRAW_DEBUG_VECS
-#define GENERATION_SIZE 2000
+#define GENERATION_SIZE 1000
 
 using mat4 = xmath::mat<4,4>;
 
@@ -21,8 +21,8 @@ struct car : g::dyn::rigid_body
     unsigned waypoint_index = 1;
 
     float time = 0;
-    vec<3> displacement = {};
     float waypoints_reached = 0;
+    float cumulative_waypoints_reached = 0;
 
     car()
     {
@@ -34,11 +34,11 @@ struct car : g::dyn::rigid_body
     inline void reset()
     {
         waypoints_reached = 0;
-        waypoint_index = 1;
         time = 0;
-        position = { (float)(rand() % 10 - 5), 0, (float)(rand() % 10 - 5) };
-        velocity *= 0;
-        displacement = {};
+
+        // waypoint_index = 1;
+        // position = { (float)(rand() % 10 - 5), 0, (float)(rand() % 10 - 5) };
+        // velocity *= 0;
     }
 
     inline void steer(float a)
@@ -97,7 +97,7 @@ struct car : g::dyn::rigid_body
             g::gfx::debug::print(cam).color(colors[i]).point(position + to_global(positions[i]));
             g::gfx::debug::print(cam).color(colors[i]).ray(position + to_global(positions[i]), up());
             g::gfx::debug::print(cam).color(colors[i]).ray(position + to_global(positions[i]), to_global(lefts[i]));
-#endif            
+#endif
             dyn_apply_local_force(positions[i], forwards[i] * throttle * 10);
 
             auto lin_vel_local = to_local(linear_velocity_at(positions[i]));
@@ -120,7 +120,6 @@ struct car : g::dyn::rigid_body
 #endif
         dyn_step(dt);
 
-        displacement += velocity * dt;
         time += dt;
     }
 
@@ -157,13 +156,15 @@ struct my_core : public g::core
     int skip = 1;
     float time = 0;
     unsigned generation = 0;
+    unsigned best_car = 0;
+    vec<3> subject, subject_velocity;
 
     virtual bool initialize()
     {
         std::cout << "initialize your game state here.\n";
 
         // glDisable(GL_CULL_FACE);
-        cam.position = {0, 50, 4};
+        cam.position = {0, 10, 50};
         plane = g::gfx::mesh_factory::plane({ 0, 1, 0 }, { 1000, 1000 });
         glPointSize(4);
 
@@ -222,6 +223,14 @@ struct my_core : public g::core
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        subject_velocity += ((cars[best_car].position + cars[best_car].velocity) - subject) * dt;
+        subject_velocity *= 0.95f;
+        subject += subject_velocity * dt;
+        auto forward = (subject - cam.position).unit();
+        auto left = vec<3>::cross(forward, {0, -1, 0});
+        cam.orientation = quat<>::view(forward, vec<3>::cross(forward, left));
+        cam.position += ((subject + vec<3>{10, 20, 10}) - cam.position) * dt;
+
         time += dt;
 
         auto& shader = assets.shader("basic_gui.vs+debug_normal.fs");
@@ -231,7 +240,7 @@ struct my_core : public g::core
         ["u_model"].mat4(mat4::I())
         .draw<GL_TRIANGLE_FAN>();
 
-        auto& waypoint_mesh = assets.geo("waypoint.obj"); 
+        auto& waypoint_mesh = assets.geo("waypoint.obj");
         for (const auto& w : waypoint_models)
         {
             waypoint_mesh.using_shader(shader)
@@ -270,14 +279,33 @@ struct my_core : public g::core
             {
                 car.waypoint_index = (car.waypoint_index + 1) % waypoint_positions.size();
                 car.waypoints_reached += 1 / (dist_to_waypoint + 1.f);
+                car.cumulative_waypoints_reached += 1 / (dist_to_waypoint + 1.f);
+            }
+
+            if (car.cumulative_waypoints_reached > cars[best_car].cumulative_waypoints_reached)
+            {
+                best_car = i;
             }
         }
+
+        auto& king = cars[best_car];
+        glDisable(GL_CULL_FACE);
+        assets.geo("crown.obj").using_shader(shader)
+        .set_camera(cam)
+        ["u_model"].mat4(mat4::scale({2, 2, 2}) * mat4::translation(king.position + king.up() * 1.5 - king.forward() * 0.75))
+        .draw<GL_TRIANGLES>();
+        glEnable(GL_CULL_FACE);
+
+        car_mesh.using_shader(shader)
+        .set_camera(cam)
+        ["u_model"].mat4(mat4::translation({100 * cos(time), 100 * cos(time), 100 * sin(time)}))
+        .draw<GL_TRIANGLES>();
 
         if (time > 30)
         {
             std::vector<car> next_generation;
             g::ai::evolution::generation<car>(cars, next_generation, {});
-            
+
             std::cerr << "generation " << generation << " top scores" << std::endl;
             for (unsigned i = 0; i < 10; i++)
             {
