@@ -57,14 +57,33 @@ struct camera : public view_point
 
 	vec<3> up() const { return orientation.rotate({0, 1, 0}); }
 
-	mat<4, 4>& look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
+	void look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
 	{
-		return _view = mat<4, 4>::look_at(position * -1.f, (position - subject).unit(), up);
+		auto forward = (position - subject).unit();
+		auto d = forward.dot({ 0, 0, 1 });
+
+		if (fabsf(d + 1.f) < 0.000001f)
+		{
+			orientation = quat<>(0, 1, 0, M_PI);
+		}
+		else if (fabsf(d - 1.f) < 0.000001f)
+		{
+			orientation = quat<>{};
+		}
+		else
+		{
+			auto angle = acosf(d);
+			auto axis = vec<3>::cross({ 0, 0, 1 }, forward).unit();
+
+			orientation = quat<>::from_axis_angle(axis, angle);
+		}
+
+		//return _view = mat<4, 4>::look_at(position, (position - subject).unit(), up);
 	}
 
-	mat<4, 4>& look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up)
+	void look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up)
 	{
-		return _view = mat<4, 4>::look_at((position = pos) * -1.0, forward, up);
+		mat<4, 4>::look_at((position = pos), forward, up);
 	}
 
 	virtual mat<4, 4> view() const
@@ -204,7 +223,7 @@ struct voxels
 	uint32_t hash()
 	{
 		auto data_len = width * height * depth * sizeof(DAT);
-		uint32_t* data = static_cast<uint32_t*>(v);
+		uint32_t* data = static_cast<uint32_t*>(v.data());
 		uint32_t h = 0;
 
 	    const uint32_t m = 0x5bd1e995;
@@ -329,7 +348,6 @@ struct voxels_paletted : public voxels<uint8_t>
 		}
 	}
 };
-
 
 } // end namespace game
 } // end namespace g

@@ -98,16 +98,26 @@ mesh<vertex::pos_uv_norm> mesh_factory::cube()
 }
 
 
-mesh<vertex::pos_uv_norm> mesh_factory::plane()
+mesh<vertex::pos_uv_norm> mesh_factory::plane(const vec<3>& normal, const vec<2>& size)
 {
     mesh<vertex::pos_uv_norm> p;
     glGenBuffers(2, &p.vbo);
 
+    auto y_basis = vec<3>{0, 1, 0};
+
+    if (normal.dot(y_basis) >= 0.999)
+    {
+        y_basis = {0, 0, 1};
+    }
+
+    auto x_basis = vec<3>::cross(normal, y_basis);
+    y_basis = vec<3>::cross(normal, x_basis);
+
     p.set_vertices({
-        {{-1,-1, 0}, {1, 0}, {0, 0, 1}},
-        {{ 1,-1, 0}, {0, 0}, {0, 0, 1}},
-        {{ 1, 1, 0}, {0, 1}, {0, 0, 1}},
-        {{-1, 1, 0}, {1, 1}, {0, 0, 1}},
+        {x_basis * -size[0] + y_basis *  size[1], {1, 1}, normal},
+        {x_basis *  size[0] + y_basis *  size[1], {0, 1}, normal},
+        {x_basis *  size[0] + y_basis * -size[1], {0, 0}, normal},        
+        {x_basis * -size[0] + y_basis * -size[1], {1, 0}, normal},
     });
 
     return p;

@@ -73,6 +73,21 @@ g::gfx::font& g::asset::store::font(const std::string& partial_path)
 }
 
 
+g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::string& partial_path)
+{
+	auto itr = geos.find(partial_path);
+	if (itr == geos.end())
+	{
+		if (std::string::npos != partial_path.find(".obj"))
+		{
+			geos[partial_path] = { time(nullptr), g::gfx::mesh_factory{}.from_obj(root + "/geo/" + partial_path) };
+		}
+	}
+
+	return geos[partial_path].get();
+}
+
+
 g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path)
 {
 	auto itr = voxels.find(partial_path);
