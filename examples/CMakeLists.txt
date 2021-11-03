@@ -1,20 +1,24 @@
+find_package(OpenGL REQUIRED)
+find_package(OpenAL REQUIRED)
+
 link_libraries(g)
 link_libraries(glfw)
 link_libraries(OpenGL::GL)
+link_libraries(${OPENAL_LIBRARY})
 
 # include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../gitman_sources/xmath.h/inc)
-include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../inc)
+include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../inc ${OPENAL_INCLUDE_DIR})
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 # add_subdirectory(../gitman_sources/glfw)
-find_package(OpenGL REQUIRED)
 
 add_executable(01.core 01.core.cpp)
 add_executable(02.net_host 02.net_host.cpp)
 add_executable(03.net_client 03.net_client.cpp)
 add_executable(04.basic_draw 04.basic_draw.cpp)
+add_executable(0425.sound 0425.sound.cpp)
 add_executable(045.basic_model 045.basic_model.cpp)
 add_executable(046.heightmap 046.heightmap.cpp)
 add_executable(05.offscreen_render 05.offscreen_render.cpp)

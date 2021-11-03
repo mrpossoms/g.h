@@ -81,6 +81,9 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
 find_package(OpenGL REQUIRED)
 
+find_package(OpenAL REQUIRED)
+target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
+
 # target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} glew_s)
 target_link_libraries(${PROJECT_NAME} freetype)
