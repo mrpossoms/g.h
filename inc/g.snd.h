@@ -3,6 +3,9 @@
 #include <xmath.h>
 #include <g.game.h>
 
+#include <vorbis/codec.h>
+#include <vorbis/vorbisfile.h>
+
 // IF MACOS
 #define OPENAL_DEPRECATED
 #include "al.h"
@@ -32,7 +35,7 @@ struct track
 {
     struct description
     {
-        unsigned frequency = 22000;
+        unsigned frequency = 44100;
         bool looping = false;
         bool stereo = false;
         bit_depth depth = bit_depth::bits16;
@@ -45,6 +48,7 @@ struct track
     unsigned next_handle = 0;
     pcm_generator generator = nullptr;
     float last_t = 0;
+    float buffer_sec = 0.1f;
 
     track() = default;
 
@@ -56,15 +60,17 @@ struct track
 
     bool is_streaming() const { return handles.size() > 1; }
 
-    ALuint next(float t, float dt)
+    ALuint next()
     {
         if (nullptr == generator) { return handles[0]; }
 
-        auto buf = generator(desc, last_t, t + dt * 10);
+        auto buf = generator(desc, last_t, last_t + buffer_sec);
         auto out = handles[next_handle];
         alBufferData(out, g::snd::formats[desc.stereo][desc.depth], buf.data(), buf.size(), desc.frequency);
         next_handle = (next_handle + 1) % handles.size();
-        last_t = t + dt * 10;
+        last_t += buffer_sec;
+
+        std::cerr << "generated buffer " << (buf.size() >> 1) / (float)desc.frequency << " sec long" << std::endl;
 
         return out;
     }
@@ -95,11 +101,13 @@ struct source
         alDeleteSources(1, &handle);
     }
 
-    void update(float t, float dt)
+    void update()
     {
         if (nullptr != source_track)
         {
-            ALint processed = 0;
+            ALint processed = 0, queued = 0;
+            float playback_sec = 0;
+
             alGetSourcei(handle, AL_BUFFERS_PROCESSED, &processed);
             if (processed > 0)
             {
@@ -107,16 +115,17 @@ struct source
                 alSourceUnqueueBuffers(handle, processed, buffers);
             }
 
-            ALint queued = 0;
             alGetSourcei(handle, AL_BUFFERS_QUEUED, &queued);
+            alGetSourcef(handle, AL_SEC_OFFSET, &playback_sec);
+            std::cerr << "processed: " << processed << " queued: " << queued << " sec: " << playback_sec << std::endl;
             if (queued < source_track->handles.size())
             {
-                auto next = source_track->next(t, dt);
+                auto next = source_track->next();
                 std::cerr << "queuing: " << next << std::endl;
                 alSourceQueueBuffers(handle, 1, &next);
             }
 
-            std::cerr << "processed: " << processed << " queued: " << queued << std::endl;
+
         }
     }
 
@@ -130,12 +139,8 @@ struct source
     {
         if (nullptr != source_track && source_track->is_streaming())
         {
-            auto dt = 1.f/60.f;
-            for (int i = 0; i < source_track->handles.size(); i++)
-            {
-                auto next = source_track->next(2 * dt * i, 2 * dt);
-                alSourceQueueBuffers(handle, 1, &next);
-            }
+            auto next = source_track->next();
+            alSourceQueueBuffers(handle, 1, &next);
         }
 
         alSourcePlay(handle);
@@ -214,6 +219,43 @@ static track from_generator(track::pcm_generator generator, const track::descrip
     t.generator = generator;
 
     return t;
+}
+
+static track from_ogg(const std::string& path)
+{
+    OggVorbis_File vf;
+    track::description desc;
+
+    if (ov_fopen(path.c_str(), &vf))
+    {
+        std::cerr << G_TERM_RED << "ov_fopen failed for: " << path << std::endl;
+        return {};
+    }
+
+    vorbis_info* vi = ov_info(&vf, -1);
+
+    desc.stereo = vi->channels >= 2; // TODO: not ideal
+    desc.depth = bit_depth::bits16;
+
+    return from_generator([=](const track::description& desc, float t_0, float t_1) {
+        // TODO: fix shitty hardcoded values
+        auto bytes = desc.frequency * 2 * 2;
+        std::vector<uint8_t> v(bytes, 0);
+        int current_section;
+        v.reserve(bytes);
+
+        long pos = 0;
+
+        while (pos < v.size())
+        {
+            long ret = ov_read((OggVorbis_File*)&vf, (char*)v.data() + pos, bytes - pos, 0, 2, 1, &current_section);
+            pos += ret;
+
+            if (ret == 0) { break; }
+        }
+
+        return v;
+    }, desc);
 }
 
 };

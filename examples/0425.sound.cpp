@@ -15,6 +15,7 @@ struct my_core : public g::core
     g::snd::source* generator_source;
     float t = 0;
     float modulation = 10;
+    float trailing_modulation = 10;
 
     virtual bool initialize()
     {
@@ -25,7 +26,7 @@ struct my_core : public g::core
         {
             auto p = ti / (float)desc.frequency;
             auto fall_off = std::min<float>(std::min<float>(p * 100.f, 1.f), (1-p) * 100.f);
-            pcm[ti] = fall_off * 20000 * sin(modulation * p);
+            pcm[ti] = fall_off * 30000 * sin(1000 * p);
         }
 
         tone_track = g::snd::track_factory::from_pcm_buffer(pcm, sizeof(pcm), desc);
@@ -35,18 +36,25 @@ struct my_core : public g::core
         {
             std::vector<uint8_t> pcm;
             auto dt = 1 / (float)desc.frequency;
+            auto duration = t_1 - t_0;
             for (float t = t_0; t <= t_1; t+=dt)
             {
-                auto signal = sin(1600 * t) * cos(modulation * t);
+                auto p = (t - t_0) / duration;
+                auto mod = trailing_modulation * (1-p) + modulation * p;
+                auto signal = sin(1600 * t) * cos(mod * t);
                 int16_t sample = 20000 * signal;
                 pcm.push_back(sample & 0x00FF); // lo
                 pcm.push_back(sample >> 8); // hi
+
+
             }
+            trailing_modulation = modulation;
 
             return pcm;
         };
 
-        generator_track = g::snd::track_factory::from_generator(modulated, {});
+        generator_track = g::snd::track_factory::from_ogg("data/snd/norty.ogg");
+        // generator_track = g::snd::track_factory::from_generator(modulated, {});
         generator_source = new g::snd::source(&generator_track);
 
         generator_source->play();
@@ -66,17 +74,17 @@ struct my_core : public g::core
 
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS)
         {
-            modulation += dt * 100;
+            modulation += dt * 10;
         }
 
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_MINUS) == GLFW_PRESS)
         {
-            modulation -= dt * 100;
+            modulation -= dt * 10;
         }
 
         modulation = std::max(0.f, modulation);
 
-        generator_source->update(t, dt);
+        generator_source->update();
 
         t += dt;
     }
