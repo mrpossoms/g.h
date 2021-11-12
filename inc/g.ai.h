@@ -62,6 +62,7 @@ struct generation_desc
 {
     float select_top=0.1f;
     float mutation_rate=0.01f;
+    float fresh_percent = 0.1f;
 };
 
 template<typename T>
@@ -108,11 +109,18 @@ void generation(std::vector<T>& g_0, std::vector<T>& g_1, const generation_desc&
     });
 
 
-    // take top 10 and add them to the next generation
+    // take top percentage and add them to the next generation
     auto top_performer_count = static_cast<unsigned>(g_0.size() * desc.select_top);
     for (unsigned i = 0; i < top_performer_count; i++)
     {
         g_1.push_back(g_0[i]);
+    }
+
+    // create some completely new randomized solutions
+    auto fresh_count = static_cast<unsigned>(g_0.size() * desc.fresh_percent);
+    for (unsigned i = 0; i < fresh_count; i++)
+    {
+        g_1.push_back({});
     }
 
     static std::default_random_engine generator;
@@ -121,9 +129,9 @@ void generation(std::vector<T>& g_0, std::vector<T>& g_1, const generation_desc&
     // breed the top performers
     while(g_1.size() < g_0.size())
     {
-        unsigned i = std::min<float>(abs(distribution(generator)), g_1.size()-1);
-        unsigned j = std::min<float>(abs(distribution(generator)), g_1.size()-1);
-        g_1.push_back(breed(g_1[i], g_1[j], desc.mutation_rate));
+        unsigned i = std::min<float>(abs(distribution(generator)), g_0.size()-1);
+        unsigned j = std::min<float>(abs(distribution(generator)), g_0.size()-1);
+        g_1.push_back(breed(g_0[i], g_0[j], desc.mutation_rate));
     }
 }
 
