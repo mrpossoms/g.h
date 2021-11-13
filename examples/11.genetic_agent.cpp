@@ -36,9 +36,9 @@ struct car : g::dyn::rigid_body
         waypoints_reached = 0;
         time = 0;
 
-        // waypoint_index = 1;
-        // position = { (float)(rand() % 10 - 5), 0, (float)(rand() % 10 - 5) };
-        // velocity *= 0;
+        waypoint_index = 1;
+        position = { (float)(rand() % 10 - 5), 0, (float)(rand() % 10 - 5) };
+        velocity *= 0;
     }
 
     inline void steer(float a)
@@ -223,13 +223,13 @@ struct my_core : public g::core
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        subject_velocity += ((cars[best_car].position + cars[best_car].velocity) - subject) * dt;
-        subject_velocity *= 0.95f;
-        subject += subject_velocity * dt;
-        auto forward = (subject - cam.position).unit();
-        auto left = vec<3>::cross(forward, {0, -1, 0});
-        cam.orientation = quat<>::view(forward, vec<3>::cross(forward, left));
-        cam.position += ((subject + vec<3>{10, 20, 10}) - cam.position) * dt;
+        // subject_velocity += ((cars[best_car].position + cars[best_car].velocity) - subject) * dt;
+        // subject_velocity *= 0.95f;
+        // subject += subject_velocity * dt;
+        // auto forward = (subject - cam.position).unit();
+        // auto left = vec<3>::cross(forward, {0, -1, 0});
+        // cam.orientation = quat<>::view(forward, vec<3>::cross(forward, left));
+        // cam.position += ((subject + vec<3>{10, 20, 10}) - cam.position) * dt;
 
         time += dt;
 

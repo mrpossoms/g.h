@@ -10,7 +10,7 @@
 #endif
 
 //#define DRAW_DEBUG_VECS
-#define GENERATION_SIZE 2000
+#define GENERATION_SIZE 6000
 
 using mat4 = xmath::mat<4,4>;
 
@@ -23,12 +23,17 @@ vec<3> rand_unit()
 
 struct drone : g::dyn::rigid_body
 {
-    g::ai::mlp<9, 4, 1> model;
+    g::ai::mlp<8, 4, 1> model;
     vec<4> throttle = {};
-    float last_dist_to_waypoint = 30;
-    unsigned waypoint_index = 1;
     float reward = 0;
-    float energy = 10;
+
+    vec<3> positions[4] = {
+        {-1, 0, 0}, // rear left
+        { 1, 0, 0}, // rear right
+        { 0, 0, -1}, // front left
+        { 0, 0,  1}, // front right
+    };
+
 
     drone()
     {
@@ -41,15 +46,10 @@ struct drone : g::dyn::rigid_body
     inline void reset()
     {
         reward = 0;
-        auto t = (2*M_PI / 20.0f) * 0.1f;
-        position = {100.f * sinf(t), 40.f + cosf(t) * 10.f, 100.f * sinf(t) * cosf(t)};
-        position += { randf() * 10, randf(), randf() * 10};
+        position = { 0, 40, 0};
         angular_momentum = {};//rand_unit() * randf() * 0.1;
         linear_momentum = {};//rand_unit();
-        orientation = /*quat<>::from_axis_angle({1, 0, 0}, M_PI) **/ quat<>::from_axis_angle({0, 1, 0}, M_PI * randf());
-        waypoint_index = 1;
-        energy = 10;
-        last_dist_to_waypoint = 30;
+        orientation = quat<>::from_axis_angle({1, 0, 0}, M_PI) * quat<>::from_axis_angle({0, 1, 0}, M_PI * randf() * 1);
     }
 
     inline vec<3> accelerometer() { return to_local(acceleration()); }
@@ -61,13 +61,6 @@ struct drone : g::dyn::rigid_body
 
     inline void update(float dt, g::game::camera* cam)
     {
-        vec<3> positions[4] = {
-            {-1, 0, 0}, // rear left
-            { 1, 0, 0}, // rear right
-            { 0, 0, -1}, // front left
-            { 0, 0,  1}, // front right
-        };
-
         vec<4> colors[4] = {
             {0.5f, 0, 0, 1},
             {1.0f, 0, 0, 1},
@@ -103,7 +96,6 @@ struct drone : g::dyn::rigid_body
             // energy -= throttle[i] * dt;
             dyn_apply_local_force(positions[i], vec<3>{0, thrust, 0});
         }
-        energy -= dt;
         position[1] -= deepest;
 #ifdef DRAW_DEBUG_VECS
         glEnable(GL_DEPTH_TEST);
@@ -138,16 +130,10 @@ struct my_core : public g::core
     g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
 
     std::vector<drone> drones;
-    std::vector<mat4> waypoint_models;
-    std::vector<vec<3>> waypoint_positions;
-    std::vector<vec<3>> waypoint_dir;
 
     float time_limit = 10;
-    float last_record = 0;
     float time = 0;
     unsigned generation = 0;
-    unsigned best_drone = 0;
-    vec<3> subject, subject_velocity;
 
     virtual bool initialize()
     {
@@ -167,25 +153,10 @@ struct my_core : public g::core
             drones.push_back(c);
         }
 
-        auto dt = (2 * M_PI)/20.f;
-        for (float t = 0; t < 2 * M_PI; t += dt)
+        auto fd = open("best_fc.genome", O_RDONLY);
+        if (fd >= 0)
         {
-            vec<3> p_0 = {100.f * sinf(t), 40.f + cosf(t) * 10.f, 100.f * sinf(t) * cosf(t)};
-            vec<3> p_1 = {100.f * sinf(t + 0.1f), 40.f + cosf(t + 0.1) * 10.f, 100.f * sinf(t + 0.1f) * cosf(t + 0.1f)};
-            waypoint_positions.push_back(p_0);
-
-            auto f = (p_1 - p_0).unit();
-            auto l = vec<3>::cross(f, {0, 1, 0});
-            l *= 2; f *= 2;
-            auto rotate = mat4{
-                { l[0], l[1], l[2],  0 },
-                {    0,   -2,    0,  0 },
-                { f[0], f[1], f[2],  0 },
-                {    0,    0,    0,  1 },
-            };
-
-            waypoint_models.push_back(rotate * mat4::translation(p_0 + vec<3>{0, 2, 0}));
-            waypoint_dir.push_back(f);
+            read(fd, drones[0].genome_buf(), drones[0].genome_size());
         }
 
         return true;
@@ -202,14 +173,6 @@ struct my_core : public g::core
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // subject_velocity += ((drones[best_drone].position + drones[best_drone].velocity) - subject) * dt;
-        // subject_velocity *= 0.95f;
-        // subject += subject_velocity * dt;
-        // auto forward = (subject - cam.position).unit();
-        // auto left = vec<3>::cross(forward, {0, -1, 0});
-        // cam.orientation = quat<>::view(forward, vec<3>::cross(forward, left));
-        // cam.position += ((subject + vec<3>{10, 20, 10}) - cam.position) * dt;
-
         time += dt;
 
         auto& shader = assets.shader("basic_gui.vs+debug_normal.fs");
@@ -219,90 +182,61 @@ struct my_core : public g::core
         ["u_model"].mat4(mat4::I())
         .draw<GL_TRIANGLE_FAN>();
 
-        auto& waypoint_mesh = assets.geo("waypoint.obj");
-        for (unsigned i = 0; i < waypoint_models.size(); i++)
-        {
-            waypoint_mesh.using_shader(shader)
-            .set_camera(cam)
-            ["u_model"].mat4(waypoint_models[i])
-            .draw<GL_TRIANGLES>();
 
-            auto dir = waypoint_positions[(i + 1) % waypoint_models.size()] - waypoint_positions[i];
-            g::gfx::debug::print(&cam).color({ i / (float)waypoint_positions.size(), 0, 0, 1}).ray(waypoint_positions[i], dir);
-
-        }
-        g::gfx::debug::print(&cam).color({ 1, 0, 0, 1}).point(waypoint_positions[1]);
-
-
-        auto all_dead = true;
         auto& drone_mesh = assets.geo("quadrotor.obj");
+
         for (unsigned i = 0; i < drones.size(); i++)
         {
             auto& drone = drones[i];
+
+            // drone.dyn_apply_local_force(drone.positions[rand() % 4], rand_unit());
+
             drone.update(dt, &cam);
             drone.throttle = {};
 
-            if (drone.position[1] < 5) { drone.energy = 0; }
+            auto target_alt = 40.f;
 
-            if (drone.energy > 0)
+            // do update
             {
                 auto a = drone.accelerometer();
                 auto w = drone.gyro_ypr();
                 auto u = drone.up();
                 auto v = drone.to_local(drone.velocity);
-                auto g = drone.to_local(waypoint_positions[drone.waypoint_index] - drone.position);
-                auto x = vec<10>{w[0], w[1], w[2], v[0], v[1], v[2], g[0], g[1], g[2], 1};
+                auto alt = drone.position[1];
+                auto x = vec<9>{w[0], w[1], w[2], u[0], u[1], u[2], alt, target_alt, 1};
                 drone.throttle = drone.model.evaluate(x);
-
-                all_dead = false;
             }
 
-            // if (i % skip == 0)
             drone.dyn_step(dt);
 
-            auto dist_to_waypoint = (drone.position - waypoint_positions[drone.waypoint_index]).magnitude();
-            if (dist_to_waypoint < 6)
-            {
-                drone.waypoint_index = (drone.waypoint_index + 1) % waypoint_positions.size();
-                // drone.reward += 100 / (dist_to_waypoint + 1.f);
-                drone.energy += 5;
-                drone.last_dist_to_waypoint = (drone.position - waypoint_positions[drone.waypoint_index]).magnitude();
-            }
+            drone.reward += (drone.up().dot({0, 1, 0})) / (1.f + fabs(drone.position[1] - target_alt));
 
-            drone.reward += (drone.last_dist_to_waypoint - dist_to_waypoint) * (drone.up().dot({0, 1, 0}) + 1);
-            drone.last_dist_to_waypoint = dist_to_waypoint;
 
-            // drone.reward += (drone.up().dot({0, 1, 0})) / (1 + (waypoint_positions[drone.waypoint_index] - drone.position).magnitude());
-
-            //if (i % 100 == 0)
+        }
             {
                 drone_mesh.using_shader(shader)
                 .set_camera(cam)
-                ["u_model"].mat4(drones[i].transform())
+                ["u_model"].mat4(drones[0].transform())
                 .draw<GL_TRIANGLES>();
             }
-        }
 
-
-        // auto& king = drones[best_drone];
-        // glDisable(GL_CULL_FACE);
-        // assets.geo("crown.obj").using_shader(shader)
-        // .set_camera(cam)
-        // ["u_model"].mat4(mat4::scale({2, 2, 2}) * mat4::translation(king.position + king.up() * 1.5 - king.forward() * 0.75))
-        // .draw<GL_TRIANGLES>();
-        // glEnable(GL_CULL_FACE);
-
-        if (all_dead)
+        if (time >= time_limit)
         {
-            std::vector<drone> next_generation;
-            g::ai::evolution::generation<drone>(drones, next_generation, {});
+            g::ai::evolution::generation_desc desc = {};
 
-            // auto delta = next_generation[0].reward - last_record;
-            // if (delta > 0)
-            // {
-            //     time_limit += delta;
-            //     last_record = next_generation[0].reward;
-            // }
+            desc.save_best = [&](const void* genome_buf, size_t genome_size)
+            {
+                auto fd = open("best_fc.genome", O_CREAT | O_WRONLY | O_TRUNC);
+
+                if (fd >= 0)
+                {
+                    write(fd, genome_buf, genome_size);
+                    close(fd);
+                }
+            };
+
+            std::vector<drone> next_generation;
+            g::ai::evolution::generation<drone>(drones, next_generation, desc);
 
             std::cerr << "generation " << generation << " top scores" << std::endl;
             for (unsigned i = 0; i < 10; i++)
@@ -353,7 +287,7 @@ int main (int argc, const char* argv[])
 //  core.start({ "04.basic_draw", true, 512, 512 });
 //  emscripten_set_main_loop(main_loop, 144, 1);
 // #else
-    core.start({ "11.genetic_agent", true, 1024, 768 });
+    core.start({ argv[0], true, 1024, 768 });
 // #endif
 
     return 0;

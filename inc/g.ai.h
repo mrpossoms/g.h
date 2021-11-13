@@ -63,6 +63,8 @@ struct generation_desc
     float select_top=0.1f;
     float mutation_rate=0.01f;
     float fresh_percent = 0.1f;
+
+    std::function<void (const void*, size_t)> save_best;
 };
 
 template<typename T>
@@ -108,6 +110,11 @@ void generation(std::vector<T>& g_0, std::vector<T>& g_1, const generation_desc&
         return a.score() > b.score();
     });
 
+    // save the best genome for resuming later
+    if (nullptr != desc.save_best)
+    {
+        desc.save_best(g_0[0].genome_buf(), g_0[0].genome_size());
+    }
 
     // take top percentage and add them to the next generation
     auto top_performer_count = static_cast<unsigned>(g_0.size() * desc.select_top);
