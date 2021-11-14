@@ -18,8 +18,9 @@ namespace snd {
 
 enum bit_depth
 {
-    bits8 = 0,
-    bits16 = 1,
+    invalid = 0,
+    bits8 = 1,
+    bits16 = 2,
     count,
 };
 
@@ -37,8 +38,14 @@ struct track
     {
         unsigned frequency = 44100;
         bool looping = false;
-        bool stereo = false;
+        unsigned channels = 1;
         bit_depth depth = bit_depth::bits16;
+        float buffer_seconds = 0.1f;
+
+        inline size_t bytes_per_second() const
+        {
+            return frequency * channels * depth;
+        }
     };
 
     using pcm_generator = std::function<std::vector<uint8_t> (const track::description&, float, float)>;
@@ -47,8 +54,7 @@ struct track
     std::vector<ALuint> handles;
     unsigned next_handle = 0;
     pcm_generator generator = nullptr;
-    float last_t = 0;
-    float buffer_sec = 0.1f;
+    float length_sec = 0;
 
     track() = default;
 
@@ -60,17 +66,15 @@ struct track
 
     bool is_streaming() const { return handles.size() > 1; }
 
-    ALuint next()
+    ALuint next(float& last_t)
     {
         if (nullptr == generator) { return handles[0]; }
 
-        auto buf = generator(desc, last_t, last_t + buffer_sec);
+        auto buf = generator(desc, last_t, last_t + desc.buffer_seconds);
         auto out = handles[next_handle];
-        alBufferData(out, g::snd::formats[desc.stereo][desc.depth], buf.data(), buf.size(), desc.frequency);
+        alBufferData(out, g::snd::formats[desc.channels - 1][desc.depth], buf.data(), buf.size(), desc.frequency);
         next_handle = (next_handle + 1) % handles.size();
-        last_t += buffer_sec;
-
-        std::cerr << "generated buffer " << (buf.size() >> 1) / (float)desc.frequency << " sec long" << std::endl;
+        last_t += desc.buffer_seconds;
 
         return out;
     }
@@ -79,8 +83,9 @@ struct track
 
 struct source
 {
-    ALuint handle;
-    track* source_track;
+    ALuint handle = 0;
+    track* source_track = nullptr;
+    float last_t = 0;
 
     source() = default;
 
@@ -117,15 +122,12 @@ struct source
 
             alGetSourcei(handle, AL_BUFFERS_QUEUED, &queued);
             alGetSourcef(handle, AL_SEC_OFFSET, &playback_sec);
-            std::cerr << "processed: " << processed << " queued: " << queued << " sec: " << playback_sec << std::endl;
+
             if (queued < source_track->handles.size())
             {
-                auto next = source_track->next();
-                std::cerr << "queuing: " << next << std::endl;
+                auto next = source_track->next(last_t);
                 alSourceQueueBuffers(handle, 1, &next);
             }
-
-
         }
     }
 
@@ -139,11 +141,16 @@ struct source
     {
         if (nullptr != source_track && source_track->is_streaming())
         {
-            auto next = source_track->next();
+            auto next = source_track->next(last_t);
             alSourceQueueBuffers(handle, 1, &next);
         }
 
         alSourcePlay(handle);
+    }
+
+    void seek(float time)
+    {
+        last_t = time;
     }
 
     void pause() { alSourcePause(handle); }
@@ -190,7 +197,13 @@ static track from_pcm_buffer(void* buf, size_t size, const track::description& d
         return {};
     }
 
-    alBufferData(al_buf, g::snd::formats[desc.stereo][desc.depth], buf, size, desc.frequency);
+    if (desc.channels >= 2)
+    {
+        std::cerr << G_TERM_RED << "This implementation does not support " << desc.channels << " channels" << std::endl;
+        return {};
+    }
+
+    alBufferData(al_buf, g::snd::formats[desc.channels - 1][desc.depth - 1], buf, size, desc.frequency);
 
     return { desc, std::vector<ALuint>{al_buf} };
 }
@@ -234,17 +247,19 @@ static track from_ogg(const std::string& path)
 
     vorbis_info* vi = ov_info(&vf, -1);
 
-    desc.stereo = vi->channels >= 2; // TODO: not ideal
+    desc.channels = vi->channels;
     desc.depth = bit_depth::bits16;
 
     return from_generator([=](const track::description& desc, float t_0, float t_1) {
-        // TODO: fix shitty hardcoded values
-        auto bytes = desc.frequency * 2 * 2;
+        
+        auto bytes = desc.bytes_per_second();
         std::vector<uint8_t> v(bytes, 0);
         int current_section;
         v.reserve(bytes);
 
         long pos = 0;
+
+        ov_time_seek_lap((OggVorbis_File*)&vf, t_0);
 
         while (pos < v.size())
         {
