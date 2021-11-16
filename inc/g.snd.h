@@ -72,7 +72,7 @@ struct track
 
         auto buf = generator(desc, last_t, last_t + desc.buffer_seconds);
         auto out = handles[next_handle];
-        alBufferData(out, g::snd::formats[desc.channels - 1][desc.depth], buf.data(), buf.size(), desc.frequency);
+        alBufferData(out, g::snd::formats[desc.channels - 1][desc.depth - 1], buf.data(), buf.size(), desc.frequency);
         next_handle = (next_handle + 1) % handles.size();
         last_t += desc.buffer_seconds;
 
@@ -110,7 +110,7 @@ struct source
     {
         if (nullptr != source_track)
         {
-            ALint processed = 0, queued = 0;
+            ALint processed = 0, queued = 0, state = 0;
             float playback_sec = 0;
 
             alGetSourcei(handle, AL_BUFFERS_PROCESSED, &processed);
@@ -121,9 +121,14 @@ struct source
             }
 
             alGetSourcei(handle, AL_BUFFERS_QUEUED, &queued);
+            alGetSourcei(handle, AL_SOURCE_STATE, &state);
             alGetSourcef(handle, AL_SEC_OFFSET, &playback_sec);
 
-            if (queued < source_track->handles.size())
+            if (state == AL_STOPPED)
+            {
+                last_t = 0;
+            }
+            else if (queued < source_track->handles.size())
             {
                 auto next = source_track->next(last_t);
                 alSourceQueueBuffers(handle, 1, &next);
@@ -150,7 +155,20 @@ struct source
 
     void seek(float time)
     {
-        last_t = time;
+        if (nullptr != source_track)
+        {
+            last_t = std::max<float>(0, std::min<float>(time, source_track->length_sec));
+
+            // ALuint buffers[10];
+            ALint queued;
+            alGetSourcei(handle, AL_BUFFERS_QUEUED, &queued);
+            alSourceUnqueueBuffers(handle, queued, nullptr);
+            alGetSourcei(handle, AL_BUFFERS_PROCESSED, &queued);
+            alSourceUnqueueBuffers(handle, queued,  nullptr);
+
+            stop();
+            play();
+        }
     }
 
     void pause() { alSourcePause(handle); }
@@ -229,6 +247,7 @@ static track from_generator(track::pcm_generator generator, const track::descrip
     }
 
     track t = { desc, bufs };
+
     t.generator = generator;
 
     return t;
@@ -249,21 +268,21 @@ static track from_ogg(const std::string& path)
 
     desc.channels = vi->channels;
     desc.depth = bit_depth::bits16;
+    desc.buffer_seconds = 0.1f;
 
-    return from_generator([=](const track::description& desc, float t_0, float t_1) {
+    auto t = from_generator([=](const track::description& desc, float t_0, float t_1) {
         
         auto bytes = desc.bytes_per_second();
         std::vector<uint8_t> v(bytes, 0);
-        int current_section;
+        int current_section = 0;
         v.reserve(bytes);
 
         long pos = 0;
 
         ov_time_seek_lap((OggVorbis_File*)&vf, t_0);
-
         while (pos < v.size())
         {
-            long ret = ov_read((OggVorbis_File*)&vf, (char*)v.data() + pos, bytes - pos, 0, 2, 1, &current_section);
+            long ret = ov_read((OggVorbis_File*)&vf, (char*)v.data() + pos, bytes - pos, 0, desc.depth, 1, &current_section);
             pos += ret;
 
             if (ret == 0) { break; }
@@ -271,6 +290,10 @@ static track from_ogg(const std::string& path)
 
         return v;
     }, desc);
+
+    t.length_sec = ov_time_total(&vf, 0);
+
+    return t;
 }
 
 };

@@ -72,6 +72,16 @@ struct my_core : public g::core
             tone_source->play();
         }
 
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        {
+            generator_source->seek(generator_source->last_t + 1);
+        }
+
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS)
+        {
+            generator_source->seek(generator_source->last_t - 1);
+        }
+
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_EQUAL) == GLFW_PRESS)
         {
             modulation += dt * 10;
