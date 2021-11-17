@@ -46,6 +46,11 @@ struct track
         {
             return frequency * channels * depth;
         }
+
+        inline size_t bytes_per_buffer() const
+        {
+            return bytes_per_second() * buffer_seconds;
+        }
     };
 
     using pcm_generator = std::function<std::vector<uint8_t> (const track::description&, float, float)>;
@@ -159,15 +164,11 @@ struct source
         {
             last_t = std::max<float>(0, std::min<float>(time, source_track->length_sec));
 
-            // ALuint buffers[10];
             ALint queued;
             alGetSourcei(handle, AL_BUFFERS_QUEUED, &queued);
             alSourceUnqueueBuffers(handle, queued, nullptr);
             alGetSourcei(handle, AL_BUFFERS_PROCESSED, &queued);
             alSourceUnqueueBuffers(handle, queued,  nullptr);
-
-            stop();
-            play();
         }
     }
 
@@ -272,7 +273,7 @@ static track from_ogg(const std::string& path)
 
     auto t = from_generator([=](const track::description& desc, float t_0, float t_1) {
         
-        auto bytes = desc.bytes_per_second();
+        auto bytes = desc.bytes_per_buffer();
         std::vector<uint8_t> v(bytes, 0);
         int current_section = 0;
         v.reserve(bytes);
