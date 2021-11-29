@@ -1,10 +1,12 @@
 #pragma once
 #define XMTYPE float
+#include <utility>
 #include <xmath.h>
 #include <g.game.h>
 
 #include <vorbis/codec.h>
 #include <vorbis/vorbisfile.h>
+#include <AudioFile.h>
 
 // IF MACOS
 #define OPENAL_DEPRECATED
@@ -12,6 +14,7 @@
 #include "OpenAL.h"
 
 using namespace xmath;
+using namespace g::game;
 
 namespace g {
 namespace snd {
@@ -86,13 +89,18 @@ struct track
 };
 
 
-struct source
+struct source : public positionable, pointable, moveable 
 {
     ALuint handle = 0;
     track* source_track = nullptr;
     float last_t = 0;
 
     source() = default;
+
+    source(source&& s) noexcept : handle(std::exchange(s.handle, 0)),
+                                  source_track(std::exchange(s.source_track, nullptr)),
+                                  last_t(std::exchange(s.last_t, 0))
+                                  {}
 
     source(track* trk)
     {
@@ -108,7 +116,10 @@ struct source
 
     ~source()
     {
-        alDeleteSources(1, &handle);
+        if (handle)
+        {
+            alDeleteSources(1, &handle);
+        }
     }
 
     void update()
@@ -131,6 +142,7 @@ struct source
 
             if (state == AL_STOPPED)
             {
+                alSourceRewind(handle);
                 last_t = 0;
             }
             else if (queued < source_track->handles.size())
@@ -141,19 +153,60 @@ struct source
         }
     }
 
-    void position(const vec<3>& pos) { alSourcefv(handle, AL_POSITION, pos.v); }
+    vec<3> position(const vec<3>& pos)
+    { 
+        alSourcefv(handle, AL_POSITION, pos.v); 
+        return pos; 
+    }
 
-    void velocity(const vec<3>& vel) { alSourcefv(handle, AL_VELOCITY, vel.v); }
+    vec<3> position()
+    {
+        vec<3> pos;
+        alGetSourcefv(handle, AL_POSITION, pos.v); 
+        return pos; 
+    }
 
-    void direction(const vec<3>& dir) { alSourcefv(handle, AL_DIRECTION, dir.v); }
+    vec<3> velocity(const vec<3>& vel)
+    {
+        alSourcefv(handle, AL_VELOCITY, vel.v);
+        return vel;
+    }
+
+    vec<3> velocity()
+    {
+        vec<3> vel;
+        alGetSourcefv(handle, AL_VELOCITY, vel.v);
+        return vel;
+    }
+
+    vec<3> direction(const vec<3>& dir) 
+    {
+        alSourcefv(handle, AL_DIRECTION, dir.v);
+        return dir;
+    }
+
+    vec<3> direction() 
+    {
+        vec<3> dir;
+        alGetSourcefv(handle, AL_DIRECTION, dir.v);
+        return dir;
+    }
 
     void play()
     {
+        assert(handle > 0);
+        std::cerr << handle << std::endl;
+
         if (nullptr != source_track && source_track->is_streaming())
         {
+            std::cerr << "queuing next" << std::endl;
+
             auto next = source_track->next(last_t);
             alSourceQueueBuffers(handle, 1, &next);
         }
+
+        assert(alIsBuffer(source_track->handles[0]));
+        assert(alIsSource(handle));
 
         alSourcePlay(handle);
     }
@@ -176,6 +229,44 @@ struct source
 
     void stop() { alSourceStop(handle); }
 };
+
+
+struct source_ring : public positionable, pointable, moveable
+{
+    std::vector<source> sources;
+    unsigned next = 0;
+
+    source_ring(track* trk, unsigned source_count)
+    {
+        for (unsigned i = 0; i < source_count; i++)
+        {
+            sources.push_back(source{trk});
+        }
+    }
+
+    void update()
+    {
+        for (auto& src : sources) { src.update(); }
+    }
+
+    vec<3> position(const vec<3>& pos) { return sources[next].position(pos); }
+    vec<3> position() { return sources[next].position(); }
+
+    vec<3> velocity(const vec<3>& vel) { return sources[next].velocity(vel); }
+    vec<3> velocity() { return sources[next].velocity(); }
+
+    vec<3> direction(const vec<3>& dir) { return sources[next].direction(dir); }
+    vec<3> direction() { return sources[next].direction(); }
+
+    source* play()
+    {
+        auto playing_source = &sources[next];
+        playing_source->play();
+        next = (next + 1) % sources.size();
+        return playing_source;
+    }
+};
+
 
 static ALCdevice* dev;
 static ALCcontext* ctx;
@@ -216,7 +307,7 @@ static track from_pcm_buffer(void* buf, size_t size, const track::description& d
         return {};
     }
 
-    if (desc.channels >= 2)
+    if (desc.channels > 2)
     {
         std::cerr << G_TERM_RED << "This implementation does not support " << desc.channels << " channels" << std::endl;
         return {};
@@ -295,6 +386,29 @@ static track from_ogg(const std::string& path)
     t.length_sec = ov_time_total(&vf, 0);
 
     return t;
+}
+
+static track from_wav(const std::string& path)
+{
+    AudioFile<int16_t> wav(path);
+
+    track::description desc;
+
+    desc.frequency = wav.getSampleRate();
+    desc.looping   = false;
+    desc.channels  = wav.getNumChannels();
+    desc.depth     = (bit_depth)(wav.getBitDepth() / 8);
+
+    std::vector<int16_t> interleaved;
+    for (unsigned si = 0; si < wav.samples[0].size(); si++)
+    {
+        for (unsigned ci = 0; ci < desc.channels; ci++)
+        {
+            interleaved.push_back(wav.samples[ci][si]); 
+        }
+    }
+
+    return from_pcm_buffer(interleaved.data(), interleaved.size(), desc);
 }
 
 };

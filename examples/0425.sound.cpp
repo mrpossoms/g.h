@@ -10,12 +10,15 @@
 struct my_core : public g::core
 {
     g::snd::track tone_track;
+    g::snd::track gun_track;
     g::snd::track generator_track;
-    g::snd::source* tone_source;
     g::snd::source* generator_source;
+    g::snd::source* tone;
+    g::snd::source_ring* gun;
     float t = 0;
     float modulation = 10;
     float trailing_modulation = 10;
+    bool trigger_pulled = false;
 
     virtual bool initialize()
     {
@@ -26,11 +29,11 @@ struct my_core : public g::core
         {
             auto p = ti / (float)desc.frequency;
             auto fall_off = std::min<float>(std::min<float>(p * 100.f, 1.f), (1-p) * 100.f);
-            pcm[ti] = fall_off * 30000 * sin(1000 * p);
+            pcm[ti] = fall_off * 30000 * (sin(1000 * p) + sin(p * p * 2000)) * 0.5;
         }
 
         tone_track = g::snd::track_factory::from_pcm_buffer(pcm, sizeof(pcm), desc);
-        tone_source = new g::snd::source(&tone_track);
+        gun_track = g::snd::track_factory::from_wav("data/snd/gun.aiff");
 
         auto modulated = [&](const g::snd::track::description& desc, float t_0, float t_1)
         {
@@ -57,7 +60,9 @@ struct my_core : public g::core
         // generator_track = g::snd::track_factory::from_generator(modulated, {});
         generator_source = new g::snd::source(&generator_track);
 
-        generator_source->play();
+        tone = new g::snd::source(&tone_track);
+        gun = new g::snd::source_ring(&gun_track, 3);
+        // generator_source->play();
 
         return true;
     }
@@ -67,9 +72,19 @@ struct my_core : public g::core
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS)
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_G) == GLFW_PRESS)
         {
-            tone_source->play();
+            if (!trigger_pulled) { gun->play(); }
+            trigger_pulled = true;
+        }
+        else
+        {
+            trigger_pulled = false;
+        }
+
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_T) == GLFW_PRESS)
+        {
+            tone->play();
         }
 
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS)
@@ -95,6 +110,8 @@ struct my_core : public g::core
         modulation = std::max(0.f, modulation);
 
         generator_source->update();
+        gun->update();
+        tone->update();
 
         t += dt;
     }

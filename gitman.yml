@@ -68,6 +68,13 @@ sources:
     sparse_paths:
       -
     rev: v1.3.7
+  - name: AudioFile
+    type: git
+    repo: git@github.com:adamstark/AudioFile.git
+    sparse_paths:
+      -
+    rev: 1.0.9
+
 default_group: ''
 groups:
   -

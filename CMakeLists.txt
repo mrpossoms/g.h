@@ -18,7 +18,7 @@ if(POLICY CMP0072)
 endif()
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # c++ flags
@@ -86,6 +86,8 @@ find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 
@@ -96,6 +98,7 @@ target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 target_link_libraries(${PROJECT_NAME} ogg)
 target_link_libraries(${PROJECT_NAME} vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)
+target_link_libraries(${PROJECT_NAME} AudioFile)
 
 add_subdirectory(examples)
 add_subdirectory(tests)
