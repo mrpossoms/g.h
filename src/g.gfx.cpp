@@ -138,7 +138,6 @@ texture_factory& texture_factory::from_png(const std::string& path)
 {
 	std::cerr << "loading texture '" <<  path << "'... ";
 
-	unsigned width, height;
 	// TODO: use a more robust lodepng_decode call which can handle textures of various channels and bit depths
 	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
 
@@ -427,7 +426,7 @@ shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 }
 
 
-shader::usage shader::usage::set_camera(const g::game::camera& cam)
+shader::usage shader::usage::set_camera(g::game::camera& cam)
 {
 	assert(gl_get_error());
 	this->set_uniform("u_view").mat4(cam.view());
@@ -625,6 +624,13 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	FT_Face     face;      /* handle to face object */
 
 	auto err_init = FT_Init_FreeType( &library );
+	if (err_init)
+	{
+		std::cerr << G_TERM_RED "font_factory: " <<
+		"FT_Init_FreeType() failed "
+		<< G_TERM_COLOR_OFF << std::endl;
+		assert(false);
+	}
 
 	auto err_load = FT_New_Face(library, path.c_str(), 0, &face);
 	if (err_load == FT_Err_Unknown_File_Format)

@@ -21,7 +21,6 @@ struct my_core : public g::core
         plane = g::gfx::mesh_factory{}.plane();
         cam.position = { 0, 0, -15 };
         cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
-        cam.aspect_ratio = g::gfx::aspect();
         glDisable(GL_CULL_FACE);
         glPointSize(5);
         // glLineWidth(2);

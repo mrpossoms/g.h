@@ -97,8 +97,6 @@ struct my_core : public g::core
 
         auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, -1, -2});
 
-        cam.aspect_ratio = g::gfx::aspect();
-
         terrain.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
             ["u_model"].mat4(model)
             .set_camera(cam)

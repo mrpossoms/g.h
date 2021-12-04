@@ -237,7 +237,7 @@ struct shader
 			return *this;
 		}
 
-		usage set_camera(const g::game::camera& cam);
+		usage set_camera(g::game::camera& cam);
 
 		uniform_usage set_uniform(const std::string& name);
 
@@ -608,23 +608,9 @@ struct mesh_factory
 		std::vector<VERT> vertices;
 		std::vector<uint32_t> indices;
 
-		float dx = 1 / (float)tex.size[0];
-		float dy = 1 / (float)tex.size[1];
-
 		for (int i = 0; i < tex.size[0]; i++)
 		for (int j = 0; j < tex.size[1]; j++)
 		{
-			// float x = dx * i - 0.5f, y = dy * j - 0.5f;
-			// Vertex v = {
-			// 	.position = {
-			// 		(x / tex.size[0]) - tex.size[0] * 0.5,
-			// 		0,
-			// 		(y / tex.size[1]) - tex.size[1] * 0.5 },
-			// 	.normal = { 0, 1, 0 },
-			// 	.tangent = { 1, 0, 0 },
-			// 	.texture = { dx * i * size, dy * j * size, 0 }
-			// };
-
 			vertices.push_back(generator(tex, i, j));
 		}
 
@@ -710,10 +696,10 @@ namespace debug
 	struct print
 	{
 		vec<4> cur_color;
-		const g::game::camera* cur_cam;
+		g::game::camera* cur_cam;
 		mat<4, 4> cur_model = mat<4, 4>::I();
 
-		print(const g::game::camera* cam);
+		print(g::game::camera* cam);
 
 		print& color(const vec<4>& c);
 
@@ -736,8 +722,8 @@ namespace primative
 template <typename D>
 struct renderer
 {
-	virtual shader::usage using_shader(g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
-	virtual void draw(g::gfx::shader& shader, const D& data, const g::game::camera& cam, const mat<4, 4>& model) = 0;
+	virtual shader::usage using_shader(g::gfx::shader& shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
+	virtual void draw(g::gfx::shader& shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
 
 
@@ -754,7 +740,7 @@ struct volume_slicer : public renderer<texture>
 
 	shader::usage using_shader(g::gfx::shader& shader,
 					  const g::gfx::texture& vox,
-			          const g::game::camera& cam,
+			          g::game::camera& cam,
 			          const mat<4, 4>& model)
 	{
 		assert(vox.is_3D());
@@ -801,7 +787,7 @@ struct volume_slicer : public renderer<texture>
 
 	void draw(g::gfx::shader& shader,
 		      const g::gfx::texture& vox,
-			  const g::game::camera& cam,
+			  g::game::camera& cam,
 			  const mat<4, 4>& model)
 	{
 		using_shader(shader, vox, cam, model).draw<GL_TRIANGLES>();
@@ -845,12 +831,12 @@ struct text : public renderer<std::string>
 
 	shader::usage using_shader(g::gfx::shader& shader,
 		const std::string& str,
-		const g::game::camera& cam,
+		g::game::camera& cam,
 		const mat<4, 4>& model);
 
 	void draw(g::gfx::shader& shader,
 		  const std::string& str,
-	      const g::game::camera& cam,
+	      g::game::camera& cam,
 	      const mat<4, 4>& model);
 
 	void measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out);

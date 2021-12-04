@@ -168,8 +168,6 @@ struct my_core : public g::core
 
         camera_controls(dt);
 
-        cam.aspect_ratio = g::gfx::aspect();
-
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

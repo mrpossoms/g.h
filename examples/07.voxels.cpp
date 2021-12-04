@@ -8,7 +8,7 @@
 using namespace xmath;
 using mat4 = xmath::mat<4,4>;
 
-struct voxels : public g::core
+struct voxel_world : public g::core
 {
 	g::asset::store assets;
 
@@ -60,6 +60,8 @@ struct voxels : public g::core
 		light.width = 42;
 		light.height = 55;
 
+		glDisable(GL_CULL_FACE);
+
 		return true;
 	}
 
@@ -79,7 +81,6 @@ struct voxels : public g::core
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) return;
 
-		cam.aspect_ratio = g::gfx::aspect();
 		// cam.orientation = quat::from_axis_angle({0, 0, 1}, 0);
 
 
@@ -123,7 +124,7 @@ struct voxels : public g::core
 
 int main (int argc, const char* argv[])
 {
-	voxels game;
+	voxel_world game;
 
 	game.start({
 		"voxels", true, 1024, 768

@@ -54,7 +54,6 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
-        cam.aspect_ratio = g::gfx::aspect();
 
         auto pointer = g::ui::pointer_from_mouse(&cam);
         g::ui::layer root(&assets, "basic_gui.vs+basic_gui.fs");

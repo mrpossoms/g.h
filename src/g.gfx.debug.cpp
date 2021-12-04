@@ -24,7 +24,7 @@ const std::string fs_dbg_src =
 "}";
 
 
-debug::print::print(const g::game::camera* cam)
+debug::print::print(g::game::camera* cam)
 {
 	if (!debug_shader.is_initialized())
 	{

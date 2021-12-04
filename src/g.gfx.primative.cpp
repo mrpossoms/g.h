@@ -52,7 +52,7 @@ text::text(g::gfx::font& f) : font(f)
 
 shader::usage text::using_shader(g::gfx::shader& shader,
 	  const std::string& str,
-      const g::game::camera& cam,
+      g::game::camera& cam,
       const mat<4, 4>& model)
 {
 	auto M = mat<4, 4>::translation({ 0, 0.5, 0 }) * model;
@@ -114,7 +114,7 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 
 void text::draw(g::gfx::shader& shader,
 	  const std::string& str,
-      const g::game::camera& cam,
+      g::game::camera& cam,
       const mat<4, 4>& model)
 {
 	using_shader(shader, str, cam, model).draw<GL_TRIANGLES>();//.draw_tri_fan();

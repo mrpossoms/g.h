@@ -108,6 +108,8 @@ struct camera : public pose
 
 	virtual mat<4, 4> projection() const = 0;
 
+	virtual void aspect_ratio(float aspect) {};
+
 private:
 	mat<4, 4> _view = {};
 };
@@ -116,12 +118,14 @@ struct camera_perspective : public camera
 {
 	float field_of_view = M_PI / 2;
 	float near = 0.1f, far = 1000.f;
-	float aspect_ratio = 1;
+	float aspect = 1;
 
 	virtual mat<4, 4> projection() const
 	{
-		return mat<4, 4>::perspective(near, far, field_of_view, aspect_ratio);
+		return mat<4, 4>::perspective(near, far, field_of_view, aspect);
 	}
+
+	virtual void aspect_ratio(float aspect) { this->aspect = aspect; }
 };
 
 struct camera_orthographic : public camera

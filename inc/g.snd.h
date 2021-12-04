@@ -186,7 +186,6 @@ static void set_observer(const vec<3>& position,
     alListenerfv(AL_VELOCITY, velocity.v);
 
     auto forward = orientation.rotate({0, 0, -1});
-    auto up = orientation.rotate({0, 1, 0});
 
     alListenerfv(AL_ORIENTATION, forward.v);
 }
