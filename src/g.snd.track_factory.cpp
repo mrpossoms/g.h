@@ -3,6 +3,12 @@
 static ALCdevice* dev;
 static ALCcontext* ctx;
 
+constexpr static ALenum formats[2][g::snd::bit_depth::count] = {
+    {AL_FORMAT_MONO8, AL_FORMAT_MONO16},
+    {AL_FORMAT_STEREO8, AL_FORMAT_STEREO16},
+};
+
+
 static void init_openal()
 {
     // ensure that the audio api has been initialized
@@ -48,7 +54,7 @@ track track_factory::from_pcm_buffer(void* buf, size_t size, const track::descri
         return {};
     }
 
-    alBufferData(al_buf, g::snd::formats[desc.channels - 1][desc.depth - 1], buf, size, desc.frequency);
+    alBufferData(al_buf, formats[desc.channels - 1][desc.depth - 1], buf, size, desc.frequency);
 
     return { desc, std::vector<ALuint>{al_buf} };
 }
