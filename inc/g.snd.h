@@ -72,6 +72,35 @@ struct track
         this->handles = handles;
     }
 
+    track(track&& o) noexcept : desc(o.desc),
+                                handles(std::exchange(o.handles, {})),
+                                next_handle(o.next_handle),
+                                generator(o.generator),
+                                length_sec(o.length_sec)
+    {
+
+    }
+
+    ~track()
+    {
+        alDeleteBuffers(handles.size(), handles.data());
+        handles.clear();
+    }
+
+    track& operator=(track&& o)
+    {
+        if (this != &o)
+        {
+            desc = o.desc;
+            handles = std::exchange(o.handles, {});
+            next_handle = o.next_handle;
+            generator = o.generator;
+            length_sec = o.length_sec;
+        }
+
+        return *this;
+    }
+
     bool is_streaming() const { return handles.size() > 1; }
 
     ALuint next(float& last_t)
@@ -140,7 +169,7 @@ struct source : public positionable, pointable, moveable
             alGetSourcei(handle, AL_SOURCE_STATE, &state);
             alGetSourcef(handle, AL_SEC_OFFSET, &playback_sec);
 
-            if (state == AL_STOPPED)
+            if (is_stopped())
             {
                 alSourceRewind(handle);
                 last_t = 0;
@@ -228,6 +257,20 @@ struct source : public positionable, pointable, moveable
     void pause() { alSourcePause(handle); }
 
     void stop() { alSourceStop(handle); }
+
+    bool is_playing()
+    {
+        ALint state = 0;
+        alGetSourcei(handle, AL_SOURCE_STATE, &state);
+        return state == AL_PLAYING;
+    }
+
+    bool is_stopped()
+    {
+        ALint state = 0;
+        alGetSourcei(handle, AL_SOURCE_STATE, &state);
+        return state == AL_STOPPED;
+    }
 };
 
 
@@ -268,148 +311,16 @@ struct source_ring : public positionable, pointable, moveable
 };
 
 
-static ALCdevice* dev;
-static ALCcontext* ctx;
-
 struct track_factory
 {
 
-static void init_openal()
-{
-    // ensure that the audio api has been initialized
-    if (nullptr == g::snd::ctx)
-    {
-        g::snd::dev = alcOpenDevice(nullptr);
+static track from_pcm_buffer(void* buf, size_t size, const track::description& desc);
 
-        if (!g::snd::dev)
-        {
-            std::cerr << G_TERM_RED << "Could not open audio device" << std::endl;
-            throw std::runtime_error("alcOpenDevice() returned NULL");
-        }
+static track from_generator(track::pcm_generator generator, const track::description& desc);
 
-        g::snd::ctx = alcCreateContext(g::snd::dev, nullptr);
-        alcMakeContextCurrent(g::snd::ctx);
-    }
-}
+static track from_ogg(const std::string& path);
 
-static track from_pcm_buffer(void* buf, size_t size, const track::description& desc)
-{
-    init_openal();
-
-    ALuint al_buf;
-
-    alGenBuffers(1, &al_buf);
-
-    ALenum error = alGetError();
-    if (error != AL_NO_ERROR)
-    {
-        std::cerr << G_TERM_RED << "Could not generate buffer: " << std::string(alGetString(error)) << std::endl;
-        return {};
-    }
-
-    if (desc.channels > 2)
-    {
-        std::cerr << G_TERM_RED << "This implementation does not support " << desc.channels << " channels" << std::endl;
-        return {};
-    }
-
-    alBufferData(al_buf, g::snd::formats[desc.channels - 1][desc.depth - 1], buf, size, desc.frequency);
-
-    return { desc, std::vector<ALuint>{al_buf} };
-}
-
-static track from_generator(track::pcm_generator generator, const track::description& desc)
-{
-    init_openal();
-
-    std::vector<ALuint> bufs;
-
-    for (unsigned i = 0; i < 3; i++)
-    {
-        ALuint al_buf;
-        alGenBuffers(1, &al_buf);
-        bufs.push_back(al_buf);
-
-        ALenum error = alGetError();
-        if (error != AL_NO_ERROR)
-        {
-            std::cerr << G_TERM_RED << "Could not generate buffer: " << std::string(alGetString(error)) << std::endl;
-            return {};
-        }
-    }
-
-    track t = { desc, bufs };
-
-    t.generator = generator;
-
-    return t;
-}
-
-static track from_ogg(const std::string& path)
-{
-    OggVorbis_File vf;
-    track::description desc;
-
-    if (ov_fopen(path.c_str(), &vf))
-    {
-        std::cerr << G_TERM_RED << "ov_fopen failed for: " << path << std::endl;
-        return {};
-    }
-
-    vorbis_info* vi = ov_info(&vf, -1);
-
-    desc.channels = vi->channels;
-    desc.depth = bit_depth::bits16;
-    desc.buffer_seconds = 0.1f;
-
-    auto t = from_generator([=](const track::description& desc, float t_0, float t_1) {
-        
-        auto bytes = desc.bytes_per_buffer();
-        std::vector<uint8_t> v(bytes, 0);
-        int current_section = 0;
-        v.reserve(bytes);
-
-        long pos = 0;
-
-        ov_time_seek_lap((OggVorbis_File*)&vf, t_0);
-        while (pos < v.size())
-        {
-            long ret = ov_read((OggVorbis_File*)&vf, (char*)v.data() + pos, bytes - pos, 0, desc.depth, 1, &current_section);
-            pos += ret;
-
-            if (ret == 0) { break; }
-        }
-
-        return v;
-    }, desc);
-
-    t.length_sec = ov_time_total(&vf, 0);
-
-    return t;
-}
-
-static track from_wav(const std::string& path)
-{
-    AudioFile<int16_t> wav(path);
-
-    track::description desc;
-
-    desc.frequency = wav.getSampleRate();
-    desc.looping   = false;
-    desc.channels  = wav.getNumChannels();
-    desc.depth     = (bit_depth)(wav.getBitDepth() / 8);
-
-    std::vector<int16_t> interleaved;
-    for (unsigned si = 0; si < wav.samples[0].size(); si++)
-    {
-        for (unsigned ci = 0; ci < desc.channels; ci++)
-        {
-            interleaved.push_back(wav.samples[ci][si]); 
-        }
-    }
-
-    return from_pcm_buffer(interleaved.data(), interleaved.size(), desc);
-}
+static track from_wav(const std::string& path);
 
 };
 
