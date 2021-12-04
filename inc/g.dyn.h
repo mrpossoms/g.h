@@ -42,6 +42,7 @@ private:
 public:
 	float mass;
 	vec<3> angular_momentum = {};
+    vec<3> linear_momentum = {};
 	quat<> orientation = {0, 0, 0, 1};
 
     void update_inertia_tensor()
@@ -57,6 +58,8 @@ public:
         _inertia_tensor_inv.invert_inplace();
     }
 
+    inline vec<3> acceleration() { return _net_f_local / mass; }
+
     inline vec<3> angular_velocity()
     {
         return _inertia_tensor_inv * angular_momentum;
@@ -64,7 +67,7 @@ public:
 
     inline vec<3> linear_velocity_at(const vec<3>& local_point)
     {
-        return vec<3>::cross(angular_velocity(), to_global(local_point)) + velocity;
+        return vec<3>::cross(to_global(angular_velocity()), to_global(local_point)) + velocity;
     }
 
 	void update_inertia_tensor(const mat<3, 3>& L)
@@ -76,7 +79,7 @@ public:
 
 	void dyn_step(float dt)
 	{
-        auto apply_torque = _net_t_local.magnitude() >= 0.001; 
+        auto apply_torque = _net_t_local.magnitude() >= 0.001;
         auto apply_force = _net_f_local.magnitude() >= 0.001;
         // if (apply_torque)
         {
@@ -86,12 +89,14 @@ public:
         }
 
         //if(apply_force)
-        { 
+        {
             // apply velocity changes
-            velocity += (orientation.inverse().rotate(_net_f_local * dt) / mass) * apply_force;
+            linear_momentum += orientation.inverse().rotate(_net_f_local * dt) * apply_force;
+            // velocity += (orientation.inverse().rotate(_net_f_local * dt) / mass) * apply_force;
             _net_f_local = _net_f_local * (1 - apply_force);
         }
 
+        velocity = linear_momentum / mass;
 		position += velocity * dt;
         auto w = angular_velocity();
         auto rad_sec = w.magnitude();
@@ -99,7 +104,7 @@ public:
 
         // if (is_spinning)
         {
-            auto axis = (w / rad_sec) * is_spinning;
+            auto axis = (w / (rad_sec + 0.0000000001f)) * is_spinning;
             orientation *= quat<>::from_axis_angle(axis, rad_sec * dt * is_spinning);
         }
 	}
@@ -116,11 +121,26 @@ public:
 
     void dyn_apply_local_force(const vec<3>& point, const vec<3>& force)
     {
+        auto f = force;
         auto& r = point;
         auto t = (vec<3>::cross(r, force));
 
+        // _inertia_tensor_inv
+
+        // f.unit().dot(r.)
+
         _net_t_local += t;
         _net_f_local += force;
+    }
+
+    void dyn_apply_global_force(const vec<3>& point, const vec<3>& force)
+    {
+        auto f = to_local(force);
+        auto r = to_local(point - position);
+        auto t = vec<3>::cross(r, f);
+
+        _net_t_local += t;
+        _net_f_local += f;
     }
 };
 

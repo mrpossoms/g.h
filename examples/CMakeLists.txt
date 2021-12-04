@@ -1,6 +1,12 @@
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -Wall -g -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Wall -g -O0")
+
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -Wall -O3")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -Wall -O3")
+
 link_libraries(g)
 link_libraries(glfw)
 link_libraries(OpenGL::GL)
@@ -30,6 +36,7 @@ add_executable(08.ray_march 08.ray_march.cpp)
 add_executable(09.gui 09.gui.cpp)
 add_executable(10.text 10.text.cpp)
 add_executable(11.genetic_agent 11.genetic_agent.cpp)
+add_executable(115.genetic_flight_controller 115.genetic_flight_controller.cpp)
 
 if (WIN32)
 message(STATUS "NOTE: Windows requires elevated permissions to create symlinks. Please run visual studio as an administrator.")
