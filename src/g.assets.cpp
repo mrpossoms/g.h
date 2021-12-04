@@ -138,3 +138,26 @@ g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path)
 
     return voxels[partial_path].get();
 }
+
+
+g::snd::track& g::asset::store::sound(const std::string& partial_path)
+{
+	auto itr = sounds.find(partial_path);
+	if (itr == sounds.end())
+	{
+		if (std::string::npos != partial_path.find(".wav"))
+		{
+			sounds[partial_path] = { time(nullptr), g::snd::track_factory::from_wav(root + "/snd/" + partial_path) };
+		}
+		else if (std::string::npos != partial_path.find(".aiff"))
+		{
+			sounds[partial_path] = { time(nullptr), g::snd::track_factory::from_wav(root + "/snd/" + partial_path) };
+		}
+		else if (std::string::npos != partial_path.find(".ogg"))
+		{
+			sounds[partial_path] = { time(nullptr), g::snd::track_factory::from_ogg(root + "/snd/" + partial_path) };
+		}
+	}
+
+	return sounds[partial_path].get();
+}

@@ -24,7 +24,7 @@ if(POLICY CMP0072)
 endif()
 
 # specify the C++ standard
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # c++ flags
@@ -36,6 +36,8 @@ set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.gfx.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.gfx.mesh_factory.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.gfx.primative.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.gfx.debug.cpp)
+set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.snd.cpp)
+set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.snd.track_factory.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.core.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.utils.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.ui.cpp)
@@ -70,6 +72,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gi
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/include)
 
 # specify includes for libg
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)
@@ -87,10 +91,22 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
 find_package(OpenGL REQUIRED)
 
+find_package(OpenAL REQUIRED)
+target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+
 # target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} glew_s)
 target_link_libraries(${PROJECT_NAME} freetype)
 target_link_libraries(${PROJECT_NAME} OpenGL::GL)
+target_link_libraries(${PROJECT_NAME} ogg)
+target_link_libraries(${PROJECT_NAME} vorbis)
+target_link_libraries(${PROJECT_NAME} vorbisfile)
+target_link_libraries(${PROJECT_NAME} AudioFile)
 
 add_subdirectory(examples)
 add_subdirectory(tests)

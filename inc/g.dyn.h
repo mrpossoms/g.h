@@ -12,6 +12,7 @@ namespace dyn {
 
 using namespace xmath;
 
+
 struct particle
 {
 	vec<3> position;

@@ -5,6 +5,7 @@
 #include <string>
 
 #include "g.gfx.h"
+#include "g.snd.h"
 #include "g.game.h"
 
 namespace g
@@ -21,10 +22,9 @@ struct kind
 
 	kind() = default;
 
-	kind(time_t last, T a)
+	kind(time_t last, T a) : asset(std::move(a))
 	{
 		last_accessed = last;
-		asset = a;
 	}
 
 	T& get()
@@ -44,6 +44,7 @@ struct store
 	private: std::unordered_map<std::string, kind<shader>> shaders;
 	private: std::unordered_map<std::string, kind<font>> fonts;
 	private: std::unordered_map<std::string, kind<mesh<vertex::pos_uv_norm>>> geos;
+	private: std::unordered_map<std::string, kind<g::snd::track>> sounds;
 
 	public: store(const std::string& root_path="data") : root(root_path) { }
 
@@ -56,6 +57,8 @@ struct store
 	g::gfx::mesh<vertex::pos_uv_norm>& geo(const std::string& partial_path);
 
 	g::game::voxels_paletted& vox(const std::string& partial_path);
+
+	g::snd::track& sound(const std::string& partial_path);
 };
 
 }

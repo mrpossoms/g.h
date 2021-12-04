@@ -7,31 +7,45 @@
 #include <unordered_set>
 #include <vector>
 
-// #ifdef __linux__
-// #include <GL/glx.h>
-// #include <GL/glext.h>
-// #endif
 
-// #include <GLFW/glfw3.h>
-
-// #ifdef __APPLE__
-// #undef __gl_h_
-// #include <OpenGL/gl3.h>
-// #endif
+#define G_TERM_GREEN "\033[0;32m"
+#define G_TERM_RED "\033[1;31m"
+#define G_TERM_YELLOW "\033[1;33m"
+#define G_TERM_BLUE "\033[1;34m"
+#define G_TERM_COLOR_OFF "\033[0m"
 
 using namespace xmath;
 
 namespace g {
 namespace game {
 
-struct view_point
+struct positionable 
+{
+	virtual vec<3> position(const vec<3>& pos) = 0;
+	virtual vec<3> position() = 0;
+};
+
+struct pointable
+{
+	virtual vec<3> direction(const vec<3>& dir) = 0;
+	virtual vec<3> direction() = 0;
+};
+
+struct moveable 
+{
+	virtual vec<3> velocity(const vec<3>& vel) = 0;
+	virtual vec<3> velocity() = 0;
+};
+
+
+struct pose
 {
 	vec<3> position = {0, 0, 0};
 	quat<float> orientation = {0, 0, 0, 1};
 };
 
 
-struct camera : public view_point
+struct camera : public pose
 {
 	quat<float>& d_pitch(float delta)
 	{

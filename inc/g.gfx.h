@@ -43,12 +43,6 @@
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
 
-#define G_TERM_GREEN "\033[0;32m"
-#define G_TERM_RED "\033[1;31m"
-#define G_TERM_YELLOW "\033[1;33m"
-#define G_TERM_BLUE "\033[1;34m"
-#define G_TERM_COLOR_OFF "\033[0m"
-
 using namespace xmath;
 
 namespace g {
@@ -606,7 +600,7 @@ struct mesh_factory
 	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, int x, int y)> generator)
 	{
 		mesh<VERT> m;
-		
+
 		glGenBuffers(2, &m.vbo);
 		glBindBuffer(GL_ARRAY_BUFFER, m.vbo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.ibo);
@@ -622,9 +616,9 @@ struct mesh_factory
 		{
 			// float x = dx * i - 0.5f, y = dy * j - 0.5f;
 			// Vertex v = {
-			// 	.position = { 
+			// 	.position = {
 			// 		(x / tex.size[0]) - tex.size[0] * 0.5,
-			// 		0, 
+			// 		0,
 			// 		(y / tex.size[1]) - tex.size[1] * 0.5 },
 			// 	.normal = { 0, 1, 0 },
 			// 	.tangent = { 1, 0, 0 },
@@ -668,7 +662,7 @@ struct mesh_factory
 					y - tex.size[1] * 0.5f,
 				},
 				// uv
-				{ 
+				{
 					x / (float)tex.size[0],
 					y / (float)tex.size[1],
 				},

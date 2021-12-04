@@ -32,7 +32,7 @@ sources:
     rev: 3.3.4
     scripts:
       -
-  - name: glew 
+  - name: glew
     type: git
     repo: git@github.com:nigels-com/glew.git
     sparse_paths:
@@ -50,7 +50,7 @@ sources:
     link: deps/sha1
     scripts:
       - make static
-  - name: freetype 
+  - name: freetype
     type: git
     repo: git@github.com:freetype/freetype.git
     sparse_paths:
@@ -58,6 +58,22 @@ sources:
     rev: 2.6.5
     scripts:
       -
+  - name: ogg
+    type: git
+    repo: git@github.com:xiph/ogg.git
+    rev: v1.3.5
+  - name: vorbis
+    type: git
+    repo: git@github.com:xiph/vorbis.git
+    sparse_paths:
+      -
+    rev: v1.3.7
+  - name: AudioFile
+    type: git
+    repo: git@github.com:adamstark/AudioFile.git
+    sparse_paths:
+      -
+    rev: 1.0.9
 
 default_group: ''
 groups:
