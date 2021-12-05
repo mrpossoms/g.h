@@ -67,13 +67,13 @@ sources:
     repo: git@github.com:xiph/vorbis.git
     sparse_paths:
       -
-    rev: integer-formats
+    rev: v1.3.7
   - name: AudioFile
     type: git
-    repo: git@github.com:/AudioFile.git
+    repo: git@github.com:mrpossoms/AudioFile.git
     sparse_paths:
       -
-    rev: 1.0.9
+    rev: integer-formats
 
 default_group: ''
 groups:
