@@ -51,9 +51,9 @@ text::text(g::gfx::font& f) : font(f)
 }
 
 shader::usage text::using_shader(g::gfx::shader& shader,
-	  const std::string& str,
-      g::game::camera& cam,
-      const mat<4, 4>& model)
+	const std::string& str,
+	g::game::camera& cam,
+	const mat<4, 4>& model)
 {
 	auto M = mat<4, 4>::translation({ 0, 0.5, 0 }) * model;
 	static std::vector<vertex::pos_uv_norm> verts;
