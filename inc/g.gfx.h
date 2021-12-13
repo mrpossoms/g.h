@@ -282,12 +282,15 @@ struct shader
 		usage mat3 (const mat<3, 3>& m);
 
 		usage vec2 (const vec<2>& v);
+		usage vec2n (const vec<2>* v, size_t count);
 
 		usage vec3 (const vec<3>& v);
+		usage vec3n (const vec<3>* v, size_t count);	
 
 		usage vec4(const vec<4>& v);
 
 		usage flt(float f);
+		usage fltn(float* f, size_t count);
 
 		usage int1(const int i);
 

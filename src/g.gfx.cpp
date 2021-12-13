@@ -490,9 +490,23 @@ shader::usage shader::uniform_usage::vec2 (const vec<2>& v)
 	return parent_usage;
 }
 
+shader::usage shader::uniform_usage::vec2n (const vec<2>* v, size_t count)
+{
+	glUniform2fv(uni_loc, count, (const float*)v);
+
+	return parent_usage;
+}
+
 shader::usage shader::uniform_usage::vec3 (const vec<3>& v)
 {
 	glUniform3fv(uni_loc, 1, v.v);
+
+	return parent_usage;
+}
+
+shader::usage shader::uniform_usage::vec3n (const vec<3>* v, size_t count)
+{
+	glUniform3fv(uni_loc, count, (const float *)v);
 
 	return parent_usage;
 }
@@ -507,6 +521,13 @@ shader::usage shader::uniform_usage::vec4(const vec<4>& v)
 shader::usage shader::uniform_usage::flt (float f)
 {
 	glUniform1f(uni_loc, f);
+
+	return parent_usage;
+}
+
+shader::usage shader::uniform_usage::fltn (float* f, size_t count)
+{
+	glUniform1fv(uni_loc, count, (const float *)f);
 
 	return parent_usage;
 }

@@ -103,6 +103,15 @@ struct source : public positionable, pointable, moveable
 
     ~source();
 
+    source& operator=(source&& s)
+    {
+        handle = std::exchange(s.handle, 0);
+        source_track = std::exchange(s.source_track, nullptr);
+        last_t = std::exchange(s.last_t, 0);
+
+        return *this;
+    }
+
     void update();
 
     vec<3> position(const vec<3>& pos);
@@ -132,6 +141,8 @@ struct source_ring : public positionable, pointable, moveable
 {
     std::vector<source> sources;
     unsigned next = 0;
+
+    source_ring() = default;
 
     source_ring(track* trk, unsigned source_count)
     {
@@ -186,6 +197,7 @@ static void set_observer(const vec<3>& position,
     alListenerfv(AL_VELOCITY, velocity.v);
 
     auto forward = orientation.rotate({0, 0, -1});
+    auto up = orientation.rotate({0, 1, 0});
 
     alListenerfv(AL_ORIENTATION, forward.v);
 }

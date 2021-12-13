@@ -30,6 +30,7 @@
 #include "g.assets.h"
 #include "g.dyn.h"
 #include "g.ui.h"
+#include "g.ai.h"
 #include "g.snd.h"
 
 namespace g {

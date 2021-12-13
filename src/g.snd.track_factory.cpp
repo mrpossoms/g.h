@@ -143,6 +143,11 @@ track track_factory::from_wav(const std::string& path)
     desc.channels  = wav.getNumChannels();
     desc.depth     = (bit_depth)(wav.getBitDepth() / 8);
 
+    if (std::string::npos != path.find(".looping"))
+    {
+        desc.looping = true;
+    }
+
     std::vector<int16_t> interleaved;
     for (unsigned si = 0; si < wav.samples[0].size(); si++)
     {

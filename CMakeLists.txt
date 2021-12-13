@@ -84,6 +84,10 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
 
+set(WITH_ZLIB OFF CACHE BOOL "" FORCE) 
+set(WITH_BZip2 OFF CACHE BOOL "" FORCE) 
+set(WITH_PNG OFF CACHE BOOL "" FORCE) 
+set(WITH_HarfBuzz OFF CACHE BOOL "" FORCE) 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 
 # set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
@@ -94,16 +98,18 @@ find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
+set(CMAKE_PREFIX_PATH "")
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
 
 # target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} glew_s)
 target_link_libraries(${PROJECT_NAME} freetype)
 target_link_libraries(${PROJECT_NAME} OpenGL::GL)
-target_link_libraries(${PROJECT_NAME} ogg)
+# target_link_libraries(${PROJECT_NAME} ogg)
 target_link_libraries(${PROJECT_NAME} vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)
 target_link_libraries(${PROJECT_NAME} AudioFile)

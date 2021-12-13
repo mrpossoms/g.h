@@ -66,7 +66,7 @@ g::gfx::font& g::asset::store::font(const std::string& partial_path)
 	auto itr = fonts.find(partial_path);
 	if (itr == fonts.end())
 	{
-		fonts[partial_path] = {time(nullptr), g::gfx::font_factory{}.from_true_type(root + "/font/" + partial_path, 128)};
+		fonts[partial_path] = {time(nullptr), g::gfx::font_factory{}.from_true_type(root + "/font/" + partial_path, 32)};
 	}
 
 	return fonts[partial_path].get();

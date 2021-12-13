@@ -50,11 +50,16 @@ g::snd::source::source(track* trk)
 
     source_track = trk;
 
+    alSourcei(handle, AL_LOOPING, trk->desc.looping);
+    // alSourcef(handle, AL_PITCH, 1);
+    // alSourcef(handle, AL_GAIN, 10);
+    alSourcef(handle, AL_REFERENCE_DISTANCE, 15);
     if (!trk->is_streaming())
     {
         alSourcei(handle, AL_BUFFER, trk->handles[0]);
     }
 }
+
 
 g::snd::source::~source()
 {
@@ -137,7 +142,6 @@ vec<3> g::snd::source::direction()
 void g::snd::source::play()
 {
     assert(handle > 0);
-    std::cerr << handle << std::endl;
 
     if (nullptr != source_track && source_track->is_streaming())
     {
