@@ -616,7 +616,7 @@ shader shader_factory::create()
 			GLchar *log_str = (GLchar *)malloc(log_length);
 			glGetProgramInfoLog(out.program, log_length, &log_length, log_str);
 			std::cerr << "Shader link log: " << log_length << std::endl << log_str << std::endl;
-			write(1, log_str, log_length);
+			::write(1, log_str, log_length);
 			free(log_str);
 		}
 		exit(-1);

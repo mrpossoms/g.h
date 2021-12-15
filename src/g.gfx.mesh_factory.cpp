@@ -116,7 +116,7 @@ mesh<vertex::pos_uv_norm> mesh_factory::plane(const vec<3>& normal, const vec<2>
     p.set_vertices({
         {x_basis * -size[0] + y_basis *  size[1], {1, 1}, normal},
         {x_basis *  size[0] + y_basis *  size[1], {0, 1}, normal},
-        {x_basis *  size[0] + y_basis * -size[1], {0, 0}, normal},        
+        {x_basis *  size[0] + y_basis * -size[1], {0, 0}, normal},
         {x_basis * -size[0] + y_basis * -size[1], {1, 0}, normal},
     });
 
@@ -154,7 +154,7 @@ struct obj_line {
 static int get_line(int fd, char* line)
 {
     int size = 0;
-    while(read(fd, line + size, 1))
+    while(::read(fd, line + size, 1))
     {
         if(line[size] == '\n') break;
         ++size;

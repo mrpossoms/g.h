@@ -46,12 +46,12 @@ set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng/lode
 # set(SOURCE ${SOURCE} gitman_sources/png/*.o))
 add_library(${PROJECT_NAME} STATIC ${G_SOURCE})
 
-execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
-                   -B${CMAKE_BINARY_DIR}/out/build/glew
-                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
-                  )
-execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
-execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
+# execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
+#                    -B${CMAKE_BINARY_DIR}/out/build/glew
+#                    -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
+#                   )
+# execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
+# execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
 
 if (WIN32)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
@@ -61,7 +61,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 endif ()
 
 message("CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
-set(GLEW_USE_STATIC_LIBS 1)
+# set(GLEW_USE_STATIC_LIBS 1)
 set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/out)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/out)
 
@@ -69,8 +69,8 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/out)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
+# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
+# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/include)
@@ -82,17 +82,18 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${OPENGL_INCLUDE_DIR})
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
 
-set(WITH_ZLIB OFF CACHE BOOL "" FORCE) 
-set(WITH_BZip2 OFF CACHE BOOL "" FORCE) 
-set(WITH_PNG OFF CACHE BOOL "" FORCE) 
-set(WITH_HarfBuzz OFF CACHE BOOL "" FORCE) 
+set(WITH_ZLIB OFF CACHE BOOL "" FORCE)
+set(WITH_BZip2 OFF CACHE BOOL "" FORCE)
+set(WITH_PNG OFF CACHE BOOL "" FORCE)
+set(WITH_HarfBuzz OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 
 # set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
-find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
+# find_package(GLEW REQUIRED CONFIG)
+
 find_package(OpenGL REQUIRED)
 
 find_package(OpenAL REQUIRED)
@@ -106,9 +107,10 @@ set(CMAKE_PREFIX_PATH "")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
 
 # target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} glew_s)
+# target_link_libraries(${PROJECT_NAME} glew_s)
 target_link_libraries(${PROJECT_NAME} freetype)
-target_link_libraries(${PROJECT_NAME} OpenGL::GL)
+target_link_libraries(${PROJECT_NAME} GL)
+# target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 # target_link_libraries(${PROJECT_NAME} ogg)
 target_link_libraries(${PROJECT_NAME} vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)

@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -Wall -O3")
 
 link_libraries(g)
 link_libraries(glfw)
-link_libraries(OpenGL::GL)
+# link_libraries(OpenGL::GL)
 link_libraries(${OPENAL_LIBRARY})
 link_libraries(ogg)
 link_libraries(vorbis)

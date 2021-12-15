@@ -25,13 +25,15 @@
 
 #include "g.utils.h"
 #include "g.gfx.h"
-#include "g.net.h"
 #include "g.game.h"
 #include "g.assets.h"
 #include "g.dyn.h"
 #include "g.ui.h"
 #include "g.ai.h"
 #include "g.snd.h"
+#ifndef __EMSCRIPTEN__
+#include "g.net.h"
+#endif
 
 namespace g {
 

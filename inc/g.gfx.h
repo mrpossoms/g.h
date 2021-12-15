@@ -32,6 +32,12 @@
 #include <GL/gl.h>
 #endif
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#define GL_GLEXT_PROTOTYPES
+#define EGL_EGLEXT_PROTOTYPES
+#endif
+
 #ifdef __APPLE__
 #include <unistd.h>
 #include <GL/glew.h>
@@ -285,7 +291,7 @@ struct shader
 		usage vec2n (const vec<2>* v, size_t count);
 
 		usage vec3 (const vec<3>& v);
-		usage vec3n (const vec<3>* v, size_t count);	
+		usage vec3n (const vec<3>* v, size_t count);
 
 		usage vec4(const vec<4>& v);
 
@@ -308,8 +314,8 @@ struct shader_factory
 	template<GLenum ST>
 	shader_factory add(const std::string& path)
 	{
-		auto fd = open(path.c_str(), O_RDONLY);
-		auto size = lseek(fd, 0, SEEK_END);
+		auto fd = ::open(path.c_str(), O_RDONLY);
+		auto size = ::lseek(fd, 0, SEEK_END);
 
 		if (fd < 0 || size <= 0)
 		{
@@ -319,14 +325,14 @@ struct shader_factory
 
 		{ // read and compile the shader
 			GLchar* src = new GLchar[size];
-			lseek(fd, 0, SEEK_SET);
-			size = read(fd, src, size);
+			::lseek(fd, 0, SEEK_SET);
+			size = ::read(fd, src, size);
 
 			std::cerr << "Compiling: " << path << "... ";
 
 			shaders[ST] = compile_shader(ST, src, (GLsizei)size);
 
-			close(fd);
+			::close(fd);
 			delete[] src;
 		}
 
