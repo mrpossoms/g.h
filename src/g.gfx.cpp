@@ -44,7 +44,7 @@ void texture::create(GLenum texture_type)
 {
 	type = texture_type;
 	glGenTextures(1, &this->hnd);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 }
 
 void texture::destroy()
@@ -308,9 +308,9 @@ texture texture_factory::create()
 	out.create(texture_type);
 	out.bind();
 
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	out.set_pixels(size[0], size[1], size[2], data, color_type, storage_type);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 
 	glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
@@ -318,9 +318,9 @@ texture texture_factory::create()
 	glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
 	glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
 	glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	// glGenerateMipmap(GL_TEXTURE_2D);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	return out;
 }
@@ -359,7 +359,7 @@ framebuffer framebuffer_factory::create()
 	fb.depth = depth_tex;
 	glGenFramebuffers(1, &fb.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	if (color_tex.hnd != (GLuint)-1)
 	{
@@ -428,10 +428,10 @@ shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 
 shader::usage shader::usage::set_camera(g::game::camera& cam)
 {
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	this->set_uniform("u_view").mat4(cam.view());
 	this->set_uniform("u_proj").mat4(cam.projection());
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	return *this;
 }
 
@@ -555,7 +555,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 	glShaderSource(shader, 1, &src, &len);
 	glCompileShader(shader);
 
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	// Check the compilation status
 	GLint status;
@@ -565,7 +565,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 		std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
 		std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
 	}
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	// Print the compilation log if there's anything in there
 	GLint log_length;
@@ -577,7 +577,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 		std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
 		free(log_str);
 	}
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	// treat all shader compilation failure as fatal
 	if (status == GL_FALSE)
@@ -603,7 +603,7 @@ shader shader_factory::create()
 		glAttachShader(out.program, shader.second);
 	}
 
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	glLinkProgram(out.program);
 
 	glGetProgramiv(out.program, GL_LINK_STATUS, &status);
@@ -622,7 +622,7 @@ shader shader_factory::create()
 		exit(-1);
 	}
 
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	// Detach all
 	for (auto shader : shaders)

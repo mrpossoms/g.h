@@ -69,8 +69,13 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/out)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
-# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
-# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
+
+if(EMSCRIPTEN)
+else()
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
+endif()
+
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/include)
@@ -82,7 +87,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${OPENGL_INCLUDE_DIR})
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
+
+if(EMSCRIPTEN)
+else()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
+endif()
 
 set(WITH_ZLIB OFF CACHE BOOL "" FORCE)
 set(WITH_BZip2 OFF CACHE BOOL "" FORCE)
@@ -92,10 +101,14 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 
 # set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
-# find_package(GLEW REQUIRED CONFIG)
+
+if(EMSCRIPTEN)
+else()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
+find_package(GLEW REQUIRED CONFIG)
+endif()
 
 find_package(OpenGL REQUIRED)
-
 find_package(OpenAL REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
 
@@ -106,8 +119,12 @@ set(CMAKE_PREFIX_PATH "")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
 
+if(EMSCRIPTEN)
+else()
 # target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
-# target_link_libraries(${PROJECT_NAME} glew_s)
+target_link_libraries(${PROJECT_NAME} glew_s)
+endif()
+
 target_link_libraries(${PROJECT_NAME} freetype)
 target_link_libraries(${PROJECT_NAME} GL)
 # target_link_libraries(${PROJECT_NAME} OpenGL::GL)
@@ -116,5 +133,11 @@ target_link_libraries(${PROJECT_NAME} vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)
 target_link_libraries(${PROJECT_NAME} AudioFile)
 
+
+if (G_BUILD_EXAMPLES)
 add_subdirectory(examples)
+endif()
+
+if (G_BUILD_TESTS)
 add_subdirectory(tests)
+endif()
