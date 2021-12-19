@@ -11,7 +11,8 @@
 // IF MACOS
 #define OPENAL_DEPRECATED
 #include "al.h"
-#include "OpenAL.h"
+#include "alc.h"
+//#include "OpenAL.h"
 
 using namespace xmath;
 using namespace g::game;
@@ -189,18 +190,9 @@ static track from_wav(const std::string& path);
 
 };
 
-static void set_observer(const vec<3>& position,
-                         const vec<3>& velocity,
-                         const quat<>& orientation)
-{
-    alListenerfv(AL_POSITION, position.v);
-    alListenerfv(AL_VELOCITY, velocity.v);
-
-    auto forward = orientation.rotate({0, 0, -1});
-    auto up = orientation.rotate({0, 1, 0});
-
-    alListenerfv(AL_ORIENTATION, forward.v);
-}
+void set_observer(const vec<3>& position,
+                  const vec<3>& velocity,
+                  const quat<>& orientation);
 
 } // end namespace snd
 } // end namespace g

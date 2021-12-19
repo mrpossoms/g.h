@@ -46,6 +46,7 @@ ALuint g::snd::track::next(float& last_t)
 
 g::snd::source::source(track* trk)
 {
+    assert(nullptr != trk);
     alGenSources(1, &handle);
 
     source_track = trk;
@@ -53,7 +54,7 @@ g::snd::source::source(track* trk)
     alSourcei(handle, AL_LOOPING, trk->desc.looping);
     // alSourcef(handle, AL_PITCH, 1);
     // alSourcef(handle, AL_GAIN, 10);
-    alSourcef(handle, AL_REFERENCE_DISTANCE, 15);
+    // alSourcef(handle, AL_REFERENCE_DISTANCE, 15);
     if (!trk->is_streaming())
     {
         alSourcei(handle, AL_BUFFER, trk->handles[0]);
@@ -185,4 +186,26 @@ bool g::snd::source::is_stopped()
     ALint state = 0;
     alGetSourcei(handle, AL_SOURCE_STATE, &state);
     return state == AL_STOPPED;
+}
+
+namespace g
+{
+namespace snd
+{
+
+void set_observer(const vec<3>& position,
+                         const vec<3>& velocity,
+                         const quat<>& orientation)
+{
+    alListenerfv(AL_POSITION, position.v);
+    alListenerfv(AL_VELOCITY, velocity.v);
+
+    auto forward = orientation.rotate({0, 0, -1});
+    auto up = orientation.rotate({0, 1, 0});
+
+    alListenerfv(AL_ORIENTATION, forward.v);
+}
+
+}
+
 }
