@@ -57,9 +57,12 @@ struct core
 			bool display = true;
 			size_t width = 640;
 			size_t height = 480;
+			bool fullscreen = false;
 			render_api api = render_api::OPEN_GL;
 			render_api_version api_version = { 4, 1 };
 		} gfx;
+
+		opts() = default;
 
 		opts(const char* name, bool display, size_t width, size_t height)
 		{

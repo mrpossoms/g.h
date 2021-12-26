@@ -46,13 +46,6 @@ set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng/lode
 # set(SOURCE ${SOURCE} gitman_sources/png/*.o))
 add_library(${PROJECT_NAME} STATIC ${G_SOURCE})
 
-# execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
-#                    -B${CMAKE_BINARY_DIR}/out/build/glew
-#                    -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
-#                   )
-# execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
-# execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
-
 if (WIN32)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
@@ -104,6 +97,13 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 
 if(EMSCRIPTEN)
 else()
+execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
+                   -B${CMAKE_BINARY_DIR}/out/build/glew
+                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
+                  )
+execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
+execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
+  
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 find_package(GLEW REQUIRED CONFIG)
 endif()
