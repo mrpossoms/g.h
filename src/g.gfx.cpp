@@ -207,7 +207,7 @@ texture_factory& texture_factory::components(unsigned count)
 	switch(component_count = count)
 	{
 		case 1:
-			color_type = GL_RED;
+			color_type = GL_R;
 			break;
 		case 2:
 			color_type = GL_RG;
@@ -768,8 +768,19 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// }
 	// std::cerr<<"done\n";
 
-	font.face = texture_factory{col_pix, row_pix}.type(GL_UNSIGNED_BYTE).components(1).fill(map_buffer).pixelated().create();
+	// using RGBA is totally excessive, but webgl 
+	// seems to have issues with just GL_RED
+	font.face = texture_factory{col_pix, row_pix}
+	.type(GL_UNSIGNED_BYTE)
+	.components(4)
+	.fill([&](int x, int y, int z, unsigned char* pixel){
+		pixel[0] = pixel[1] = pixel[2] = 0xff;
+		pixel[3] = map_buffer[(x * row_pix) + y];
+	}).pixelated().clamped().create();
+
 	font.point = point;
+
+	delete[] map_buffer;
 
 	return font;
 }
