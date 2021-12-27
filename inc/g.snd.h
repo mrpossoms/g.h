@@ -20,6 +20,11 @@
 #include "OpenAL.h"
 #endif
 
+#ifdef WIN32
+#include "al.h"
+#include "alc.h"
+#endif
+
 using namespace xmath;
 using namespace g::game;
 

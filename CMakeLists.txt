@@ -97,6 +97,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 
 if(EMSCRIPTEN)
 else()
+# build and use glew
 execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
                    -B${CMAKE_BINARY_DIR}/out/build/glew
                    -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
@@ -106,14 +107,25 @@ execute_process(COMMAND cmake --build out/build/glew --target install --config R
   
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 find_package(GLEW REQUIRED CONFIG)
+
+# build and use ogg
+execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
+                   -B${CMAKE_BINARY_DIR}/out/build/ogg
+                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
+                  )
+execute_process(COMMAND cmake --build out/build/ogg --target install --config Debug)
+execute_process(COMMAND cmake --build out/build/ogg --target install --config Release)
+  
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+find_package(ogg REQUIRED CONFIG)
 endif()
 
 find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
-set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+# set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
 set(CMAKE_PREFIX_PATH "")
 
