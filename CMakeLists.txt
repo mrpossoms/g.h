@@ -138,7 +138,7 @@ target_link_libraries(${PROJECT_NAME} glew_s)
 endif()
 
 target_link_libraries(${PROJECT_NAME} freetype)
-target_link_libraries(${PROJECT_NAME} GL)
+# target_link_libraries(${PROJECT_NAME} GL)
 # target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 # target_link_libraries(${PROJECT_NAME} ogg)
 target_link_libraries(${PROJECT_NAME} vorbis)

@@ -72,9 +72,9 @@ g::snd::source::~source()
 
 void g::snd::source::update()
 {
-    if (nullptr != source_track)
+    if (nullptr != source_track && source_track->is_streaming())
     {
-        ALint processed = 0, queued = 0, state = 0;
+        ALint processed = 0, queued = 0;
         float playback_sec = 0;
 
         alGetSourcei(handle, AL_BUFFERS_PROCESSED, &processed);
@@ -85,7 +85,6 @@ void g::snd::source::update()
         }
 
         alGetSourcei(handle, AL_BUFFERS_QUEUED, &queued);
-        alGetSourcei(handle, AL_SOURCE_STATE, &state);
         alGetSourcef(handle, AL_SEC_OFFSET, &playback_sec);
 
         if (is_stopped())
@@ -148,9 +147,10 @@ void g::snd::source::play()
     {
         auto next = source_track->next(last_t);
         alSourceQueueBuffers(handle, 1, &next);
+
+        assert(alIsBuffer(source_track->handles[0]));
     }
 
-    assert(alIsBuffer(source_track->handles[0]));
     assert(alIsSource(handle));
 
     alSourcePlay(handle);
@@ -163,10 +163,11 @@ void g::snd::source::seek(float time)
         last_t = std::max<float>(0, std::min<float>(time, source_track->length_sec));
 
         ALint queued;
+        ALuint dequeued[10];
         alGetSourcei(handle, AL_BUFFERS_QUEUED, &queued);
-        alSourceUnqueueBuffers(handle, queued, nullptr);
+        alSourceUnqueueBuffers(handle, queued, dequeued);
         alGetSourcei(handle, AL_BUFFERS_PROCESSED, &queued);
-        alSourceUnqueueBuffers(handle, queued,  nullptr);
+        alSourceUnqueueBuffers(handle, queued, dequeued);
     }
 }
 
