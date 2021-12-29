@@ -117,7 +117,7 @@ execute_process(COMMAND cmake --build out/build/ogg --target install --config De
 execute_process(COMMAND cmake --build out/build/ogg --target install --config Release)
   
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
-find_package(ogg REQUIRED CONFIG)
+find_package(Ogg REQUIRED CONFIG)
 endif()
 
 find_package(OpenGL REQUIRED)
