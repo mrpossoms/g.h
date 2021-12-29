@@ -203,6 +203,10 @@ struct framebuffer_factory
 
 	framebuffer_factory(unsigned w, unsigned h);
 
+	framebuffer_factory(texture& dst);
+
+	framebuffer_factory();
+
 	framebuffer_factory& color();
 
 	framebuffer_factory& depth();

@@ -19,24 +19,31 @@ using namespace xmath;
 namespace g {
 namespace game {
 
-struct positionable 
+struct positionable
 {
+	virtual ~positionable() {};
 	virtual vec<3> position(const vec<3>& pos) = 0;
 	virtual vec<3> position() = 0;
 };
 
 struct pointable
 {
+	virtual ~pointable() {};
 	virtual vec<3> direction(const vec<3>& dir) = 0;
 	virtual vec<3> direction() = 0;
 };
 
-struct moveable 
+struct moveable
 {
+	virtual ~moveable() {};
 	virtual vec<3> velocity(const vec<3>& vel) = 0;
 	virtual vec<3> velocity() = 0;
 };
 
+struct updateable
+{
+	virtual void update(float dt, float time) = 0;
+};
 
 struct pose
 {

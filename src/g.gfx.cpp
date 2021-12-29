@@ -332,6 +332,13 @@ framebuffer_factory::framebuffer_factory(unsigned w, unsigned h)
 	size[1] = h;
 }
 
+framebuffer_factory::framebuffer_factory(texture& dst)
+{
+	color_tex = dst;
+	size[0] = color_tex.size[0];
+	size[1] = color_tex.size[1];
+}
+
 framebuffer_factory& framebuffer_factory::color()
 {
 	color_tex = texture_factory{ size[0], size[1] }.color().clamped().smooth().create();
@@ -546,7 +553,6 @@ shader::usage shader::uniform_usage::texture(const g::gfx::texture& tex)
 	parent_usage.texture_unit++;
 	return parent_usage;
 }
-
 
 GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
 {
@@ -768,7 +774,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// }
 	// std::cerr<<"done\n";
 
-	// using RGBA is totally excessive, but webgl 
+	// using RGBA is totally excessive, but webgl
 	// seems to have issues with just GL_RED
 	font.face = texture_factory{col_pix, row_pix}
 	.type(GL_UNSIGNED_BYTE)
