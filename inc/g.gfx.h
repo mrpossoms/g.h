@@ -317,6 +317,12 @@ struct shader_factory
 {
 	std::unordered_map<GLenum, GLuint> shaders;
 
+#ifdef __EMSCRIPTEN__
+	std::string shader_header = "#version 300 es\n";
+#else
+	std::string shader_header = "#version 410\n";
+#endif
+
 	static GLuint compile_shader (GLenum type, const GLchar* src, GLsizei len);
 
 	template<GLenum ST>
@@ -338,7 +344,8 @@ struct shader_factory
 
 			std::cerr << "Compiling: " << path << "... ";
 
-			shaders[ST] = compile_shader(ST, src, (GLsizei)size);
+			auto src_str = shader_header + std::string(src, size);
+			shaders[ST] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length() - 1);
 
 			::close(fd);
 			delete[] src;
@@ -351,7 +358,8 @@ struct shader_factory
 	shader_factory add_src(const std::string& src)
 	{
 		{ // read and compile the shader
-			shaders[ST] = compile_shader(ST, src.c_str(), (GLsizei)src.length());
+			auto src_str = shader_header + src;
+			shaders[ST] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length());
 		}
 
 		return *this;
