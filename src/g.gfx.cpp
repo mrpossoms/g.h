@@ -103,7 +103,14 @@ void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLen
 	else if (h >= 1)
 	{
 		type = GL_TEXTURE_2D;
-		glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage, data);
+		if (storage == GL_FLOAT && color_type == GL_RGBA)
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage, data);
+		}
+		else
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage, data);
+		}
 	}
 }
 
@@ -117,6 +124,7 @@ texture_factory::texture_factory(unsigned w, unsigned h)
 	texture_type = GL_TEXTURE_2D;
 	size[0] = w;
 	size[1] = h;
+	size[2] = 1;
 }
 
 texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)

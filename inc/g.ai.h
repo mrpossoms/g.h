@@ -103,6 +103,12 @@ T breed(T& a, T& b, float mutation_rate)
 template<typename T>
 void generation(std::vector<T>& g_0, std::vector<T>& g_1, const generation_desc& desc)
 {
+    if (g_0.size() == 0)
+    {
+        // cant do anything with an empty generation
+        return;
+    }
+
     g_1.resize(0); // empty without freeing
 
     // sort the input generation
@@ -117,7 +123,7 @@ void generation(std::vector<T>& g_0, std::vector<T>& g_1, const generation_desc&
     }
 
     // take top percentage and add them to the next generation
-    auto top_performer_count = static_cast<unsigned>(g_0.size() * desc.select_top);
+    auto top_performer_count = static_cast<unsigned>(ceil(g_0.size() * desc.select_top));
     for (unsigned i = 0; i < top_performer_count; i++)
     {
         g_1.push_back(g_0[i]);
