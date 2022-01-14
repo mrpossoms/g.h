@@ -1,5 +1,5 @@
-find_package(OpenGL REQUIRED)
-find_package(OpenAL REQUIRED)
+# find_package(OpenGL REQUIRED)
+# find_package(OpenAL REQUIRED)
 
 if (WIN32)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
