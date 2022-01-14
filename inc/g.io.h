@@ -1,11 +1,19 @@
 #pragma once
 
+#include <stddef.h>
+
+#include <string>
+#include <vector>
+#include <memory>
+#include <functional>
+
+
 namespace g
 {
 namespace io
 {
 
-template
+// template
 struct file
 {
 	struct impl;
@@ -35,7 +43,10 @@ struct file
 	void seek(size_t byte_position);
 
 	void on_changed(std::function<void(file&)> callback);
-}
+
+private:
+	std::unique_ptr<impl> file_impl;
+};
 
 } // namespace io
 } // namespace g
