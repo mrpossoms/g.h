@@ -19,7 +19,6 @@ struct kind
 {
 	time_t last_accessed;
 	time_t loaded_time;
-	time_t last_modified;
 	T asset;
 
 	kind() = default;

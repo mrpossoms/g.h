@@ -55,7 +55,6 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
 			auto tex = chain.create();
 			textures[partial_path] = { time(nullptr), tex };
 		}
-		itr->second.last_modified = mod_time;
 	}
 
 	return textures[partial_path].get();
@@ -82,6 +81,32 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 
 		shaders[program_collection] = { time(nullptr), factory.create() };
 	}
+	else if(hot_reload)
+	{
+		auto do_reload = false;
+
+		for (auto shader_path : g::utils::split(program_collection, "+"))
+		{
+			if (std::string::npos != shader_path.find(".vs"))
+			{
+				auto mod_time = g::io::file(root + "/shader/" + shader_path).modified();
+				do_reload |= mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time;
+			}
+			else if (std::string::npos != shader_path.find(".fs"))
+			{
+				auto mod_time = g::io::file(root + "/shader/" + shader_path).modified();
+				do_reload |= mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time;
+			}
+		}
+
+		if (do_reload)
+		{
+			itr->second.get().destroy();
+			shaders.erase(itr);
+			return this->shader(program_collection);
+		}
+	}
+
 
 	return shaders[program_collection].get();
 }

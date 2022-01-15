@@ -46,6 +46,7 @@ struct my_core : public g::core
 
 		plane = g::gfx::mesh_factory::plane();
 
+		glDisable(GL_CULL_FACE);
 		// grid_tex = g::gfx::texture_factory{}.from_png("data/tex/brick.color.png").create();
 
 		return true;

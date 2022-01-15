@@ -229,6 +229,8 @@ struct shader
 
 	inline bool is_initialized() const { return program != 0; }
 
+	void destroy();
+
 	shader& bind();
 
 	struct uniform_usage;

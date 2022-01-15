@@ -336,7 +336,7 @@ texture texture_factory::create()
 	{
 		out.create(texture_type);		
 	}
-	
+
 	out.bind();
 
 	//assert(gl_get_error());
@@ -455,6 +455,10 @@ framebuffer framebuffer_factory::create()
 
 shader& shader::bind() { glUseProgram(program); return *this; }
 
+void shader::destroy()
+{
+	glDeleteProgram(program);
+}
 
 shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 {
