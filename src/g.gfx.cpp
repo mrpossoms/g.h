@@ -136,6 +136,16 @@ texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)
 	size[2] = d;
 }
 
+texture_factory::texture_factory(texture* existing_texture)
+{
+	existing = existing_texture;
+	data = existing->data;
+	texture_type = existing->type;
+	size[0] = existing->size[0];
+	size[1] = existing->size[1];
+	size[2] = existing->size[2];
+}
+
 void texture_factory::abort(std::string message)
 {
 	std::cerr << message << std::endl;
@@ -145,6 +155,12 @@ void texture_factory::abort(std::string message)
 texture_factory& texture_factory::from_png(const std::string& path)
 {
 	std::cerr << "loading texture '" <<  path << "'... ";
+
+	if (nullptr != data)
+	{
+		delete data;
+		data = nullptr;
+	}
 
 	// TODO: use a more robust lodepng_decode call which can handle textures of various channels and bit depths
 	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
@@ -312,8 +328,15 @@ texture texture_factory::create()
 {
 	texture out;
 
-
-	out.create(texture_type);
+	if (existing)
+	{
+		out = *existing;
+	}
+	else
+	{
+		out.create(texture_type);		
+	}
+	
 	out.bind();
 
 	//assert(gl_get_error());

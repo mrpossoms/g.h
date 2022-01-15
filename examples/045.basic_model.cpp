@@ -9,7 +9,6 @@
 using mat4 = xmath::mat<4,4>;
 
 const std::string vs_src =
-"#version 410\n"
 "in vec3 a_position;"
 "in vec2 a_uv;"
 "in vec3 a_normal;"
@@ -25,7 +24,6 @@ const std::string vs_src =
 "}";
 
 const std::string fs_src =
-"#version 410\n"
 "in vec2 v_uv;"
 "in vec3 v_normal;"
 "uniform sampler2D u_tex;"

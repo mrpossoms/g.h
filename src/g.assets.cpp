@@ -1,5 +1,6 @@
 #include "g.assets.h"
 #include "g.utils.h"
+#include "g.io.h"
 
 #define OGT_VOX_IMPLEMENTATION
 #define OGT_VOXEL_MESHIFY_IMPLEMENTATION
@@ -30,6 +31,31 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
 
 		auto tex = chain.create();
 		textures[partial_path] = { time(nullptr), tex };
+	}
+	else if (hot_reload)
+	{
+		auto mod_time = g::io::file(root + "/tex/" + partial_path).modified();
+		// std::cerr << mod_time << " - " << itr->second.last_accessed << std::endl;
+		if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
+		{
+			std::cerr << partial_path << " has been updated, reloading" << std::endl;
+
+			auto chain = g::gfx::texture_factory(&textures[partial_path].get()).from_png(root + "/tex/" + partial_path).pixelated();
+			// do spicy chain thing with processors here
+			if (std::string::npos != partial_path.find("repeating"))
+			{
+				chain = chain.repeating();
+			}
+
+			if (std::string::npos != partial_path.find("smooth"))
+			{
+				chain = chain.smooth();
+			}
+
+			auto tex = chain.create();
+			textures[partial_path] = { time(nullptr), tex };
+		}
+		itr->second.last_modified = mod_time;
 	}
 
 	return textures[partial_path].get();

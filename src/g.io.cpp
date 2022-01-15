@@ -102,6 +102,7 @@ struct g::io::file::impl
 };
 #elif __linux__
 #include <sys/inotify.h>
+#include <sys/stat.h>
 
 struct g::io::file::impl
 {
@@ -140,10 +141,10 @@ struct g::io::file::impl
 			}
 		}
 
-		if (impl::in_fd < 0)
-		{
-			impl::in_fd = inotify_init();
-		}
+		// if (impl::in_fd < 0)
+		// {
+		// 	impl::in_fd = inotify_init();
+		// }
 
 		fd = open(path, flags, 0x666);
 	}
@@ -166,9 +167,9 @@ struct g::io::file::impl
 		return end;
 	}
 
-	void read(void* buf, size_t bytes)
+	int read(void* buf, size_t bytes)
 	{
-		::read(fd, buf, bytes);
+		return ::read(fd, buf, bytes);
 	}
 
 	std::vector<uint8_t> read(size_t bytes)
@@ -182,14 +183,14 @@ struct g::io::file::impl
 		return buf;
 	}
 
-	void write(void* buf, size_t bytes)
+	int write(void* buf, size_t bytes)
 	{
-		::write(fd, buf, bytes);
+		return ::write(fd, buf, bytes);
 	}
 
-	void write(const std::vector<uint8_t>& buf)
+	int write(const std::vector<uint8_t>& buf)
 	{
-		::write(fd, buf.data(), buf.size());
+		return ::write(fd, buf.data(), buf.size());
 	}
 
 	void seek(size_t byte_position)
@@ -197,10 +198,15 @@ struct g::io::file::impl
 		::lseek(fd, byte_position, SEEK_SET);
 	}
 
-	void on_changed(std::function<void(file&)> callback)
+	time_t modified()
 	{
+		struct stat stat_buf = {};
+		fstat(fd, &stat_buf);
 
+		return stat_buf.st_mtim.tv_sec;
 	}
+
+	void on_changed(std::function<void(file&)> callback){}
 };
 #endif
 
@@ -236,9 +242,9 @@ size_t g::io::file::size()
 	return file_impl->size();
 }
 
-void g::io::file::read(void* buf, size_t bytes)
+int g::io::file::read(void* buf, size_t bytes)
 {
-	file_impl->read(buf, bytes);
+	return file_impl->read(buf, bytes);
 }
 
 std::vector<uint8_t> g::io::file::read(size_t bytes)
@@ -246,19 +252,24 @@ std::vector<uint8_t> g::io::file::read(size_t bytes)
 	return file_impl->read(bytes);
 }
 
-void g::io::file::write(void* buf, size_t bytes)
+int g::io::file::write(void* buf, size_t bytes)
 {
-	file_impl->write(buf, bytes);
+	return file_impl->write(buf, bytes);
 }
 
-void g::io::file::write(const std::vector<uint8_t>& buf)
+int g::io::file::write(const std::vector<uint8_t>& buf)
 {
-	file_impl->write(buf);
+	return file_impl->write(buf);
 }
 
 void g::io::file::seek(size_t byte_position)
 {
 	file_impl->seek(byte_position);
+}
+
+time_t g::io::file::modified()
+{
+	return file_impl->modified();
 }
 
 void g::io::file::on_changed(std::function<void(g::io::file&)> callback)

@@ -9,7 +9,6 @@
 using mat4 = xmath::mat<4,4>;
 
 const std::string vs_src =
-"#version 410\n"
 "in vec3 a_position;"
 "in vec2 a_uv;"
 "in vec3 a_normal;"
@@ -22,7 +21,6 @@ const std::string vs_src =
 "}";
 
 const std::string fs_src =
-"#version 410\n"
 "in vec2 v_uv;"
 "uniform sampler2D u_tex;"
 "out vec4 color;"
@@ -36,6 +34,7 @@ struct my_core : public g::core
 	g::gfx::shader basic_shader;
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
 	g::gfx::texture grid_tex;
+	g::asset::store assets;
 
 	virtual bool initialize()
 	{
@@ -47,7 +46,7 @@ struct my_core : public g::core
 
 		plane = g::gfx::mesh_factory::plane();
 
-		grid_tex = g::gfx::texture_factory{}.from_png("data/tex/brick.color.png").create();
+		// grid_tex = g::gfx::texture_factory{}.from_png("data/tex/brick.color.png").create();
 
 		return true;
 	}
@@ -65,7 +64,7 @@ struct my_core : public g::core
 		plane.using_shader(basic_shader)
 		["u_model"].mat4(model)
 		["u_proj"].mat4(proj)
-		["u_tex"].texture(grid_tex)
+		["u_tex"].texture(assets.tex("brick.color.png"))
 		.draw<GL_TRIANGLE_FAN>();
 	}
 

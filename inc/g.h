@@ -31,6 +31,7 @@
 #include "g.ui.h"
 #include "g.ai.h"
 #include "g.snd.h"
+#include "g.io.h"
 #ifndef __EMSCRIPTEN__
 #include "g.net.h"
 #endif

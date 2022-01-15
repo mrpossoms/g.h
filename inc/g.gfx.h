@@ -89,7 +89,7 @@ struct texture
 	GLuint hnd = -1;
 	unsigned char* data = nullptr;
 
-	inline bool is_initialized() const { return hnd != -1; }
+	inline bool is_initialized() const { return hnd != (unsigned)-1; }
 
 	void release_bitmap();
 
@@ -122,6 +122,7 @@ struct texture
 
 struct texture_factory
 {
+	texture* existing = nullptr;
 	unsigned size[3] = {1, 1, 1};
 	unsigned char* data = nullptr;
 	GLenum texture_type;
@@ -137,6 +138,8 @@ struct texture_factory
 	explicit texture_factory(unsigned w, unsigned h);
 
 	explicit texture_factory(unsigned w, unsigned h, unsigned d);
+
+	explicit texture_factory(texture* existing_texture);
 
 	void abort(std::string message);
 
@@ -633,17 +636,17 @@ struct mesh_factory
 		std::vector<VERT> vertices;
 		std::vector<uint32_t> indices;
 
-		for (int i = 0; i < tex.size[0]; i++)
-		for (int j = 0; j < tex.size[1]; j++)
+		for (unsigned i = 0; i < tex.size[0]; i++)
+		for (unsigned j = 0; j < tex.size[1]; j++)
 		{
 			vertices.push_back(generator(tex, i, j));
 		}
 
-		for (int y = 0; y < tex.size[0] - 1; y++)
-		for (int x = 0; x < tex.size[1] - 1; x++)
+		for (unsigned y = 0; y < tex.size[0] - 1; y++)
+		for (unsigned x = 0; x < tex.size[1] - 1; x++)
 		{
-			int i = x + y * (tex.size[0]);
-			int j = x + (y + 1) * (tex.size[0]);
+			unsigned i = x + y * (tex.size[0]);
+			unsigned j = x + (y + 1) * (tex.size[0]);
 			indices.push_back(j);
 			indices.push_back(i + 1);
 			indices.push_back(i);
