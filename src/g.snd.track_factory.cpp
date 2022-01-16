@@ -44,7 +44,7 @@ track track_factory::from_pcm_buffer(void* buf, size_t size, const track::descri
         if (error != AL_NO_ERROR)
         {
             std::cerr << G_TERM_RED << "pre check error: " << std::string(alGetString(error)) << std::endl;
-            exit(1);
+            // exit(1);
         }
     }
 

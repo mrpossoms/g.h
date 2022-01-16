@@ -1,4 +1,5 @@
 #include "g.gfx.h"
+#include "g.io.h"
 
 #ifdef _WIN32
 # define strtok_r strtok_s
@@ -116,7 +117,7 @@ mesh<vertex::pos_uv_norm> mesh_factory::plane(const vec<3>& normal, const vec<2>
     p.set_vertices({
         {x_basis * -size[0] + y_basis *  size[1], {1, 1}, normal},
         {x_basis *  size[0] + y_basis *  size[1], {0, 1}, normal},
-        {x_basis *  size[0] + y_basis * -size[1], {0, 0}, normal},        
+        {x_basis *  size[0] + y_basis * -size[1], {0, 0}, normal},
         {x_basis * -size[0] + y_basis * -size[1], {1, 0}, normal},
     });
 
@@ -151,10 +152,10 @@ struct obj_line {
 };
 
 //------------------------------------------------------------------------------
-static int get_line(int fd, char* line)
+static int get_line(g::io::file& fd, char* line)
 {
     int size = 0;
-    while(read(fd, line + size, 1))
+    while(fd.read(line + size, 1))
     {
         if(line[size] == '\n') break;
         ++size;
@@ -166,7 +167,7 @@ static int get_line(int fd, char* line)
 }
 
 //------------------------------------------------------------------------------
-bool parse_line(int fd, obj_line& line)
+bool parse_line(g::io::file& fd, obj_line& line)
 {
     char *save_ptr = nullptr;
     line.type = UNKNOWN;
@@ -271,7 +272,7 @@ mesh<vertex::pos_uv_norm> mesh_factory::from_obj(const std::string& path)
     std::vector<uint32_t> indices;
     std::vector<vertex::pos_uv_norm> vertices;
 
-    auto fd = open(path.c_str(), O_RDONLY);
+    g::io::file fd(path);
 
     obj_line l = {};
     while(parse_line(fd, l))

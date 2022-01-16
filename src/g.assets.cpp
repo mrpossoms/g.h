@@ -1,5 +1,6 @@
 #include "g.assets.h"
 #include "g.utils.h"
+#include "g.io.h"
 
 #define OGT_VOX_IMPLEMENTATION
 #define OGT_VOXEL_MESHIFY_IMPLEMENTATION
@@ -31,6 +32,20 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
 		auto tex = chain.create();
 		textures[partial_path] = { time(nullptr), tex };
 	}
+	else if (hot_reload)
+	{
+		auto mod_time = g::io::file(root + "/tex/" + partial_path).modified();
+		// std::cerr << mod_time << " - " << itr->second.last_accessed << std::endl;
+		if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
+		{
+			std::cerr << partial_path << " has been updated, reloading" << std::endl;
+
+			itr->second.get().destroy();
+			textures.erase(itr);
+
+			return this->tex(partial_path);
+		}
+	}
 
 	return textures[partial_path].get();
 }
@@ -56,6 +71,32 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 
 		shaders[program_collection] = { time(nullptr), factory.create() };
 	}
+	else if(hot_reload)
+	{
+		auto do_reload = false;
+
+		for (auto shader_path : g::utils::split(program_collection, "+"))
+		{
+			if (std::string::npos != shader_path.find(".vs"))
+			{
+				auto mod_time = g::io::file(root + "/shader/" + shader_path).modified();
+				do_reload |= mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time;
+			}
+			else if (std::string::npos != shader_path.find(".fs"))
+			{
+				auto mod_time = g::io::file(root + "/shader/" + shader_path).modified();
+				do_reload |= mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time;
+			}
+		}
+
+		if (do_reload)
+		{
+			itr->second.get().destroy();
+			shaders.erase(itr);
+			return this->shader(program_collection);
+		}
+	}
+
 
 	return shaders[program_collection].get();
 }
@@ -81,6 +122,17 @@ g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::strin
 		if (std::string::npos != partial_path.find(".obj"))
 		{
 			geos[partial_path] = { time(nullptr), g::gfx::mesh_factory{}.from_obj(root + "/geo/" + partial_path) };
+		}
+	}
+	else if (hot_reload)
+	{
+		auto mod_time = g::io::file(root + "/geo/" + partial_path).modified();
+		if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
+		{
+			itr->second.get().destroy();
+			geos.erase(itr);
+
+			return this->geo(partial_path);
 		}
 	}
 
@@ -156,6 +208,16 @@ g::snd::track& g::asset::store::sound(const std::string& partial_path)
 		else if (std::string::npos != partial_path.find(".ogg"))
 		{
 			sounds[partial_path] = { time(nullptr), g::snd::track_factory::from_ogg(root + "/snd/" + partial_path) };
+		}
+	}
+	else if(hot_reload)
+	{
+		auto mod_time = g::io::file(root + "/snd/" + partial_path).modified();
+		if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
+		{
+			sounds.erase(itr);
+
+			return this->sound(partial_path);
 		}
 	}
 

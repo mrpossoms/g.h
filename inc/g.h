@@ -25,13 +25,16 @@
 
 #include "g.utils.h"
 #include "g.gfx.h"
-#include "g.net.h"
 #include "g.game.h"
 #include "g.assets.h"
 #include "g.dyn.h"
 #include "g.ui.h"
 #include "g.ai.h"
 #include "g.snd.h"
+#include "g.io.h"
+#ifndef __EMSCRIPTEN__
+#include "g.net.h"
+#endif
 
 namespace g {
 
@@ -55,9 +58,12 @@ struct core
 			bool display = true;
 			size_t width = 640;
 			size_t height = 480;
+			bool fullscreen = false;
 			render_api api = render_api::OPEN_GL;
 			render_api_version api_version = { 4, 1 };
 		} gfx;
+
+		opts() = default;
 
 		opts(const char* name, bool display, size_t width, size_t height)
 		{

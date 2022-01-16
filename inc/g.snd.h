@@ -10,9 +10,20 @@
 
 // IF MACOS
 #define OPENAL_DEPRECATED
+
+#if defined(__linux__) || defined(__EMSCRIPTEN__)
+#include "AL/al.h"
+#include "AL/alc.h"
+#endif
+
+#ifdef __APPLE__
+#include "OpenAL.h"
+#endif
+
+#ifdef WIN32
 #include "al.h"
 #include "alc.h"
-//#include "OpenAL.h"
+#endif
 
 using namespace xmath;
 using namespace g::game;

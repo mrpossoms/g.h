@@ -51,10 +51,25 @@ void g::core::start(const core::opts& opts)
 				glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, opts.gfx.api_version.minor);
 				glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 				glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
 				break;
 		}
 
-		g::gfx::GLFW_WIN = glfwCreateWindow(opts.gfx.width, opts.gfx.height, opts.name ? opts.name : "", NULL, NULL);
+		if (opts.gfx.fullscreen)
+		{
+			auto monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+			// glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+			// glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+			// glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+			// glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);					
+			g::gfx::GLFW_WIN = glfwCreateWindow(mode->width, mode->height, opts.name ? opts.name : "", monitor, NULL);
+		}
+		else
+		{
+			g::gfx::GLFW_WIN = glfwCreateWindow(opts.gfx.width, opts.gfx.height, opts.name ? opts.name : "", NULL, NULL);
+		}
 
 		if (!g::gfx::GLFW_WIN)
 		{
@@ -99,7 +114,7 @@ void g::core::start(const core::opts& opts)
 
 
 #ifdef __EMSCRIPTEN__
-	emscripten_set_main_loop_arg(EMSCRIPTEN_MAIN_LOOP, this, 144, 1);
+	emscripten_set_main_loop_arg(EMSCRIPTEN_MAIN_LOOP, this, 0, 1);
 #else
 	while (running)
 	{ // TODO: refactor this such that a 'main loop' function can be implemented and called by emscripten_set_main_loop

@@ -10,7 +10,7 @@
 #endif
 
 //#define DRAW_DEBUG_VECS
-#define GENERATION_SIZE 6000
+#define GENERATION_SIZE 3000
 
 using mat4 = xmath::mat<4,4>;
 
@@ -23,33 +23,12 @@ vec<3> rand_unit()
 
 struct drone : g::dyn::rigid_body
 {
-    g::ai::mlp<8, 4, 1> model;
     vec<4> throttle = {};
-    float reward = 0;
-
-    vec<3> positions[4] = {
-        {-1, 0, 0}, // rear left
-        { 1, 0, 0}, // rear right
-        { 0, 0, -1}, // front left
-        { 0, 0,  1}, // front right
-    };
-
 
     drone()
     {
         mass = 1;
         update_inertia_tensor();
-        model.initialize();
-    }
-
-    inline float score() const { return reward; }
-    inline void reset()
-    {
-        reward = 0;
-        position = { 0, 40, 0};
-        angular_momentum = {};//rand_unit() * randf() * 0.1;
-        linear_momentum = {};//rand_unit();
-        orientation = quat<>::from_axis_angle({1, 0, 0}, M_PI) * quat<>::from_axis_angle({0, 1, 0}, M_PI * randf() * 1);
     }
 
     inline vec<3> accelerometer() { return to_local(acceleration()); }
@@ -61,6 +40,13 @@ struct drone : g::dyn::rigid_body
 
     inline void update(float dt, g::game::camera* cam)
     {
+        const vec<3> positions[4] = {
+            {-1, 0, 0}, // rear left
+            { 1, 0, 0}, // rear right
+            { 0, 0, -1}, // front left
+            { 0, 0,  1}, // front right
+        };
+
         vec<4> colors[4] = {
             {0.5f, 0, 0, 1},
             {1.0f, 0, 0, 1},
@@ -105,10 +91,6 @@ struct drone : g::dyn::rigid_body
         // std::cerr << gyro_ypr().to_string() << std::endl;
     }
 
-    uint8_t* genome_buf() { return (uint8_t*)&model; }
-    size_t genome_size() { return sizeof(model); }
-
-
     inline vec<3> forward() { return orientation.inverse().rotate({0, 0, 1}); }
 
     inline vec<3> up() { return orientation.inverse().rotate({ 0, 1, 0 }); }
@@ -121,6 +103,71 @@ struct drone : g::dyn::rigid_body
     {
         return orientation.to_matrix() * mat4::translation(position);
     }
+
+    void reset()
+    {
+        position = { 0, 40, 0};
+        angular_momentum = {};//rand_unit() * randf() * 0.1;
+        linear_momentum = {};//rand_unit();
+        orientation = quat<>::from_axis_angle({1, 0, 0}, M_PI - randf() * 1) * quat<>::from_axis_angle({0, 1, 0}, M_PI * randf() * 1);
+    }
+};
+
+struct drone_agent
+{
+    g::ai::mlp<11, 4, 8> model;
+    float reward = 0;
+
+    drone drones[4];
+
+    drone_agent()
+    {
+        model.initialize();
+    }
+
+    inline float score() const { return reward; }
+    inline void reset()
+    {
+        reward = 0;
+        for (unsigned i = 0; i < 4; i++)
+        {
+            drones[i].reset();
+        }
+    }
+
+    void evaluate(float dt, g::game::camera_perspective* cam)
+    {
+        for (unsigned i = 0; i < 4; i++)
+        {
+            auto& drone = drones[i];
+
+            drone.throttle = {};
+
+            auto target_alt = 40.f;
+
+            // do update
+            {
+                auto a = drone.accelerometer();
+                auto w = drone.gyro_ypr();
+                auto u = drone.up();
+                auto v = drone.to_local(drone.velocity);
+                auto alt = drone.position[1];
+                auto x = vec<12>{w[0], w[1], w[2], u[0], u[1], u[2], v[0], v[1], v[2], alt, target_alt, 1};
+                drone.throttle = model.evaluate(x);
+            }
+
+            drone.update(dt, cam);
+            drone.dyn_step(dt);
+
+            reward += (drone.up().dot({0, 1, 0})) - fabs(drone.position[1] - target_alt);            
+        }
+
+
+    }
+
+    uint8_t* genome_buf() { return (uint8_t*)&model; }
+    size_t genome_size() { return sizeof(model); }
+
 };
 
 struct my_core : public g::core
@@ -129,7 +176,7 @@ struct my_core : public g::core
     g::game::camera_perspective cam;
     g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
 
-    std::vector<drone> drones;
+    std::vector<drone_agent> agents;
 
     float time_limit = 10;
     float time = 0;
@@ -137,26 +184,23 @@ struct my_core : public g::core
 
     virtual bool initialize()
     {
-        std::cout << "initialize your game state here.\n";
-
-        // glDisable(GL_CULL_FACE);
         cam.position = {0, 10, 10};
         plane = g::gfx::mesh_factory::plane({ 0, 1, 0 }, { 1000, 1000 });
         glPointSize(4);
 
         for (unsigned i = GENERATION_SIZE; i--;)
         {
-            drone c = {};
+            drone_agent c = {};
             // c.angular_momentum = vec<3>{ 0, M_PI * 2, 0};
             // c.throttle[0] = c.throttle[1] = c.throttle[2] = c.throttle[3] = 1;
             c.reset();
-            drones.push_back(c);
+            agents.push_back(c);
         }
 
         auto fd = open("best_fc.genome", O_RDONLY);
         if (fd >= 0)
         {
-            read(fd, drones[0].genome_buf(), drones[0].genome_size());
+            read(fd, agents[0].genome_buf(), agents[0].genome_size());
         }
 
         return true;
@@ -183,40 +227,20 @@ struct my_core : public g::core
 
         auto& drone_mesh = assets.geo("quadrotor.obj");
 
-        for (unsigned i = 0; i < drones.size(); i++)
+        for (unsigned i = 0; i < agents.size(); i++)
         {
-            auto& drone = drones[i];
+            agents[i].evaluate(dt, &cam);
 
             // drone.dyn_apply_local_force(drone.positions[rand() % 4], rand_unit());
 
-            drone.update(dt, &cam);
-            drone.throttle = {};
-
-            auto target_alt = 40.f;
-
-            // do update
-            {
-                auto a = drone.accelerometer();
-                auto w = drone.gyro_ypr();
-                auto u = drone.up();
-                auto v = drone.to_local(drone.velocity);
-                auto alt = drone.position[1];
-                auto x = vec<9>{w[0], w[1], w[2], u[0], u[1], u[2], alt, target_alt, 1};
-                drone.throttle = drone.model.evaluate(x);
-            }
-
-            drone.dyn_step(dt);
-
-            drone.reward += (drone.up().dot({0, 1, 0})) / (1.f + fabs(drone.position[1] - target_alt));
-
-
-        }
             {
                 drone_mesh.using_shader(shader)
                 .set_camera(cam)
-                ["u_model"].mat4(drones[0].transform())
+                ["u_model"].mat4(agents[i].drones[0].transform())
                 .draw<GL_TRIANGLES>();
             }
+        }
+
 
         if (time >= time_limit)
         {
@@ -233,19 +257,19 @@ struct my_core : public g::core
                 }
             };
 
-            std::vector<drone> next_generation;
-            g::ai::evolution::generation<drone>(drones, next_generation, desc);
+            std::vector<drone_agent> next_generation;
+            g::ai::evolution::generation<drone_agent>(agents, next_generation, desc);
 
             std::cerr << "generation " << generation << " top scores" << std::endl;
             for (unsigned i = 0; i < 10; i++)
             {
-                std::cerr << "#" << i << ": " << drones[i].score() << std::endl;
-                drones[i].reset();
-                next_generation.push_back(drones[i]);
+                std::cerr << "#" << i << ": " << agents[i].score() << std::endl;
+                agents[i].reset();
+                next_generation.push_back(agents[i]);
             }
 
             for (auto& drone : next_generation) { drone.reset(); }
-            drones = next_generation;
+            agents = next_generation;
             time = 0;
             generation++;
         }

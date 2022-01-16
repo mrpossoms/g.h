@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.10)
 
 project(g VERSION 0.0.1 LANGUAGES CXX)
 
@@ -41,27 +41,24 @@ set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.snd.track_factory.cpp
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.core.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.utils.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.ui.cpp)
+set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.io.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng/lodepng.cpp)
 
 # set(SOURCE ${SOURCE} gitman_sources/png/*.o))
 add_library(${PROJECT_NAME} STATIC ${G_SOURCE})
-
-execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
-                   -B${CMAKE_BINARY_DIR}/out/build/glew
-                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
-                  )
-execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
-execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
 
 if (WIN32)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
+
+set(OPENAL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/libs/Win64/OpenAL32.lib")
+set(OPENAL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/include")
 endif ()
 
 message("CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
-set(GLEW_USE_STATIC_LIBS 1)
+# set(GLEW_USE_STATIC_LIBS 1)
 set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/out)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/out)
 
@@ -69,8 +66,13 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/out)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/xmath.h/inc)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
+
+if(EMSCRIPTEN)
+else()
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
+endif()
+
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis/include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/include)
@@ -82,37 +84,76 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${OPENGL_INCLUDE_DIR})
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
 
-set(WITH_ZLIB OFF CACHE BOOL "" FORCE) 
-set(WITH_BZip2 OFF CACHE BOOL "" FORCE) 
-set(WITH_PNG OFF CACHE BOOL "" FORCE) 
-set(WITH_HarfBuzz OFF CACHE BOOL "" FORCE) 
+if(EMSCRIPTEN)
+else()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
+endif()
+
+set(WITH_ZLIB OFF CACHE BOOL "" FORCE)
+set(WITH_BZip2 OFF CACHE BOOL "" FORCE)
+set(WITH_PNG OFF CACHE BOOL "" FORCE)
+set(WITH_HarfBuzz OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 
 # set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
-find_package(GLEW REQUIRED CONFIG) # call twice to test multiple call
-find_package(OpenGL REQUIRED)
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 
+if(EMSCRIPTEN)
+else()
+# build and use glew
+execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
+                   -B${CMAKE_BINARY_DIR}/out/build/glew
+                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
+                  )
+execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
+execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
+  
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
+find_package(GLEW REQUIRED CONFIG)
+
+# build and use ogg
+execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
+                   -B${CMAKE_BINARY_DIR}/out/build/ogg
+                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
+                  )
+execute_process(COMMAND cmake --build out/build/ogg --target install --config Debug)
+execute_process(COMMAND cmake --build out/build/ogg --target install --config Release)
+  
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+find_package(Ogg REQUIRED CONFIG)
+endif()
+
+find_package(OpenGL REQUIRED)
 find_package(OpenAL REQUIRED)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
-set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+# set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
 set(CMAKE_PREFIX_PATH "")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
 
+if(EMSCRIPTEN)
+else()
 # target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} glew_s)
+endif()
+
 target_link_libraries(${PROJECT_NAME} freetype)
-target_link_libraries(${PROJECT_NAME} OpenGL::GL)
+# target_link_libraries(${PROJECT_NAME} GL)
+# target_link_libraries(${PROJECT_NAME} OpenGL::GL)
 # target_link_libraries(${PROJECT_NAME} ogg)
 target_link_libraries(${PROJECT_NAME} vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)
 target_link_libraries(${PROJECT_NAME} AudioFile)
 
+
+if (G_BUILD_EXAMPLES)
 add_subdirectory(examples)
+endif()
+
+if (G_BUILD_TESTS)
 add_subdirectory(tests)
+endif()

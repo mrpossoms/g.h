@@ -44,7 +44,7 @@ void texture::create(GLenum texture_type)
 {
 	type = texture_type;
 	glGenTextures(1, &this->hnd);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 }
 
 void texture::destroy()
@@ -103,7 +103,14 @@ void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLen
 	else if (h >= 1)
 	{
 		type = GL_TEXTURE_2D;
-		glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage, data);
+		if (storage == GL_FLOAT && color_type == GL_RGBA)
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage, data);
+		}
+		else
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage, data);
+		}
 	}
 }
 
@@ -117,6 +124,7 @@ texture_factory::texture_factory(unsigned w, unsigned h)
 	texture_type = GL_TEXTURE_2D;
 	size[0] = w;
 	size[1] = h;
+	size[2] = 1;
 }
 
 texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)
@@ -128,6 +136,16 @@ texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)
 	size[2] = d;
 }
 
+texture_factory::texture_factory(texture* existing_texture)
+{
+	existing = existing_texture;
+	data = existing->data;
+	texture_type = existing->type;
+	size[0] = existing->size[0];
+	size[1] = existing->size[1];
+	size[2] = existing->size[2];
+}
+
 void texture_factory::abort(std::string message)
 {
 	std::cerr << message << std::endl;
@@ -137,6 +155,12 @@ void texture_factory::abort(std::string message)
 texture_factory& texture_factory::from_png(const std::string& path)
 {
 	std::cerr << "loading texture '" <<  path << "'... ";
+
+	if (nullptr != data)
+	{
+		delete data;
+		data = nullptr;
+	}
 
 	// TODO: use a more robust lodepng_decode call which can handle textures of various channels and bit depths
 	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
@@ -207,7 +231,7 @@ texture_factory& texture_factory::components(unsigned count)
 	switch(component_count = count)
 	{
 		case 1:
-			color_type = GL_RED;
+			color_type = GL_R;
 			break;
 		case 2:
 			color_type = GL_RG;
@@ -304,13 +328,20 @@ texture texture_factory::create()
 {
 	texture out;
 
+	if (existing)
+	{
+		out = *existing;
+	}
+	else
+	{
+		out.create(texture_type);		
+	}
 
-	out.create(texture_type);
 	out.bind();
 
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	out.set_pixels(size[0], size[1], size[2], data, color_type, storage_type);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 
 	glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
@@ -318,9 +349,9 @@ texture texture_factory::create()
 	glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
 	glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
 	glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	// glGenerateMipmap(GL_TEXTURE_2D);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	return out;
 }
@@ -330,6 +361,13 @@ framebuffer_factory::framebuffer_factory(unsigned w, unsigned h)
 {
 	size[0] = w;
 	size[1] = h;
+}
+
+framebuffer_factory::framebuffer_factory(texture& dst)
+{
+	color_tex = dst;
+	size[0] = color_tex.size[0];
+	size[1] = color_tex.size[1];
 }
 
 framebuffer_factory& framebuffer_factory::color()
@@ -359,7 +397,7 @@ framebuffer framebuffer_factory::create()
 	fb.depth = depth_tex;
 	glGenFramebuffers(1, &fb.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	if (color_tex.hnd != (GLuint)-1)
 	{
@@ -417,6 +455,10 @@ framebuffer framebuffer_factory::create()
 
 shader& shader::bind() { glUseProgram(program); return *this; }
 
+void shader::destroy()
+{	
+	glDeleteProgram(program);
+}
 
 shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 {
@@ -428,10 +470,10 @@ shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 
 shader::usage shader::usage::set_camera(g::game::camera& cam)
 {
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	this->set_uniform("u_view").mat4(cam.view());
 	this->set_uniform("u_proj").mat4(cam.projection());
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	return *this;
 }
 
@@ -547,7 +589,6 @@ shader::usage shader::uniform_usage::texture(const g::gfx::texture& tex)
 	return parent_usage;
 }
 
-
 GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
 {
 	// Create the GL shader and attempt to compile it
@@ -555,7 +596,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 	glShaderSource(shader, 1, &src, &len);
 	glCompileShader(shader);
 
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	// Check the compilation status
 	GLint status;
@@ -565,7 +606,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 		std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
 		std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
 	}
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	// Print the compilation log if there's anything in there
 	GLint log_length;
@@ -577,7 +618,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 		std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
 		free(log_str);
 	}
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	// treat all shader compilation failure as fatal
 	if (status == GL_FALSE)
@@ -603,7 +644,7 @@ shader shader_factory::create()
 		glAttachShader(out.program, shader.second);
 	}
 
-	assert(gl_get_error());
+	//assert(gl_get_error());
 	glLinkProgram(out.program);
 
 	glGetProgramiv(out.program, GL_LINK_STATUS, &status);
@@ -616,13 +657,13 @@ shader shader_factory::create()
 			GLchar *log_str = (GLchar *)malloc(log_length);
 			glGetProgramInfoLog(out.program, log_length, &log_length, log_str);
 			std::cerr << "Shader link log: " << log_length << std::endl << log_str << std::endl;
-			write(1, log_str, log_length);
+			::write(1, log_str, log_length);
 			free(log_str);
 		}
 		exit(-1);
 	}
 
-	assert(gl_get_error());
+	//assert(gl_get_error());
 
 	// Detach all
 	for (auto shader : shaders)
@@ -768,8 +809,19 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// }
 	// std::cerr<<"done\n";
 
-	font.face = texture_factory{col_pix, row_pix}.type(GL_UNSIGNED_BYTE).components(1).fill(map_buffer).pixelated().create();
+	// using RGBA is totally excessive, but webgl
+	// seems to have issues with just GL_RED
+	font.face = texture_factory{col_pix, row_pix}
+	.type(GL_UNSIGNED_BYTE)
+	.components(4)
+	.fill([&](int x, int y, int z, unsigned char* pixel){
+		pixel[0] = pixel[1] = pixel[2] = 0xff;
+		pixel[3] = map_buffer[(x * row_pix) + y];
+	}).pixelated().clamped().create();
+
 	font.point = point;
+
+	delete[] map_buffer;
 
 	return font;
 }

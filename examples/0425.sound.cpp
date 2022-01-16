@@ -26,7 +26,7 @@ struct my_core : public g::core
     {
         g::snd::track::description desc;
 
-        int16_t pcm[desc.frequency];
+        int16_t* pcm = new int16_t[desc.frequency];
         for (unsigned ti = 0; ti < desc.frequency; ti++)
         {
             auto p = ti / (float)desc.frequency;
@@ -109,7 +109,12 @@ struct my_core : public g::core
             modulation -= dt * 10;
         }
 
-        modulation = std::max(0.f, modulation);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS)
+        {
+            streaming_source->stop();
+        }
+
+        modulation = std::max<float>(0.f, modulation);
 
         streaming_source->update();
         gun->update();

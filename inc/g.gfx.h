@@ -32,6 +32,16 @@
 #include <GL/gl.h>
 #endif
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <unistd.h>
+#define GL_GLEXT_PROTOTYPES
+#define EGL_EGLEXT_PROTOTYPES
+#include <GL/glew.h>
+#include <GL/glext.h>
+#include <GL/gl.h>
+#endif
+
 #ifdef __APPLE__
 #include <unistd.h>
 #include <GL/glew.h>
@@ -79,7 +89,7 @@ struct texture
 	GLuint hnd = -1;
 	unsigned char* data = nullptr;
 
-	inline bool is_initialized() const { return hnd != -1; }
+	inline bool is_initialized() const { return hnd != (unsigned)-1; }
 
 	void release_bitmap();
 
@@ -112,6 +122,7 @@ struct texture
 
 struct texture_factory
 {
+	texture* existing = nullptr;
 	unsigned size[3] = {1, 1, 1};
 	unsigned char* data = nullptr;
 	GLenum texture_type;
@@ -127,6 +138,8 @@ struct texture_factory
 	explicit texture_factory(unsigned w, unsigned h);
 
 	explicit texture_factory(unsigned w, unsigned h, unsigned d);
+
+	explicit texture_factory(texture* existing_texture);
 
 	void abort(std::string message);
 
@@ -169,7 +182,7 @@ struct framebuffer
 	{
 		glViewport(0, 0, size[0], size[1]);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		assert(gl_get_error());
+		//assert(gl_get_error());
 	}
 
 	void unbind_as_target()
@@ -193,6 +206,10 @@ struct framebuffer_factory
 
 	framebuffer_factory(unsigned w, unsigned h);
 
+	framebuffer_factory(texture& dst);
+
+	framebuffer_factory();
+
 	framebuffer_factory& color();
 
 	framebuffer_factory& depth();
@@ -211,6 +228,8 @@ struct shader
 	std::unordered_map<std::string, GLint> uni_locs;
 
 	inline bool is_initialized() const { return program != 0; }
+
+	void destroy();
 
 	shader& bind();
 
@@ -231,9 +250,9 @@ struct shader
 		template<typename MV>
 		usage attach_attributes(const shader& shader)
 		{
-			assert(gl_get_error());
+			//assert(gl_get_error());
 			MV::attributes(shader.program);
-			assert(gl_get_error());
+			//assert(gl_get_error());
 			return *this;
 		}
 
@@ -246,16 +265,16 @@ struct shader
 		template<GLenum PRIM>
 		usage& draw()
 		{
-			assert(gl_get_error());
+			//assert(gl_get_error());
 			if (indices > 0)
 			{
 				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
-				assert(gl_get_error());
+				//assert(gl_get_error());
 			}
 			else
 			{
 				glDrawArrays(PRIM, 0, vertices);
-				assert(gl_get_error());
+				//assert(gl_get_error());
 			}
 
 			return *this;
@@ -285,7 +304,7 @@ struct shader
 		usage vec2n (const vec<2>* v, size_t count);
 
 		usage vec3 (const vec<3>& v);
-		usage vec3n (const vec<3>* v, size_t count);	
+		usage vec3n (const vec<3>* v, size_t count);
 
 		usage vec4(const vec<4>& v);
 
@@ -303,13 +322,19 @@ struct shader_factory
 {
 	std::unordered_map<GLenum, GLuint> shaders;
 
+#ifdef __EMSCRIPTEN__
+	std::string shader_header = "#version 300 es\n";
+#else
+	std::string shader_header = "#version 410\n";
+#endif
+
 	static GLuint compile_shader (GLenum type, const GLchar* src, GLsizei len);
 
 	template<GLenum ST>
 	shader_factory add(const std::string& path)
 	{
-		auto fd = open(path.c_str(), O_RDONLY);
-		auto size = lseek(fd, 0, SEEK_END);
+		auto fd = ::open(path.c_str(), O_RDONLY);
+		auto size = ::lseek(fd, 0, SEEK_END);
 
 		if (fd < 0 || size <= 0)
 		{
@@ -319,14 +344,15 @@ struct shader_factory
 
 		{ // read and compile the shader
 			GLchar* src = new GLchar[size];
-			lseek(fd, 0, SEEK_SET);
-			size = read(fd, src, size);
+			::lseek(fd, 0, SEEK_SET);
+			size = ::read(fd, src, size);
 
 			std::cerr << "Compiling: " << path << "... ";
 
-			shaders[ST] = compile_shader(ST, src, (GLsizei)size);
+			auto src_str = shader_header + std::string(src, size);
+			shaders[ST] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length() - 1);
 
-			close(fd);
+			::close(fd);
 			delete[] src;
 		}
 
@@ -337,7 +363,8 @@ struct shader_factory
 	shader_factory add_src(const std::string& src)
 	{
 		{ // read and compile the shader
-			shaders[ST] = compile_shader(ST, src.c_str(), (GLsizei)src.length());
+			auto src_str = shader_header + src;
+			shaders[ST] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length());
 		}
 
 		return *this;
@@ -444,6 +471,21 @@ struct mesh
 
 	inline bool is_initialized() const { return vbo != 0; }
 
+	void destroy()
+	{
+		if (GL_TRUE == glIsBuffer(vbo))
+		{
+			glDeleteBuffers(1, &vbo);
+			vbo = 0;
+		}
+
+		if (GL_TRUE == glIsBuffer(ibo))
+		{
+			glDeleteBuffers(1, &ibo);
+			ibo = 0;
+		}
+	}
+
 	mesh& set_vertices(const std::vector<V>& verts)
 	{
 		return set_vertices(verts.data(), verts.size());
@@ -452,16 +494,16 @@ struct mesh
 	mesh& set_vertices(const V* verts, size_t count)
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		assert(gl_get_error());
+		//assert(gl_get_error());
 		vertex_count = count;
-		assert(gl_get_error());
+		//assert(gl_get_error());
 		glBufferData(
 			GL_ARRAY_BUFFER,
 			count * sizeof(V),
 			verts,
 			GL_STATIC_DRAW
 		);
-		assert(gl_get_error());
+		//assert(gl_get_error());
 
 		return *this;
 	}
@@ -474,7 +516,7 @@ struct mesh
 	mesh& set_indices(const uint32_t* inds, size_t count)
 	{
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-		assert(gl_get_error());
+		//assert(gl_get_error());
 		assert(GL_TRUE == glIsBuffer(ibo));
 		index_count = count;
 		glBufferData(
@@ -483,21 +525,21 @@ struct mesh
 			inds,
 			GL_STATIC_DRAW
 		);
-		assert(gl_get_error());
+		//assert(gl_get_error());
 
 		return *this;
 	}
 
 	shader::usage using_shader (shader& shader)
 	{
-		assert(gl_get_error());
+		//assert(gl_get_error());
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		assert(gl_get_error());
+		//assert(gl_get_error());
 
 		if (index_count > 0)
 		{
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-			assert(gl_get_error());
+			//assert(gl_get_error());
 		}
 
 		shader.bind();
@@ -611,17 +653,17 @@ struct mesh_factory
 		std::vector<VERT> vertices;
 		std::vector<uint32_t> indices;
 
-		for (int i = 0; i < tex.size[0]; i++)
-		for (int j = 0; j < tex.size[1]; j++)
+		for (unsigned i = 0; i < tex.size[0]; i++)
+		for (unsigned j = 0; j < tex.size[1]; j++)
 		{
 			vertices.push_back(generator(tex, i, j));
 		}
 
-		for (int y = 0; y < tex.size[0] - 1; y++)
-		for (int x = 0; x < tex.size[1] - 1; x++)
+		for (unsigned y = 0; y < tex.size[0] - 1; y++)
+		for (unsigned x = 0; x < tex.size[1] - 1; x++)
 		{
-			int i = x + y * (tex.size[0]);
-			int j = x + (y + 1) * (tex.size[0]);
+			unsigned i = x + y * (tex.size[0]);
+			unsigned j = x + (y + 1) * (tex.size[0]);
 			indices.push_back(j);
 			indices.push_back(i + 1);
 			indices.push_back(i);

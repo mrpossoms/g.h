@@ -18,6 +18,7 @@ template<typename T>
 struct kind
 {
 	time_t last_accessed;
+	time_t loaded_time;
 	T asset;
 
 	kind() = default;
@@ -25,6 +26,7 @@ struct kind
 	kind(time_t last, T a) : asset(std::move(a))
 	{
 		last_accessed = last;
+		loaded_time = last;
 	}
 
 	T& get()
@@ -38,6 +40,7 @@ struct kind
 struct store
 {
 	private: std::string root;
+	private: bool hot_reload;;
 	private: std::unordered_map<std::string, kind<g::gfx::texture>> textures;
 	private: std::unordered_map<std::string, kind<g::game::voxels_paletted>> voxels;
 	private: std::unordered_map<std::string, kind<g::gfx::shader>> shaders;
@@ -45,7 +48,7 @@ struct store
 	private: std::unordered_map<std::string, kind<g::gfx::mesh<g::gfx::vertex::pos_uv_norm>>> geos;
 	private: std::unordered_map<std::string, kind<g::snd::track>> sounds;
 
-	public: store(const std::string& root_path="data") : root(root_path) { }
+	public: store(const std::string& root_path="data", bool do_hot_reload=true) : root(root_path), hot_reload(do_hot_reload) { }
 
 	g::gfx::texture& tex(const std::string& partial_path);
 

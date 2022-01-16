@@ -121,7 +121,6 @@ public:
 
     void dyn_apply_local_force(const vec<3>& point, const vec<3>& force)
     {
-        auto f = force;
         auto& r = point;
         auto t = (vec<3>::cross(r, force));
 
