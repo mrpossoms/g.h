@@ -210,6 +210,16 @@ g::snd::track& g::asset::store::sound(const std::string& partial_path)
 			sounds[partial_path] = { time(nullptr), g::snd::track_factory::from_ogg(root + "/snd/" + partial_path) };
 		}
 	}
+	else if(hot_reload)
+	{
+		auto mod_time = g::io::file(root + "/snd/" + partial_path).modified();
+		if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
+		{
+			sounds.erase(itr);
+
+			return this->sound(partial_path);
+		}
+	}
 
 	return sounds[partial_path].get();
 }
