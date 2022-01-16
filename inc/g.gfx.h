@@ -471,6 +471,21 @@ struct mesh
 
 	inline bool is_initialized() const { return vbo != 0; }
 
+	void destroy()
+	{
+		if (GL_TRUE == glIsBuffer(vbo))
+		{
+			glDeleteBuffers(1, &vbo);
+			vbo = 0;
+		}
+
+		if (GL_TRUE == glIsBuffer(ibo))
+		{
+			glDeleteBuffers(1, &ibo);
+			ibo = 0;
+		}
+	}
+
 	mesh& set_vertices(const std::vector<V>& verts)
 	{
 		return set_vertices(verts.data(), verts.size());

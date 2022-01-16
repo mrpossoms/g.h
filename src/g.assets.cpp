@@ -124,6 +124,17 @@ g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::strin
 			geos[partial_path] = { time(nullptr), g::gfx::mesh_factory{}.from_obj(root + "/geo/" + partial_path) };
 		}
 	}
+	else if (hot_reload)
+	{
+		auto mod_time = g::io::file(root + "/geo/" + partial_path).modified();
+		if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
+		{
+			itr->second.get().destroy();
+			geos.erase(itr);
+
+			return this->geo(partial_path);
+		}
+	}
 
 	return geos[partial_path].get();
 }

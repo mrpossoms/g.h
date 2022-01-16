@@ -38,7 +38,6 @@ struct my_core : public g::core
     g::gfx::shader basic_shader;
     g::asset::store assets;
     g::game::camera_perspective cam;
-    g::gfx::mesh<g::gfx::vertex::pos_uv_norm> car;
 
     virtual bool initialize()
     {
@@ -48,7 +47,7 @@ struct my_core : public g::core
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
                                                .create();
 
-        car = assets.geo("car.obj");
+        // car = assets.geo("car.obj");
 
         cam.position = {0, 2, 4};
         glDisable(GL_CULL_FACE);
@@ -76,7 +75,7 @@ struct my_core : public g::core
         auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, -1, -2});
         auto proj = mat4::perspective(0.1, 10, M_PI / 2, g::gfx::aspect());
 
-        car.using_shader(basic_shader)
+        assets.geo("car.obj").using_shader(basic_shader)
             ["u_model"].mat4(model)
             .set_camera(cam)
             .draw<GL_TRIANGLES>();
