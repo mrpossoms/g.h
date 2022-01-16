@@ -40,20 +40,10 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
 		{
 			std::cerr << partial_path << " has been updated, reloading" << std::endl;
 
-			auto chain = g::gfx::texture_factory(&textures[partial_path].get()).from_png(root + "/tex/" + partial_path).pixelated();
-			// do spicy chain thing with processors here
-			if (std::string::npos != partial_path.find("repeating"))
-			{
-				chain = chain.repeating();
-			}
+			itr->second.get().destroy();
+			textures.erase(itr);
 
-			if (std::string::npos != partial_path.find("smooth"))
-			{
-				chain = chain.smooth();
-			}
-
-			auto tex = chain.create();
-			textures[partial_path] = { time(nullptr), tex };
+			return this->tex(partial_path);
 		}
 	}
 

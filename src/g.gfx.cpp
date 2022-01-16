@@ -456,7 +456,7 @@ framebuffer framebuffer_factory::create()
 shader& shader::bind() { glUseProgram(program); return *this; }
 
 void shader::destroy()
-{
+{	
 	glDeleteProgram(program);
 }
 
