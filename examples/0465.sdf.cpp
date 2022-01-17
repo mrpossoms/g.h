@@ -21,28 +21,6 @@ struct my_core : public g::core
     {
         std::cout << "initialize your game state here.\n";
 
-        // basic_shader = g::gfx::shader_factory{}.add_src<GL_VERTEX_SHADER>(vs_src)
-        //                                        .add_src<GL_FRAGMENT_SHADER>(fs_src)
-        //                                        .create();
-
-        // vertex_generator = [](const texture& tex, int x, int y) -> vertex::pos_uv_norm {
-        //     return {
-        //         // position
-        //         {
-        //             x - tex.size[0] * 0.5f,
-        //             static_cast<float>(tex.sample(x, y)[0] * 0.25f),
-        //             y - tex.size[1] * 0.5f,
-        //         },
-        //         // uv
-        //         {
-        //             x / (float)tex.size[0],
-        //             y / (float)tex.size[1],
-        //         },
-        //         // normal
-        //         { 0, 1, 0 }
-        //     };
-        // };
-
         terrain = g::gfx::mesh_factory{}.empty_mesh<g::gfx::vertex::pos_uv_norm>();
 
         auto sphere_sdf = [](const vec<3> p) -> float {
@@ -80,7 +58,7 @@ struct my_core : public g::core
         vec<3> corners[2] = { {-1, -1, -1}, {1, 1, 1} };
         terrain.from_sdf(sphere_sdf, generator, corners);
 
-        cam.position = {0, 30, 0};
+        cam.position = {0, 0, -2};
         //glDisable(GL_CULL_FACE);
 
         return true;

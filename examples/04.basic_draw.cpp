@@ -46,8 +46,21 @@ struct my_core : public g::core
 
 		plane = g::gfx::mesh_factory::plane();
 
+		std::vector<int8_t> v;
+		for (unsigned i = 1024; i--;)
+		{
+			v.push_back(rand() % 255 - 128);
+		}
+
 		glDisable(GL_CULL_FACE);
-		// grid_tex = g::gfx::texture_factory{}.from_png("data/tex/brick.color.png").create();
+		grid_tex = g::gfx::texture_factory{256, 256}
+		.type(GL_UNSIGNED_BYTE)
+		.components(1)
+		.fill([&](int x, int y, int z, unsigned char* pixel) {
+			*pixel = (unsigned char)(g::gfx::perlin<2>({x / 10.f, y / 10.f}, v) * 255);
+		})
+		.create()
+		//.from_png("data/tex/brick.color.png").create();
 
 		return true;
 	}
