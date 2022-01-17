@@ -55,11 +55,13 @@ struct my_core : public g::core
 		glDisable(GL_CULL_FACE);
 		grid_tex = g::gfx::texture_factory{256, 256}
 		.type(GL_UNSIGNED_BYTE)
-		.components(1)
+		.components(4)
 		.fill([&](int x, int y, int z, unsigned char* pixel) {
-			*pixel = (unsigned char)(g::gfx::perlin<2>({x / 10.f, y / 10.f}, v) * 255);
+			pixel[0] = (unsigned char)(g::gfx::perlin<2>({x / 10.f, y / 10.f}, v) * 255);
+			pixel[3] = 255;
 		})
-		.create()
+		.pixelated().clamped()
+		.create();
 		//.from_png("data/tex/brick.color.png").create();
 
 		return true;
@@ -78,7 +80,8 @@ struct my_core : public g::core
 		plane.using_shader(basic_shader)
 		["u_model"].mat4(model)
 		["u_proj"].mat4(proj)
-		["u_tex"].texture(assets.tex("brick.color.png"))
+		["u_tex"].texture(grid_tex)
+		// ["u_tex"].texture(assets.tex("brick.color.png"))
 		.draw<GL_TRIANGLE_FAN>();
 	}
 

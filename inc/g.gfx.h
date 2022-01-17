@@ -139,7 +139,7 @@ float perlin(const vec<N>& p, const std::vector<int8_t>& entropy)
  * 111 -> 7
  */
 
-	vec<N> bounds[2] = {
+	const vec<N> bounds[2] = {
 		p.floor(),
 		p.ceil()
 	};
@@ -159,7 +159,7 @@ float perlin(const vec<N>& p, const std::vector<int8_t>& entropy)
 			corner[i] = bit * bounds[1][i] + (1 - bit) * bounds[0][i];
 		}
 
-		dots[ci] = rand_grad(corner).dot(p - corner);
+		dots[ci] = rand_grad(corner.template cast<int>()).dot(p - corner);
 
 		sum += dots[ci];
 	}
