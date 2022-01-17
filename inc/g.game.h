@@ -51,6 +51,10 @@ struct pose
 	quat<float> orientation = {0, 0, 0, 1};
 };
 
+/**
+ * Defines a 'signed distance function' used for describing implicit surfaces
+ */
+using sdf = std::function<float (const vec<3>&)>;
 
 struct camera : public pose
 {

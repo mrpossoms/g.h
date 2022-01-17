@@ -555,6 +555,121 @@ struct mesh
 		return usage;
 	}
 
+	void from_sdf(
+		const g::game::sdf& sdf, 
+		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
+		vec<3> corners[2],
+		unsigned divisions=32)
+	{
+		#include "data/marching.cubes.lut"
+
+		static std::vector<V> vertices;
+		static std::vector<uint32_t> indices;
+
+		vertices.clear();
+		indices.clear();
+
+		float div = divisions;
+
+		auto& p0 = corners[0];
+		auto& p1 = corners[1];
+		auto block_delta = (p1 - p0);
+		auto voxel_delta = block_delta / div;
+
+		for (int x = divisions; x--;)
+		for (int y = divisions; y--;)
+		for (int z = divisions; z--;)
+		{
+			vec<3> voxel_index({ (float)x, (float)y, (float)z });
+			vec<3> p[8];  // voxel corners
+			float d[8]; // densities at each corner
+			uint8_t voxel_case = 0;
+
+			vec<3> c[8] = {
+				{ 0.f, 0.f, 0.f },
+				{ 0.f, 1.f, 0.f },
+				{ 1.f, 1.f, 0.f },
+				{ 1.f, 0.f, 0.f },
+
+				{ 0.f, 0.f, 1.f },
+				{ 0.f, 1.f, 1.f },
+				{ 1.f, 1.f, 1.f },
+				{ 1.f, 0.f, 1.f },
+			};
+
+			// compute positions of the corners for voxel x,y,z as well
+			// as the case for the voxel
+			for (int i = 8; i--;)
+			{
+				c[i] *= voxel_delta;
+				p[i] = p0 + (voxel_delta * voxel_index) + c[i];
+				d[i] = sdf(p[i]);
+
+				if (d[i] <= 0)
+				{
+					voxel_case |= (1 << i);
+				}
+			}
+
+			// compute lerp weights between verts for each edge
+			float w[12];
+			for (int i = 0; i < 12; ++i)
+			{
+				int e_i = tri_edge_list_case[voxel_case][i];
+
+				if (e_i == -1) break;
+
+				// v0 * w + v1 * (1 - w)
+				// w = 0.5
+				// -1 * w + 1 * (1 - w) = 0
+				//
+				// d0 * w + d1 * (1 - w) = 0
+				// d0 * w + d1 - d1 * w = 0
+				// (d0 * w - d1 * w) / w = -d1 / w
+				// d0 - d1 = -d1 / w
+				// -d1 / (d0 - d1) = w
+
+				int p0_i = edge_list[e_i][0];
+				int p1_i = edge_list[e_i][1];
+
+				// solve for the weight that will lerp between
+				w[i] = d[p0_i] / (d[p0_i] - d[p1_i]);
+
+				vec<3> _p = p[p1_i] * w[i] + p[p0_i] * (1 - w[i]);
+				
+				indices.push_back(vertices.size());
+				vertices.push_back(generator(sdf, _p));
+			}
+
+		}
+
+		set_vertices(vertices);
+		set_indices(indices);
+
+		// use the gradient of the density function to compute the
+		// normal vector for each vertex
+		// for (int i = 0; i < vertices.size(); i++)
+		// {
+		// 	const float s = 0.1;
+		// 	vec3 grad;
+		// 	vec3 deltas[3][2] = {
+		// 		{{ s, 0, 0 }, { -s, 0, 0 }},
+		// 		{{ 0, s, 0 }, { 0, -s, 0 }},
+		// 		{{ 0, 0, s }, { 0,  0, -s }},
+		// 	};
+		// 	Vertex& v = vertices[i];
+
+		// 	for (int j = 3; j--;)
+		// 	{
+		// 		vec3 samples[2];
+		// 		vec3_add(samples[0], v.position, deltas[j][0]);
+		// 		vec3_add(samples[1], v.position, deltas[j][1]);
+		// 		grad[j] = density_at(samples[0]) - density_at(samples[1]);
+		// 	}
+
+		// 	vec3_norm(v.normal, grad);
+		// }
+	}
 
 	static void compute_normals(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
 	{
@@ -701,6 +816,14 @@ struct mesh_factory
 				{ 0, 1, 0 }
 			};
 		});
+	}
+
+	template<typename VERT>
+	static mesh<VERT> from_sdf(g::game::sdf sdf, std::function<VERT(const g::game::sdf& sdf, const vec<3>& pos)> generator)
+	{
+		mesh<VERT> m;
+
+		return m;
 	}
 
 	template<typename V>
