@@ -80,6 +80,40 @@ size_t height();
 
 float aspect();
 
+template<size_t N>
+float perlin(const vec<N>& p, const std::vector<int8_t>& entropy)
+{
+	auto rand_grad = [](const vec<N, int>& index) -> vec<N>
+	{
+	    const unsigned w = 8 * sizeof(int);
+	    const unsigned s = w / 2; // rotation width
+
+	    unsigned a[N];
+	    for (unsigned i = N; i--;) { a[i] = index[i]; }
+	    
+	    for (unsigned i = 0; i < N; i++)
+	    {
+	    	a[i] *= *static_cast<unsigned*>(entropy.data() + (a[i] % entropy.size() - sizeof(unsigned)));
+	    	a[(i + 1) % N] ^= a[i] << s | a[i] >> w-s; 
+	    }
+
+	    vec<N> grad;
+	    for (unsigned i = N; i--;)
+	    {
+	    	grad[i] = entropy[a[i] % entropy.size()];
+	    }
+
+	    return grad.unit();
+	}
+
+	auto corners[2] = {
+		p.floor(),
+		p.ceil()
+	};
+
+	auto w = p - corners[0];
+}
+
 struct texture
 {
 	GLenum type;

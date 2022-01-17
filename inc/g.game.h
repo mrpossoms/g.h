@@ -52,7 +52,7 @@ struct pose
 };
 
 /**
- * Defines a 'signed distance function' used for describing implicit surfaces
+ * Defines a 'signed distance field' used for describing implicit surfaces
  */
 using sdf = std::function<float (const vec<3>&)>;
 
