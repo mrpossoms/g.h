@@ -30,6 +30,95 @@ float g::gfx::aspect()
 	return width / (float)height;
 }
 
+float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
+{
+	auto rand_grad = [&](const vec<3, int>& index) -> vec<3>
+	{
+		const unsigned w = 8 * sizeof(int);
+		const unsigned s = w / 2; // rotation width
+
+		unsigned a[3];
+		for (unsigned i = 3; i--;) { a[i] = index[i]; }
+
+		for (unsigned i = 0; i < 3; i++)
+		{
+			a[i] *= *(const unsigned*)(entropy.data() + (a[i] % entropy.size() - sizeof(unsigned)));
+			a[(i + 1) % 3] ^= a[i] << s | a[i] >> w - s;
+		}
+
+		vec<3> grad;
+		for (unsigned i = 3; i--;)
+		{
+			grad[i] = entropy[a[i] % entropy.size()];
+		}
+
+		return grad.unit();
+	};
+
+	/**
+	 * 0-------1
+	 * |       |
+	 * x----*--x
+	 * |       |
+	 * 2-------3
+	 *
+	 * 0 *
+	 *
+	 * 00 -> 0
+	 * 01 -> 2
+	 * 10 -> 1
+	 * 11 -> 3
+	 *
+	 *      0-------1
+	 *     /       /|
+	 *    /       / |
+	 *   2-------3  |
+	 *   |  4    |  5
+	 *   |       | /
+	 *   |       |/
+	 *   6-------7
+	 *
+	 * 000 -> 0
+	 * 001 -> 4
+	 * 010 -> 2
+	 * 011 -> 6
+	 * 100 -> 1
+	 * 101 -> 5
+	 * 110 -> 3
+	 * 111 -> 7
+	 */
+
+	const vec<3> bounds[2] = {
+		p.floor(),
+		p.ceil()
+	};
+
+	constexpr auto cn = 8;//1 << 3;
+
+	float sum = 0;
+	float samples[cn] = {};
+	for (unsigned ci = 0; ci < cn; ci++)
+	{
+		vec<3> corner;
+
+		// construct a corner based on the 
+		for (unsigned i = 0; i < 3; i++)
+		{
+			bool bit = (ci >> i) & 0x1;
+			corner[i] = bit * bounds[1][i] + (1 - bit) * bounds[0][i];
+		}
+
+		auto grad = rand_grad(corner.template cast<int>());
+		samples[ci] = grad.dot(p - corner);
+
+		sum += dots[ci];
+	}
+
+	// auto w = p - corners[0];
+
+	return sum;
+}
+
 
 void texture::release_bitmap()
 {

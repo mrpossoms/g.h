@@ -1,5 +1,7 @@
 #include <g.h>
 
+#include <algorithm>
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #define GL_GLEXT_PROTOTYPES
@@ -23,8 +25,27 @@ struct my_core : public g::core
 
         terrain = g::gfx::mesh_factory{}.empty_mesh<g::gfx::vertex::pos_uv_norm>();
 
-        auto sphere_sdf = [](const vec<3> p) -> float {
-            return p.dot(p) - 1;
+        std::vector<int8_t> v[3];
+        for (unsigned i = 1024; i--;)
+        {
+            v[0].push_back(rand() % 255 - 128);
+            v[1].push_back(rand() % 255 - 128);
+            v[2].push_back(rand() % 255 - 128);
+        }
+
+        auto sphere_sdf = [&](const vec<3> p) -> float {
+            auto d = p.dot(p) - 0.75f;
+            // d += g::gfx::perlin<3>(p * 9, v) * 0.01;
+            // d += g::gfx::perlin<3>(p * 11, v) * 0.01;
+            // d += g::gfx::perlin<3>(p * 3, v) * 0.1;
+
+
+
+            /* d += g::gfx::perlin<3>(p*4.03, v[0]) * 0.0025;
+             d += g::gfx::perlin<3>(p*1.96, v[1]) * 0.0050;
+             d += g::gfx::perlin<3>(p*1.01, v[2]) * 0.01;*/
+
+            return d;
         };
 
         auto generator = [](const g::game::sdf& sdf, const vec<3>& pos) -> g::gfx::vertex::pos_uv_norm
@@ -56,7 +77,7 @@ struct my_core : public g::core
 
 
         vec<3> corners[2] = { {-1, -1, -1}, {1, 1, 1} };
-        terrain.from_sdf(sphere_sdf, generator, corners);
+        terrain.from_sdf(sphere_sdf, generator, corners, 61);
 
         cam.position = {0, 0, -2};
         //glDisable(GL_CULL_FACE);

@@ -52,12 +52,19 @@ struct my_core : public g::core
 			v.push_back(rand() % 255 - 128);
 		}
 
+		auto noise = g::gfx::perlin({ 0.5, 0.5, 0 }, v);
+
 		glDisable(GL_CULL_FACE);
 		grid_tex = g::gfx::texture_factory{256, 256}
 		.type(GL_UNSIGNED_BYTE)
 		.components(4)
 		.fill([&](int x, int y, int z, unsigned char* pixel) {
-			pixel[0] = (unsigned char)(g::gfx::perlin<2>({x / 10.f, y / 10.f}, v) * 255);
+			vec<3> p = { x / 25.6f, y / 25.6f, 0 };
+			auto noise = g::gfx::perlin(p, v);
+			auto n = std::max<float>(std::min<float>(noise, 1), -1);
+			pixel[0] = (unsigned char)((n + 1) * 127);
+			pixel[1] = 0;
+			pixel[2] = 0;
 			pixel[3] = 255;
 		})
 		.pixelated().clamped()

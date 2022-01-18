@@ -80,94 +80,8 @@ size_t height();
 
 float aspect();
 
-template<size_t N>
-float perlin(const vec<N>& p, const std::vector<int8_t>& entropy)
-{
-	auto rand_grad = [&](const vec<N, int>& index) -> vec<N>
-	{
-	    const unsigned w = 8 * sizeof(int);
-	    const unsigned s = w / 2; // rotation width
 
-	    unsigned a[N];
-	    for (unsigned i = N; i--;) { a[i] = index[i]; }
-	    
-	    for (unsigned i = 0; i < N; i++)
-	    {
-	    	a[i] *= *(const unsigned*)(entropy.data() + (a[i] % entropy.size() - sizeof(unsigned)));
-	    	a[(i + 1) % N] ^= a[i] << s | a[i] >> w-s; 
-	    }
-
-	    vec<N> grad;
-	    for (unsigned i = N; i--;)
-	    {
-	    	grad[i] = entropy[a[i] % entropy.size()];
-	    }
-
-	    return grad.unit();
-	};
-
-/**
- * 0-------1
- * |       |
- * x----*--x
- * |       |
- * 2-------3
- * 
- * 0 * 
- * 
- * 00 -> 0
- * 01 -> 2
- * 10 -> 1
- * 11 -> 3
- * 
- *      0-------1
- *     /       /|
- *    /       / |
- *   2-------3  |
- *   |  4    |  5
- *   |       | /
- *   |       |/
- *   6-------7
- * 
- * 000 -> 0
- * 001 -> 4
- * 010 -> 2
- * 011 -> 6
- * 100 -> 1
- * 101 -> 5
- * 110 -> 3
- * 111 -> 7
- */
-
-	const vec<N> bounds[2] = {
-		p.floor(),
-		p.ceil()
-	};
-
-	constexpr auto cn = 1 << N;
-
-	float sum = 0;
-	float dots[cn];
-	for (unsigned ci = 0; ci < cn; ci++)
-	{
-		vec<N> corner;
-
-		// construct a corner based on the 
-		for (unsigned i = 0; i < N; i++)
-		{
-			bool bit = (ci >> i) & 0x1;
-			corner[i] = bit * bounds[1][i] + (1 - bit) * bounds[0][i];
-		}
-
-		dots[ci] = rand_grad(corner.template cast<int>()).dot(p - corner);
-
-		sum += dots[ci];
-	}
-
-	// auto w = p - corners[0];
-
-	return sum;
-}
+float perlin(const vec<3>& p, const std::vector<int8_t>& entropy);
 
 struct texture
 {
@@ -731,6 +645,8 @@ struct mesh
 			}
 
 		}
+
+		std::reverse(indices.begin(), indices.end());
 
 		set_vertices(vertices);
 		set_indices(indices);
