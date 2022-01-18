@@ -78,14 +78,14 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 	 *   |       |/
 	 *   6-------7
 	 *
-	 * 000 -> 0
-	 * 001 -> 4
-	 * 010 -> 2
-	 * 011 -> 6
-	 * 100 -> 1
-	 * 101 -> 5
-	 * 110 -> 3
-	 * 111 -> 7
+	 *0 000 -> 0
+	 *1 001 -> 4
+	 *2 010 -> 2
+	 *3 011 -> 6
+	 *4 100 -> 1
+	 *5 101 -> 5
+	 *6 110 -> 3
+	 *7 111 -> 7
 	 */
 
 	const vec<3> bounds[2] = {
@@ -95,8 +95,9 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 
 	constexpr auto cn = 8;//1 << 3;
 
+	auto w = p - bounds[0];
 	float sum = 0;
-	float samples[cn] = {};
+	float s[cn] = {};
 	for (unsigned ci = 0; ci < cn; ci++)
 	{
 		vec<3> corner;
@@ -109,14 +110,22 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 		}
 
 		auto grad = rand_grad(corner.template cast<int>());
-		samples[ci] = grad.dot(p - corner);
+		s[ci] = grad.dot(p - corner);
 
-		sum += dots[ci];
+		//sum += dots[ci];
 	}
 
-	// auto w = p - corners[0];
+	auto za0 = s[0] * (1 - w[2]) + s[1] * w[2];
+	auto za1 = s[2] * (1 - w[2]) + s[3] * w[2];
 
-	return sum;
+	auto ya0 = za0 * (1 - w[1]) + za1 * w[1];
+
+	auto zb0 = s[4] * (1 - w[2]) + s[5] * w[2];
+	auto zb1 = s[6] * (1 - w[2]) + s[7] * w[2];
+
+	auto yb0 = zb0 * (1 - w[1]) + zb1 * w[1];
+
+	return ya0 * (1 - w[0]) + yb0 * w[0];
 }
 
 
