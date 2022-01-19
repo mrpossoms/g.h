@@ -32,25 +32,35 @@ float g::gfx::aspect()
 
 float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 {
-	auto rand_grad = [&](const vec<3, int>& index) -> vec<3>
+	auto ent_data = entropy.data();
+	auto ent_size = entropy.size();
+
+	auto rand_grad = [&](vec<3, unsigned> a) -> vec<3>
 	{
 		const unsigned w = 8 * sizeof(int);
 		const unsigned s = w / 2; // rotation width
 
-		unsigned a[3];
-		for (unsigned i = 3; i--;) { a[i] = index[i]; }
+		// unsigned a[3];
+		// for (unsigned i = 3; i--;) { a[i] = index[i]; }
 
 		for (unsigned i = 0; i < 3; i++)
 		{
-			a[i] *= *(const unsigned*)(entropy.data() + (a[i] % entropy.size() - sizeof(unsigned)));
+			a[i] *= *(const unsigned*)(ent_data + (a[i] % ent_size - sizeof(unsigned)));
 			a[(i + 1) % 3] ^= a[i] << s | a[i] >> w - s;
 		}
 
-		vec<3> grad;
-		for (unsigned i = 3; i--;)
-		{
-			grad[i] = entropy[a[i] % entropy.size()];
-		}
+		// a.v[0] *= *(const unsigned*)(ent_data + (a.v[0] % ent_size - sizeof(unsigned)));
+		// a.v[(0 + 1) % 3] ^= a.v[0] << s | a.v[0] >> w - s;
+		// a.v[1] *= *(const unsigned*)(ent_data + (a.v[1] % ent_size - sizeof(unsigned)));
+		// a.v[(1 + 1) % 3] ^= a.v[1] << s | a.v[1] >> w - s;
+		// a.v[2] *= *(const unsigned*)(ent_data + (a.v[2] % ent_size - sizeof(unsigned)));
+		// a.v[(2 + 1) % 3] ^= a.v[2] << s | a.v[2] >> w - s;
+
+		vec<3> grad = {
+			entropy[a.v[0] % ent_size],
+			entropy[a.v[1] % ent_size],
+			entropy[a.v[2] % ent_size],
+		};
 
 		return grad.unit();
 	};
@@ -61,8 +71,6 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 	 * x----*--x
 	 * |       |
 	 * 2-------3
-	 *
-	 * 0 *
 	 *
 	 * 00 -> 0
 	 * 01 -> 2
@@ -90,7 +98,7 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 
 	const vec<3> bounds[2] = {
 		p.floor(),
-		p.ceil()
+		p.floor() + vec<3>{1, 1, 1}
 	};
 
 	constexpr auto cn = 8;//1 << 3;
@@ -103,14 +111,25 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 		vec<3> corner;
 
 		// construct a corner based on the 
-		for (unsigned i = 0; i < 3; i++)
-		{
-			bool bit = (ci >> i) & 0x1;
-			corner[i] = bit * bounds[1][i] + (1 - bit) * bounds[0][i];
-		}
+		// for (unsigned i = 0; i < 3; i++)
+		// {
+		// 	bool bit = (ci >> i) & 0x1;
+		// 	corner[2 - i] = bit * bounds[1][2 - i] + (1 - bit) * bounds[0][2 - i];
+		// }
 
-		auto grad = rand_grad(corner.template cast<int>());
-		s[ci] = grad.dot(p - corner);
+		float bits[3] = {
+			(ci >> 0) & 0x1,
+			(ci >> 1) & 0x1,
+			(ci >> 2) & 0x1,
+		};
+		corner.v[2] = bits[0] * bounds[1].v[2] + (1 - bits[0]) * bounds[0].v[2];
+		corner.v[1] = bits[1] * bounds[1].v[1] + (1 - bits[1]) * bounds[0].v[1];
+		corner.v[0] = bits[2] * bounds[1].v[0] + (1 - bits[2]) * bounds[0].v[0];
+		auto grad = rand_grad(corner.template cast<unsigned>());
+
+		// std::cout << ci << ": " << corner.to_string() << " -> " << grad.to_string() << std::endl;
+
+		s[ci] = grad.dot(corner - p);
 
 		//sum += dots[ci];
 	}

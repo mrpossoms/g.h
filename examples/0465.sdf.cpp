@@ -33,17 +33,19 @@ struct my_core : public g::core
             v[2].push_back(rand() % 255 - 128);
         }
 
-        auto sphere_sdf = [&](const vec<3> p) -> float {
-            auto d = p.dot(p) - 0.75f;
-            // d += g::gfx::perlin<3>(p * 9, v) * 0.01;
-            // d += g::gfx::perlin<3>(p * 11, v) * 0.01;
-            // d += g::gfx::perlin<3>(p * 3, v) * 0.1;
+        auto sdf = [&](const vec<3> p) -> float {
+            //auto d = p.dot(p) - 0.75f;
+            //d += g::gfx::perlin(p * 9, v) * 0.01;
+            // d += g::gfx::perlin(p * 11, v) * 0.01;
+            // d += g::gfx::perlin(p * 3, v) * 0.1;
 
 
+            auto d = p[1] - 2;
+            d += g::gfx::perlin(p*4.03, v[0]) * 0.125;
+            d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
+            d += g::gfx::perlin(p*0.1, v[2]) * 9;
 
-            /* d += g::gfx::perlin<3>(p*4.03, v[0]) * 0.0025;
-             d += g::gfx::perlin<3>(p*1.96, v[1]) * 0.0050;
-             d += g::gfx::perlin<3>(p*1.01, v[2]) * 0.01;*/
+            // d = std::max<float>(d, -1);
 
             return d;
         };
@@ -76,8 +78,13 @@ struct my_core : public g::core
         };
 
 
-        vec<3> corners[2] = { {-1, -1, -1}, {1, 1, 1} };
-        terrain.from_sdf(sphere_sdf, generator, corners, 61);
+        vec<3> corners[2] = { {-10, -2, -10}, {10, 10, 10} };
+
+        time_t start = time(NULL);
+        terrain.from_sdf(sdf, generator, corners, 61);
+        time_t end = time(NULL);
+
+        std::cerr << "processing time: " << end - start << std::endl;
 
         cam.position = {0, 0, -2};
         //glDisable(GL_CULL_FACE);
