@@ -10,22 +10,99 @@
 
 using mat4 = xmath::mat<4,4>;
 
+template<typename V>
+struct terrain_volume
+{
+    struct terrain_block
+    {
+        g::gfx::mesh<V> mesh;
+        vec<3> bounding_box[2];
+        bool needs_regen;
+
+        inline bool contains(const vec<3>& pos)
+        {
+            return pos[0] > bounding_box[0][0] && pos[0] < bounding_box[1][0] &&
+                   pos[1] > bounding_box[0][1] && pos[1] < bounding_box[1][1] &&
+                   pos[2] > bounding_box[0][2] && pos[2] < bounding_box[1][2];
+        }
+    };
+
+    std::vector<terrain_block> blocks;
+    std::vector<vec<3, int>> config;
+
+    g::game::sdf sdf;
+    std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
+
+    terrain_volume() = default;
+
+    terrain_volume(const g::game::sdf& sdf, std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator, const std::vector<vec<3, int>>& offset_config) :
+        config(offset_config)
+    {
+        this->sdf = sdf;
+        this->generator = generator;
+
+        for (auto& offset : config)
+        {
+            terrain_block block;
+            block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
+            blocks.push_back(block);
+        }
+    }
+
+    void update(const g::game::camera& cam)
+    {
+        auto pos = cam.position;
+
+        for (auto& block : blocks)
+        {
+            auto inside = block.contains(pos);
+
+            if (!inside)
+            {
+                block.bounding_box[0] = pos - vec<3>{0.5f, 0.5f, 0.5f};
+                block.bounding_box[1] = pos + vec<3>{0.5f, 0.5f, 0.5f};
+
+                time_t start = time(NULL);
+                block.mesh.from_sdf(sdf, generator, block.bounding_box, 16);
+                time_t end = time(NULL);
+
+                std::cerr << "processing time: " << end - start << std::endl;
+            }
+        }
+
+
+    }
+
+    void draw(g::game::camera& cam, g::gfx::shader& s)
+    {
+        auto model = mat4::I();
+
+        for (auto& block : blocks)
+        {
+            block.mesh.using_shader(s)
+                ["u_model"].mat4(model)
+                .set_camera(cam)
+                .template draw<GL_TRIANGLES>();            
+        }
+    }
+};
+
 struct my_core : public g::core
 {
     g::gfx::shader basic_shader;
     g::asset::store assets;
     g::game::camera_perspective cam;
-    g::gfx::mesh<g::gfx::vertex::pos_uv_norm> terrain;
+    // g::gfx::mesh<g::gfx::vertex::pos_uv_norm> terrain;
+    std::vector<int8_t> v[3];
 
-    std::function<vertex::pos_uv_norm(const texture& t, int x, int y)> vertex_generator;
+    terrain_volume<g::gfx::vertex::pos_uv_norm> terrain;
 
     virtual bool initialize()
     {
         std::cout << "initialize your game state here.\n";
 
-        terrain = g::gfx::mesh_factory{}.empty_mesh<g::gfx::vertex::pos_uv_norm>();
+        // terrain = g::gfx::mesh_factory{}.empty_mesh<g::gfx::vertex::pos_uv_norm>();
 
-        std::vector<int8_t> v[3];
         for (unsigned i = 1024; i--;)
         {
             v[0].push_back(rand() % 255 - 128);
@@ -77,14 +154,15 @@ struct my_core : public g::core
             return v;
         };
 
+        terrain = terrain_volume<g::gfx::vertex::pos_uv_norm>(sdf, generator);
 
-        vec<3> corners[2] = { {-10, -2, -10}, {10, 10, 10} };
+        // vec<3> corners[2] = { {-10, -2, -10}, {10, 10, 10} };
 
-        time_t start = time(NULL);
-        terrain.from_sdf(sdf, generator, corners, 61);
-        time_t end = time(NULL);
+        // time_t start = time(NULL);
+        // terrain.from_sdf(sdf, generator, corners, 16);
+        // time_t end = time(NULL);
 
-        std::cerr << "processing time: " << end - start << std::endl;
+        // std::cerr << "processing time: " << end - start << std::endl;
 
         cam.position = {0, 0, -2};
         //glDisable(GL_CULL_FACE);
@@ -109,12 +187,16 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
-        auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, -1, -2});
+        auto model = mat4::I();
 
-        terrain.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
-            ["u_model"].mat4(model)
-            .set_camera(cam)
-            .draw<GL_TRIANGLES>();
+        terrain.update(cam);
+
+        terrain.draw(cam, assets.shader("basic_gui.vs+debug_normal.fs"));
+
+        // terrain.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
+        //     ["u_model"].mat4(model)
+        //     .set_camera(cam)
+        //     .draw<GL_TRIANGLES>();
     }
 
     float t;
