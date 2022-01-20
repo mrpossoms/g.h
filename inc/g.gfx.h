@@ -325,11 +325,7 @@ struct shader_factory
 {
 	std::unordered_map<GLenum, GLuint> shaders;
 
-#ifdef __EMSCRIPTEN__
-	std::string shader_header = "#version 300 es\n";
-#else
-	std::string shader_header = "#version 410\n";
-#endif
+	static std::string shader_header;
 
 	static GLuint compile_shader (GLenum type, const GLchar* src, GLsizei len);
 

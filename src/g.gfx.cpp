@@ -706,6 +706,12 @@ shader::usage shader::uniform_usage::texture(const g::gfx::texture& tex)
 	return parent_usage;
 }
 
+#ifdef __EMSCRIPTEN__
+	std::string shader_factory::shader_header = "#version 300 es\n";
+#else
+	std::string shader_factory::shader_header = "#version 410\n";
+#endif
+
 GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
 {
 	// Create the GL shader and attempt to compile it
