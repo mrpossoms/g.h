@@ -1,6 +1,7 @@
 #include <g.h>
 
 #include <algorithm>
+#include <set>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -17,7 +18,6 @@ struct terrain_volume
     {
         g::gfx::mesh<V> mesh;
         vec<3> bounding_box[2];
-        bool needs_regen;
 
         inline bool contains(const vec<3>& pos)
         {
@@ -28,23 +28,31 @@ struct terrain_volume
     };
 
     std::vector<terrain_block> blocks;
-    std::vector<vec<3, int>> config;
+    std::vector<vec<3>> offsets;
 
     g::game::sdf sdf;
     std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
 
     terrain_volume() = default;
 
-    terrain_volume(const g::game::sdf& sdf, std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator, const std::vector<vec<3, int>>& offset_config) :
-        config(offset_config)
+    terrain_volume(const g::game::sdf& sdf, std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator, const std::vector<vec<3>>& offset_config) :
+        offsets(offset_config)
     {
         this->sdf = sdf;
         this->generator = generator;
 
-        for (auto& offset : config)
+        for (auto& offset : offsets)
         {
             terrain_block block;
             block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
+
+            block.bounding_box[0] = offset - vec<3>{0.5f, 0.5f, 0.5f};
+            block.bounding_box[1] = offset + vec<3>{0.5f, 0.5f, 0.5f};
+
+            time_t start = time(NULL);
+            block.mesh.from_sdf(sdf, generator, block.bounding_box, 16);
+            time_t end = time(NULL);
+
             blocks.push_back(block);
         }
     }
@@ -52,25 +60,54 @@ struct terrain_volume
     void update(const g::game::camera& cam)
     {
         auto pos = cam.position;
+        std::set<unsigned> unvisited;
+        std::vector<terrain_block*> to_regenerate;
+
+        for (unsigned i = 0; i < offsets.size(); i++) { unvisited.insert(i); }
 
         for (auto& block : blocks)
         {
-            auto inside = block.contains(pos);
+            bool needs_regen = true;
 
-            if (!inside)
+            for (auto oi : unvisited)
             {
-                block.bounding_box[0] = pos - vec<3>{0.5f, 0.5f, 0.5f};
-                block.bounding_box[1] = pos + vec<3>{0.5f, 0.5f, 0.5f};
+                auto ppo = (pos.floor() + 0.5f) + offsets[oi];
 
-                time_t start = time(NULL);
-                block.mesh.from_sdf(sdf, generator, block.bounding_box, 16);
-                time_t end = time(NULL);
-
-                std::cerr << "processing time: " << end - start << std::endl;
+                if (block.contains(ppo))
+                {
+                    unvisited.erase(oi);
+                    needs_regen = false;
+                    break;
+                }
             }
+
+            if (needs_regen) { to_regenerate.push_back(&block); }
         }
 
+        
+        assert(to_regenerate.size() == unvisited.size());
 
+        // remaining 'unvisited' offset positions need to be regenerated
+        if (to_regenerate.size() > 0)
+        for (auto oi : unvisited)
+        {
+            auto offset = offsets[oi];
+            auto block_ptr = to_regenerate.back();
+
+            auto ppo = (pos.floor() + 0.5f) + offset;
+            block_ptr->bounding_box[0] = ppo - vec<3>{0.5f, 0.5f, 0.5f};
+            block_ptr->bounding_box[1] = ppo + vec<3>{0.5f, 0.5f, 0.5f};
+
+            std::cerr << "generating " << block_ptr->bounding_box[0].to_string() << " - " << block_ptr->bounding_box[1].to_string() << std::endl;
+
+            time_t start = time(NULL);
+            block_ptr->mesh.from_sdf(sdf, generator, block_ptr->bounding_box, 16);
+            time_t end = time(NULL);
+
+            std::cerr << "processing time: " << end - start << std::endl;
+
+            to_regenerate.pop_back();
+        }
     }
 
     void draw(g::game::camera& cam, g::gfx::shader& s)
@@ -103,6 +140,8 @@ struct my_core : public g::core
 
         // terrain = g::gfx::mesh_factory{}.empty_mesh<g::gfx::vertex::pos_uv_norm>();
 
+        srand(time(NULL));
+
         for (unsigned i = 1024; i--;)
         {
             v[0].push_back(rand() % 255 - 128);
@@ -110,21 +149,26 @@ struct my_core : public g::core
             v[2].push_back(rand() % 255 - 128);
         }
 
-        auto sdf = [&](const vec<3> p) -> float {
+        auto sdf = [&](const vec<3>& p) -> float {
             //auto d = p.dot(p) - 0.75f;
             //d += g::gfx::perlin(p * 9, v) * 0.01;
             // d += g::gfx::perlin(p * 11, v) * 0.01;
             // d += g::gfx::perlin(p * 3, v) * 0.1;
 
 
-            auto d = p[1] - 2;
+            auto d = p[1] + 0.5;
             d += g::gfx::perlin(p*4.03, v[0]) * 0.125;
-            d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
-            d += g::gfx::perlin(p*0.1, v[2]) * 9;
+            // d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
+            // d += g::gfx::perlin(p*0.1, v[2]) * 9;
 
             // d = std::max<float>(d, -1);
 
             return d;
+        };
+
+        auto test_sdf = [](const vec<3>& p)
+        {
+            return p[1] + cos(p[0]) * 0.1;
         };
 
         auto generator = [](const g::game::sdf& sdf, const vec<3>& pos) -> g::gfx::vertex::pos_uv_norm
@@ -154,7 +198,15 @@ struct my_core : public g::core
             return v;
         };
 
-        terrain = terrain_volume<g::gfx::vertex::pos_uv_norm>(sdf, generator);
+        std::vector<vec<3>> offsets;
+        for (int x = -1; x <= 1; x++)
+        for (int y = -1; y <= 1; y++)
+        for (int z = -1; z <= 1; z++)
+        {
+            offsets.push_back({x, y, z});
+        }
+
+        terrain = terrain_volume<g::gfx::vertex::pos_uv_norm>(sdf, generator, offsets);
 
         // vec<3> corners[2] = { {-10, -2, -10}, {10, 10, 10} };
 
