@@ -554,6 +554,132 @@ struct mesh
 		return usage;
 	}
 
+	void from_sdf_r(
+		const g::game::sdf& sdf, 
+		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
+		vec<3> corners[2],
+		unsigned max_depth=4)
+	{
+		#include "data/marching.cubes.lut"
+
+		static std::vector<V> vertices;
+		static std::vector<uint32_t> indices;
+
+		vertices.clear();
+		indices.clear();
+
+		std::function<bool(vec<3> corners[2], unsigned depth)> subdivider = [&](vec<3> corners[2], unsigned depth)
+		{
+			vec<3> c[8] = {
+				{ 0.f, 0.f, 0.f },
+				{ 0.f, 1.f, 0.f },
+				{ 1.f, 1.f, 0.f },
+				{ 1.f, 0.f, 0.f },
+
+				{ 0.f, 0.f, 1.f },
+				{ 0.f, 1.f, 1.f },
+				{ 1.f, 1.f, 1.f },
+				{ 1.f, 0.f, 1.f },
+			};
+			auto& p0 = corners[0];
+			auto& p1 = corners[1];
+			auto block_delta = (p1 - p0);
+			auto mid = p0 + block_delta * 0.5f;
+
+			// compute positions of the corners for voxel x,y,z as well
+			// as the case for the voxel
+			uint8_t voxel_case = 0;
+			vec<3> p[8];  // voxel corners
+			float d[8]; // densities at each corner
+			for (int i = 8; i--;)
+			{
+				c[i] *= block_delta;
+				p[i] = p0 + c[i];
+				d[i] = sdf(p[i]);
+
+				if (d[i] <= 0)
+				{
+					voxel_case |= (1 << i);
+				}
+			}
+
+			// std::cerr << "voxel_case: " << static_cast<int>(voxel_case) << std::endl;
+
+			if (depth == 0)
+			{ // time to generate geometry
+			// compute lerp weights between verts for each edge
+				float w[12];
+				for (int i = 0; i < 12; ++i)
+				{
+					int e_i = tri_edge_list_case[voxel_case][i];
+
+					if (e_i == -1) break;
+
+					// v0 * w + v1 * (1 - w)
+					// w = 0.5
+					// -1 * w + 1 * (1 - w) = 0
+					//
+					// d0 * w + d1 * (1 - w) = 0
+					// d0 * w + d1 - d1 * w = 0
+					// (d0 * w - d1 * w) / w = -d1 / w
+					// d0 - d1 = -d1 / w
+					// -d1 / (d0 - d1) = w
+
+					int p0_i = edge_list[e_i][0];
+					int p1_i = edge_list[e_i][1];
+
+					// solve for the weight that will lerp between
+					w[i] = d[p0_i] / (d[p0_i] - d[p1_i]);
+
+					vec<3> _p = p[p1_i] * w[i] + p[p0_i] * (1 - w[i]);
+					
+					indices.push_back(vertices.size());
+					vertices.push_back(generator(sdf, _p));
+				}
+
+				// std::cerr << vertices.size() << std::endl;
+			}
+			else
+			{ // test for density function boundaries
+
+				if (voxel_case != 0 && voxel_case != 255)
+				{
+					for (int i = 8; i--;)
+					{
+						if (d[i] > 0) { continue; }
+
+						vec<3> next_corners[2];
+
+						// if (p[i][0] < mid[0] || p[i][1] < mid[1] || p[i][2] < mid[2])
+						if (p[i].dot(p[i]) < mid.dot(mid))
+						{
+							next_corners[0] = p[i];
+							next_corners[1] = mid;
+						}
+						else
+						{
+							next_corners[0] = mid;
+							next_corners[1] = p[i];
+						}
+
+						subdivider(next_corners, depth - 1);
+					}
+
+					return true;
+				}
+			}
+
+			return false;
+		};
+
+		subdivider(corners, max_depth);
+
+		std::reverse(indices.begin(), indices.end());
+
+		set_vertices(vertices);
+		set_indices(indices);
+	}
+
 	void from_sdf(
 		const g::game::sdf& sdf, 
 		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 

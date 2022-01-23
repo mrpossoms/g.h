@@ -17,13 +17,20 @@ struct terrain_volume
     struct terrain_block
     {
         g::gfx::mesh<V> mesh;
+
+        vec<3, int> index;
         vec<3> bounding_box[2];
 
-        inline bool contains(const vec<3>& pos)
+        inline bool contains(const vec<3>& pos) const
         {
-            return pos[0] > bounding_box[0][0] && pos[0] < bounding_box[1][0] &&
-                   pos[1] > bounding_box[0][1] && pos[1] < bounding_box[1][1] &&
-                   pos[2] > bounding_box[0][2] && pos[2] < bounding_box[1][2];
+            return pos[0] > bounding_box[0][0] && pos[0] <= bounding_box[1][0] &&
+                   pos[1] > bounding_box[0][1] && pos[1] <= bounding_box[1][1] &&
+                   pos[2] > bounding_box[0][2] && pos[2] <= bounding_box[1][2];
+        }
+
+        inline bool contains(const vec<3, int> idx) const
+        {
+            return index == idx;
         }
     };
 
@@ -32,6 +39,7 @@ struct terrain_volume
 
     g::game::sdf sdf;
     std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
+    float scale = 10;
 
     terrain_volume() = default;
 
@@ -41,13 +49,17 @@ struct terrain_volume
         this->sdf = sdf;
         this->generator = generator;
 
-        for (auto& offset : offsets)
+        for (auto offset : offsets)
         {
             terrain_block block;
             block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
 
-            block.bounding_box[0] = offset - vec<3>{0.5f, 0.5f, 0.5f};
-            block.bounding_box[1] = offset + vec<3>{0.5f, 0.5f, 0.5f};
+            auto pipo = offset.cast<int>();
+
+            block.bounding_box[0] = (pipo * scale).cast<float>();
+            block.bounding_box[1] = ((pipo + 1) * scale).cast<float>();
+
+            block.index = (offset * scale).cast<int>();
 
             time_t start = time(NULL);
             block.mesh.from_sdf(sdf, generator, block.bounding_box, 16);
@@ -65,15 +77,17 @@ struct terrain_volume
 
         for (unsigned i = 0; i < offsets.size(); i++) { unvisited.insert(i); }
 
+        auto pidx = (pos / scale).cast<int>();
+
         for (auto& block : blocks)
         {
             bool needs_regen = true;
 
             for (auto oi : unvisited)
             {
-                auto ppo = (pos.floor() + 0.5f) + offsets[oi];
+                auto pipo = pidx + offsets[oi].cast<int>();
 
-                if (block.contains(ppo))
+                if (block.contains(pipo))
                 {
                     unvisited.erase(oi);
                     needs_regen = false;
@@ -94,17 +108,20 @@ struct terrain_volume
             auto offset = offsets[oi];
             auto block_ptr = to_regenerate.back();
 
-            auto ppo = (pos.floor() + 0.5f) + offset;
-            block_ptr->bounding_box[0] = ppo - vec<3>{0.5f, 0.5f, 0.5f};
-            block_ptr->bounding_box[1] = ppo + vec<3>{0.5f, 0.5f, 0.5f};
+            // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
+            auto pipo = pidx + offsets[oi].cast<int>();
+
+            block_ptr->bounding_box[0] = (pipo * scale).cast<float>();//ppo - vec<3>{0.5f, 0.5f, 0.5f} * scale;
+            block_ptr->bounding_box[1] = ((pipo + 1) * scale).cast<float>();//ppo + vec<3>{0.5f, 0.5f, 0.5f} * scale;
+            block_ptr->index = pipo;
 
             std::cerr << "generating " << block_ptr->bounding_box[0].to_string() << " - " << block_ptr->bounding_box[1].to_string() << std::endl;
 
             time_t start = time(NULL);
-            block_ptr->mesh.from_sdf(sdf, generator, block_ptr->bounding_box, 16);
+            block_ptr->mesh.from_sdf_r(sdf, generator, block_ptr->bounding_box, 4);
             time_t end = time(NULL);
 
-            std::cerr << "processing time: " << end - start << std::endl;
+            std::cerr << "processing time: " << end - start << " verts: " << block_ptr->mesh.vertex_count << std::endl;
 
             to_regenerate.pop_back();
         }
@@ -156,9 +173,9 @@ struct my_core : public g::core
             // d += g::gfx::perlin(p * 3, v) * 0.1;
 
 
-            auto d = p[1] + 0.5;
+            auto d = p[1] - 0.5;
             d += g::gfx::perlin(p*4.03, v[0]) * 0.125;
-            // d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
+            d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
             // d += g::gfx::perlin(p*0.1, v[2]) * 9;
 
             // d = std::max<float>(d, -1);
@@ -198,6 +215,7 @@ struct my_core : public g::core
             return v;
         };
 
+        // std::vector<vec<3>> offsets = {{0, 0, 0}};
         std::vector<vec<3>> offsets;
         for (int x = -1; x <= 1; x++)
         for (int y = -1; y <= 1; y++)
@@ -216,7 +234,7 @@ struct my_core : public g::core
 
         // std::cerr << "processing time: " << end - start << std::endl;
 
-        cam.position = {0, 0, -2};
+        cam.position = {0, 0, 0};
         //glDisable(GL_CULL_FACE);
 
         return true;
