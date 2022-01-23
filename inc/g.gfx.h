@@ -557,7 +557,7 @@ struct mesh
 	void from_sdf_r(
 		const g::game::sdf& sdf, 
 		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
-		vec<3> corners[2],
+		vec<3> volume_corners[2],
 		unsigned max_depth=4)
 	{
 		#include "data/marching.cubes.lut"
@@ -650,17 +650,10 @@ struct mesh
 
 						vec<3> next_corners[2];
 
-						// if (p[i][0] < mid[0] || p[i][1] < mid[1] || p[i][2] < mid[2])
-						if (p[i].dot(p[i]) < mid.dot(mid))
-						{
-							next_corners[0] = p[i];
-							next_corners[1] = mid;
-						}
-						else
-						{
-							next_corners[0] = mid;
-							next_corners[1] = p[i];
-						}
+						next_corners[0] = p[i];
+						next_corners[0].take_min(mid);
+						next_corners[1] = p[i];
+						next_corners[1].take_max(mid);
 
 						subdivider(next_corners, depth - 1);
 					}
@@ -672,7 +665,7 @@ struct mesh
 			return false;
 		};
 
-		subdivider(corners, max_depth);
+		subdivider(volume_corners, max_depth);
 
 		std::reverse(indices.begin(), indices.end());
 

@@ -57,9 +57,9 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 		// a.v[(2 + 1) % 3] ^= a.v[2] << s | a.v[2] >> w - s;
 
 		vec<3> grad = {
-			entropy[a.v[0] % ent_size],
-			entropy[a.v[1] % ent_size],
-			entropy[a.v[2] % ent_size],
+			(float)entropy[a.v[0] % ent_size],
+			(float)entropy[a.v[1] % ent_size],
+			(float)entropy[a.v[2] % ent_size],
 		};
 
 		return grad.unit();

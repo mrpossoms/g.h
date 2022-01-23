@@ -62,7 +62,7 @@ struct terrain_volume
             block.index = (offset * scale).cast<int>();
 
             time_t start = time(NULL);
-            block.mesh.from_sdf(sdf, generator, block.bounding_box, 16);
+            block.mesh.from_sdf_r(sdf, generator, block.bounding_box, 4);
             time_t end = time(NULL);
 
             blocks.push_back(block);
@@ -217,9 +217,9 @@ struct my_core : public g::core
 
         // std::vector<vec<3>> offsets = {{0, 0, 0}};
         std::vector<vec<3>> offsets;
-        for (int x = -1; x <= 1; x++)
-        for (int y = -1; y <= 1; y++)
-        for (int z = -1; z <= 1; z++)
+        for (float x = -1; x <= 1; x++)
+        for (float y = -1; y <= 1; y++)
+        for (float z = -1; z <= 1; z++)
         {
             offsets.push_back({x, y, z});
         }
