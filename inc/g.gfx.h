@@ -568,7 +568,7 @@ struct mesh
 		vertices.clear();
 		indices.clear();
 
-		std::function<bool(vec<3> corners[2], unsigned depth)> subdivider = [&](vec<3> corners[2], unsigned depth)
+		std::function<int(vec<3> corners[2], unsigned)> subdivider = [&](vec<3> corners[2], unsigned depth)
 		{
 			vec<3> c[8] = {
 				{ 0.f, 0.f, 0.f },
@@ -591,23 +591,51 @@ struct mesh
 			uint8_t voxel_case = 0;
 			vec<3> p[8];  // voxel corners
 			float d[8]; // densities at each corner
+
 			for (int i = 8; i--;)
 			{
 				c[i] *= block_delta;
 				p[i] = p0 + c[i];
 				d[i] = sdf(p[i]);
 
-				if (d[i] <= 0)
-				{
-					voxel_case |= (1 << i);
-				}
-			}
+				// if d[i] >= 0
+				voxel_case |= ((d[i] >= 0) << i);
+			}				
 
 			// std::cerr << "voxel_case: " << static_cast<int>(voxel_case) << std::endl;
 
-			if (depth == 0)
+			if (depth > 0)
+			{ // test for density function boundaries
+				int verts_generated = 0;
+
+				auto d_mid = sdf(mid);
+				if ((voxel_case != 0 && voxel_case != 255) || d_mid >= 0)
+				{
+					for (int i = 8; i--;)
+					{
+						//if (d[i] > 0  && d_mid > 0) { continue; }
+
+						vec<3> next_corners[2];
+
+						next_corners[0] = p[i];
+						next_corners[0].take_min(mid);
+						next_corners[1] = p[i];
+						next_corners[1].take_max(mid);
+
+						verts_generated += subdivider(next_corners, depth - 1);
+					}
+
+					if (verts_generated == 0) { verts_generated = subdivider(corners, 0); }
+				}
+
+				return verts_generated;
+			}
+			else
 			{ // time to generate geometry
 			// compute lerp weights between verts for each edge
+				int verts_generated = 0;
+				if (voxel_case == 0 || voxel_case == 255) { return verts_generated; }
+
 				float w[12];
 				for (int i = 0; i < 12; ++i)
 				{
@@ -635,39 +663,19 @@ struct mesh
 					
 					indices.push_back(vertices.size());
 					vertices.push_back(generator(sdf, _p));
+					verts_generated++;
 				}
 
-				// std::cerr << vertices.size() << std::endl;
-			}
-			else
-			{ // test for density function boundaries
-
-				if (voxel_case != 0 && voxel_case != 255)
-				{
-					for (int i = 8; i--;)
-					{
-						if (d[i] > 0) { continue; }
-
-						vec<3> next_corners[2];
-
-						next_corners[0] = p[i];
-						next_corners[0].take_min(mid);
-						next_corners[1] = p[i];
-						next_corners[1].take_max(mid);
-
-						subdivider(next_corners, depth - 1);
-					}
-
-					return true;
-				}
+				return verts_generated;
 			}
 
-			return false;
+
+			return 0;
 		};
 
 		subdivider(volume_corners, max_depth);
 
-		std::reverse(indices.begin(), indices.end());
+		//std::reverse(indices.begin(), indices.end());
 
 		set_vertices(vertices);
 		set_indices(indices);

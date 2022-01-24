@@ -40,6 +40,7 @@ struct terrain_volume
     g::game::sdf sdf;
     std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
     float scale = 10;
+    unsigned depth = 2;
 
     terrain_volume() = default;
 
@@ -62,7 +63,7 @@ struct terrain_volume
             block.index = (offset * scale).cast<int>();
 
             time_t start = time(NULL);
-            block.mesh.from_sdf_r(sdf, generator, block.bounding_box, 4);
+            block.mesh.from_sdf_r(sdf, generator, block.bounding_box, depth);
             time_t end = time(NULL);
 
             blocks.push_back(block);
@@ -77,7 +78,7 @@ struct terrain_volume
 
         for (unsigned i = 0; i < offsets.size(); i++) { unvisited.insert(i); }
 
-        auto pidx = (pos / scale).cast<int>();
+        auto pidx = ((pos / scale) - 0.5f).cast<int>();
 
         for (auto& block : blocks)
         {
@@ -118,7 +119,7 @@ struct terrain_volume
             std::cerr << "generating " << block_ptr->bounding_box[0].to_string() << " - " << block_ptr->bounding_box[1].to_string() << std::endl;
 
             time_t start = time(NULL);
-            block_ptr->mesh.from_sdf_r(sdf, generator, block_ptr->bounding_box, 4);
+            block_ptr->mesh.from_sdf_r(sdf, generator, block_ptr->bounding_box, depth);
             time_t end = time(NULL);
 
             std::cerr << "processing time: " << end - start << " verts: " << block_ptr->mesh.vertex_count << std::endl;
@@ -167,16 +168,16 @@ struct my_core : public g::core
         }
 
         auto sdf = [&](const vec<3>& p) -> float {
-            //auto d = p.dot(p) - 0.75f;
+            auto d = sqrtf(p.dot(p)) - 200.f;
             //d += g::gfx::perlin(p * 9, v) * 0.01;
             // d += g::gfx::perlin(p * 11, v) * 0.01;
             // d += g::gfx::perlin(p * 3, v) * 0.1;
 
 
-            auto d = p[1] - 0.5;
+            // auto d = p[1] - 200;
             d += g::gfx::perlin(p*4.03, v[0]) * 0.125;
             d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
-            // d += g::gfx::perlin(p*0.1, v[2]) * 9;
+            d += g::gfx::perlin(p*0.1, v[2]) * 9;
 
             // d = std::max<float>(d, -1);
 
@@ -217,9 +218,10 @@ struct my_core : public g::core
 
         // std::vector<vec<3>> offsets = {{0, 0, 0}};
         std::vector<vec<3>> offsets;
-        for (float x = -1; x <= 1; x++)
-        for (float y = -1; y <= 1; y++)
-        for (float z = -1; z <= 1; z++)
+        auto k = 4;
+        for (float x = -k; x <= k; x++)
+        for (float y = -k; y <= k; y++)
+        for (float z = -k; z <= k; z++)
         {
             offsets.push_back({x, y, z});
         }
@@ -234,7 +236,7 @@ struct my_core : public g::core
 
         // std::cerr << "processing time: " << end - start << std::endl;
 
-        cam.position = {0, 0, 0};
+        cam.position = {0, 201, 0};
         //glDisable(GL_CULL_FACE);
 
         return true;
