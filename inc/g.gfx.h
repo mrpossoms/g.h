@@ -1008,6 +1008,8 @@ namespace debug
 		void point(const vec<2>& o);
 
 		void point(const vec<3>& o);
+
+		void box(const vec<3> corners[2]);
 	};
 }
 

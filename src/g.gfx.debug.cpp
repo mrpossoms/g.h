@@ -6,7 +6,6 @@ static g::gfx::shader debug_shader;
 static g::gfx::mesh<vertex::pos> debug_mesh;
 
 const std::string vs_dbg_src =
-"#version 410\n"
 "in vec3 a_position;"
 "uniform mat4 u_view;"
 "uniform mat4 u_proj;"
@@ -16,7 +15,6 @@ const std::string vs_dbg_src =
 "}";
 
 const std::string fs_dbg_src =
-"#version 410\n"
 "uniform vec4 u_color;"
 "out vec4 color;"
 "void main (void) {"
@@ -97,5 +95,33 @@ void debug::print::point(const vec<3>& o)
 	          .set_uniform("u_color").vec4(cur_color)
 	          .set_uniform("u_model").mat4(cur_model)
 	          .draw<GL_POINTS>();
+	assert(gl_get_error());
+}
+
+void debug::print::box(const vec<3> corners[2])
+{
+	auto& m = corners[0];
+	auto& M = corners[1];
+
+	vec<3> c[8] = {
+		M, {M[0], m[1], M[2]}, {m[0], m[1], M[2]}, {m[0], M[1], M[2]},
+
+		m, {M[0], m[1], m[2]}, {M[0], M[1], m[2]}, {m[0], M[1], m[2]},
+	};
+
+	vertex::pos verts[24] = {
+		c[0], c[1], c[1], c[2], c[2], c[3], c[3], c[0],
+		c[4], c[5], c[5], c[6], c[6], c[7], c[7], c[4],
+		c[0], c[6], c[1], c[5], c[2], c[4], c[3], c[7],
+	};
+
+	assert(gl_get_error());
+	debug_mesh.set_vertices(verts, 24);
+	assert(gl_get_error());
+	debug_mesh.using_shader(debug_shader)
+	          .set_camera(*cur_cam)
+	          .set_uniform("u_color").vec4(cur_color)
+	          .set_uniform("u_model").mat4(cur_model)
+	          .draw<GL_LINES>();
 	assert(gl_get_error());
 }

@@ -137,7 +137,9 @@ struct terrain_volume
             block.mesh.using_shader(s)
                 ["u_model"].mat4(model)
                 .set_camera(cam)
-                .template draw<GL_TRIANGLES>();            
+                .template draw<GL_TRIANGLES>();
+
+            g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
         }
     }
 };
