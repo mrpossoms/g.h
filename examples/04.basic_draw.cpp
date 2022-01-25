@@ -49,12 +49,16 @@ struct my_core : public g::core
 		srand(time(NULL));
 
 		std::vector<int8_t> v;
-		for (unsigned i = 1024; i--;)
-		{
-			v.push_back(rand() % 255 - 128);
+        std::default_random_engine generator;
+        std::uniform_int_distribution<int> distribution(-127,128);
+        for (unsigned i = 1024; i--;)
+        {
+                v.push_back(distribution(generator));
 		}
 
 		auto noise = g::gfx::perlin({ 0.5, 0.5, 0 }, v);
+
+		float pmin = 100, pmax = -100;
 
 		glDisable(GL_CULL_FACE);
 		grid_tex = g::gfx::texture_factory{256, 256}
@@ -63,6 +67,8 @@ struct my_core : public g::core
 		.fill([&](int x, int y, int z, unsigned char* pixel) {
 			vec<3> p = { x / 8.f, y / 8.f, 0 };
 			auto noise = g::gfx::perlin(p, v);
+			pmin = std::min<float>(noise, pmin);
+			pmax = std::max<float>(noise, pmax);
 			auto n = std::max<float>(std::min<float>(noise, 1), -1);
 			pixel[0] = (unsigned char)((n + 1) * 127);
 			pixel[1] = 0;
@@ -72,6 +78,9 @@ struct my_core : public g::core
 		.pixelated().clamped()
 		.create();
 		//.from_png("data/tex/brick.color.png").create();
+
+		std::cerr << "min: " << pmin << std::endl;
+		std::cerr << "max: " << pmax << std::endl;
 
 		return true;
 	}

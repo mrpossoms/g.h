@@ -156,13 +156,6 @@ struct intersect
     intersect(float t, const vec<3>& p, const vec<3>& n) : time(t), position(p), normal(n) {}
 };
 
-struct ray
-{
-    vec<3> position, direction;
-
-    inline vec<3> point_at(float t) const { return position + direction * t; }
-};
-
 struct box
 {
     vec<3> position;
@@ -171,29 +164,36 @@ struct box
     vec<3> half_z;
 };
 
-static intersect ray_plane(const ray& r, const vec<3>& plane_o, const vec<3>& plane_n)
+struct ray
 {
-    auto t = xmath::intersect::ray_plane(r.position, r.direction, plane_o, plane_n);
+    vec<3> position, direction;
 
-    return {
-        t,
-        r.point_at(t),
-        plane_n
-    };
-}
+    inline vec<3> point_at(float t) const { return position + direction * t; }
 
-static intersect ray_box(const ray& r, const box& b)
-{
-    vec<3> half_lengths[] = {b.half_x, b.half_y, b.half_z};
-    auto t = xmath::intersect::ray_box(r.position, r.direction, b.position, half_lengths);
-    auto face_normal = vec<3>{}; // TODO: compute normal here
+    intersect intersect_plane(const ray& r, const vec<3>& plane_o, const vec<3>& plane_n)
+    {
+        auto t = xmath::intersect::ray_plane(position, direction, plane_o, plane_n);
 
-    return {
-        t,
-        r.point_at(t),
-        face_normal
-    };
-}
+        return {
+            t,
+            point_at(t),
+            plane_n
+        };
+    }
+
+    intersect intersect_box(const box& b)
+    {
+        vec<3> half_lengths[] = {b.half_x, b.half_y, b.half_z};
+        auto t = xmath::intersect::ray_box(position, direction, b.position, half_lengths);
+        auto face_normal = vec<3>{}; // TODO: compute normal here
+
+        return {
+            t,
+            point_at(t),
+            face_normal
+        };
+    }
+};
 
 } // end namespace cd
 } // end namespace dyn

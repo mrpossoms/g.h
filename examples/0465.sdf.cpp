@@ -20,6 +20,7 @@ struct terrain_volume
 
         vec<3, int> index;
         vec<3> bounding_box[2];
+        uint8_t vertex_case = 0;
 
         inline bool contains(const vec<3>& pos) const
         {
@@ -39,8 +40,8 @@ struct terrain_volume
 
     g::game::sdf sdf;
     std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
-    float scale = 10;
-    unsigned depth = 2;
+    float scale = 100;
+    unsigned depth = 4;
 
     terrain_volume() = default;
 
@@ -112,37 +113,44 @@ struct terrain_volume
             // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
             auto pipo = pidx + offsets[oi].cast<int>();
 
-            block_ptr->bounding_box[0] = (pipo * scale).cast<float>();//ppo - vec<3>{0.5f, 0.5f, 0.5f} * scale;
-            block_ptr->bounding_box[1] = ((pipo + 1) * scale).cast<float>();//ppo + vec<3>{0.5f, 0.5f, 0.5f} * scale;
+            block_ptr->bounding_box[0] = (pipo * scale).cast<float>();
+            block_ptr->bounding_box[1] = ((pipo + 1) * scale).cast<float>();
             block_ptr->index = pipo;
 
-            std::cerr << "generating " << block_ptr->bounding_box[0].to_string() << " - " << block_ptr->bounding_box[1].to_string() << std::endl;
-
-            time_t start = time(NULL);
             block_ptr->mesh.from_sdf_r(sdf, generator, block_ptr->bounding_box, depth);
-            time_t end = time(NULL);
-
-            std::cerr << "processing time: " << end - start << " verts: " << block_ptr->mesh.vertex_count << std::endl;
 
             to_regenerate.pop_back();
         }
     }
 
-    void draw(g::game::camera& cam, g::gfx::shader& s)
+    void draw(g::game::camera& cam, g::gfx::shader& s, std::function<void(g::gfx::shader::usage&)> draw_config=nullptr)
     {
         auto model = mat4::I();
 
         for (auto& block : blocks)
         {
-            block.mesh.using_shader(s)
+            auto chain = block.mesh.using_shader(s)
                 ["u_model"].mat4(model)
-                .set_camera(cam)
-                .template draw<GL_TRIANGLES>();
+                .set_camera(cam);
 
-            g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
+            if (draw_config) { draw_config(chain); }
+
+            chain.template draw<GL_TRIANGLES>();
+
+//            g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
         }
     }
 };
+
+float saturate(float x)
+{
+    return std::min<float>(1.f, std::max<float>(0, x));
+}
+
+float clamp(float x, float h, float l)
+{
+    return std::min<float>(h, std::max<float>(l, x));
+}
 
 struct my_core : public g::core
 {
@@ -162,33 +170,37 @@ struct my_core : public g::core
 
         srand(time(NULL));
 
-        for (unsigned i = 1024; i--;)
         {
-            v[0].push_back(rand() % 255 - 128);
-            v[1].push_back(rand() % 255 - 128);
-            v[2].push_back(rand() % 255 - 128);
+            std::default_random_engine generator;
+            std::uniform_int_distribution<int> distribution(-127,128);
+            for (unsigned i = 2048; i--;)
+            {
+                v[0].push_back(distribution(generator));
+                v[1].push_back(distribution(generator));
+                v[2].push_back(distribution(generator));
+            }
         }
 
         auto sdf = [&](const vec<3>& p) -> float {
-            auto d = sqrtf(p.dot(p)) - 200.f;
+            auto r = sqrtf(p.dot(p));
+            auto base = r - 500.f;
             //d += g::gfx::perlin(p * 9, v) * 0.01;
             // d += g::gfx::perlin(p * 11, v) * 0.01;
             // d += g::gfx::perlin(p * 3, v) * 0.1;
 
+            // if (base <= 0) return base;
 
             // auto d = p[1] - 200;
-            d += g::gfx::perlin(p*4.03, v[0]) * 0.125;
-            d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
-            d += g::gfx::perlin(p*0.1, v[2]) * 9;
+            // d += g::gfx::perlin(p*4.03, v[0]) * 0.125;
+            // d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
 
+            auto d = base;
+            d += g::gfx::perlin(p*0.065, v[0]) * 10;
+            d += g::gfx::perlin(p*0.0334, v[1]) * 20;
+            d += g::gfx::perlin(p*0.0123, v[2]) * 40;
             // d = std::max<float>(d, -1);
 
             return d;
-        };
-
-        auto test_sdf = [](const vec<3>& p)
-        {
-            return p[1] + cos(p[0]) * 0.1;
         };
 
         auto generator = [](const g::game::sdf& sdf, const vec<3>& pos) -> g::gfx::vertex::pos_uv_norm
@@ -197,7 +209,7 @@ struct my_core : public g::core
 
             v.position = pos;
 
-            const float s = 0.1;
+            const float s = 1;
             vec<3> grad = {};
             vec<3> deltas[3][2] = {
                 {{ s, 0, 0 }, { -s, 0, 0 }},
@@ -220,7 +232,7 @@ struct my_core : public g::core
 
         // std::vector<vec<3>> offsets = {{0, 0, 0}};
         std::vector<vec<3>> offsets;
-        auto k = 4;
+        auto k = 2;
         for (float x = -k; x <= k; x++)
         for (float y = -k; y <= k; y++)
         for (float z = -k; z <= k; z++)
@@ -238,7 +250,7 @@ struct my_core : public g::core
 
         // std::cerr << "processing time: " << end - start << std::endl;
 
-        cam.position = {0, 201, 0};
+        cam.position = {0, 501, 0};
         //glDisable(GL_CULL_FACE);
 
         return true;
@@ -249,7 +261,8 @@ struct my_core : public g::core
         glClearColor(0, 0, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        const auto speed = 4.0f;
+        auto speed = 4.0f;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 4;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
@@ -265,7 +278,12 @@ struct my_core : public g::core
 
         terrain.update(cam);
 
-        terrain.draw(cam, assets.shader("basic_gui.vs+debug_normal.fs"));
+        auto& wall = assets.tex("rock_wall.repeating.png");
+        auto& ground = assets.tex("sand.repeating.png");
+        terrain.draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
+            usage["u_wall"].texture(wall)
+                 ["u_ground"].texture(ground);
+        });
 
         // terrain.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
         //     ["u_model"].mat4(model)

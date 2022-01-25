@@ -554,6 +554,45 @@ struct mesh
 		return usage;
 	}
 
+
+	static void compute_normals(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
+	{
+		for(unsigned i = 0; i < indices.size(); i += 3)
+		{
+			vec<3> diff[2] = {
+				vertices[indices[i + 0]].position - vertices[indices[i + 1]].position,
+				vertices[indices[i + 0]].position - vertices[indices[i + 2]].position,
+			};
+
+			auto& vert = vertices[indices[i]];
+			auto cross = vec<3>::cross(diff[0], diff[1]);
+			vert.normal = cross.unit();
+
+			if(isnan(vert.normal[0]) || isnan(vert.normal[1]) || isnan(vert.normal[2]))
+			{
+				// assert(0);
+			}
+
+			i = (i + 1) - 1;
+		}
+	}
+
+
+	static void compute_tangents(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
+	{
+		for(unsigned int i = 0; i < indices.size(); i += 3)
+		{
+
+			vertices[indices[i + 0]].tangent = vertices[indices[i]].position - vertices[indices[i + 1]].position;
+
+			for(int j = 3; j--;)
+			{
+				vertices[indices[i + j]].tangent = vertices[indices[i + j]].tangent.unit();
+			}
+		}
+	}
+
+
 	void from_sdf_r(
 		const g::game::sdf& sdf, 
 		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
@@ -669,17 +708,15 @@ struct mesh
 				return verts_generated;
 			}
 
-
 			return 0;
 		};
 
 		subdivider(volume_corners, max_depth);
-
-		//std::reverse(indices.begin(), indices.end());
-
+		
 		set_vertices(vertices);
 		set_indices(indices);
 	}
+
 
 	void from_sdf(
 		const g::game::sdf& sdf, 
@@ -797,42 +834,6 @@ struct mesh
 
 		// 	vec3_norm(v.normal, grad);
 		// }
-	}
-
-	static void compute_normals(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
-	{
-		for(unsigned i = 0; i < indices.size(); i += 3)
-		{
-			vec<3> diff[2] = {
-				vertices[indices[i + 0]].position - vertices[indices[i + 1]].position,
-				vertices[indices[i + 0]].position - vertices[indices[i + 2]].position,
-			};
-
-			auto& vert = vertices[indices[i]];
-			auto cross = vec<3>::cross(diff[0], diff[1]);
-			vert.normal = cross.unit();
-
-			if(isnan(vert.normal[0]) || isnan(vert.normal[1]) || isnan(vert.normal[2]))
-			{
-				// assert(0);
-			}
-
-			i = (i + 1) - 1;
-		}
-	}
-
-	static void compute_tangents(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
-	{
-		for(unsigned int i = 0; i < indices.size(); i += 3)
-		{
-
-			vertices[indices[i + 0]].tangent = vertices[indices[i]].position - vertices[indices[i + 1]].position;
-
-			for(int j = 3; j--;)
-			{
-				vertices[indices[i + j]].tangent = vertices[indices[i + j]].tangent.unit();
-			}
-		}
 	}
 };
 

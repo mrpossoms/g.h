@@ -31,10 +31,12 @@ static void error_callback(int error, const char* description)
     std::cerr << description << std::endl;
 }
 
+#ifdef __EMSCRIPTEN__
 static void EMSCRIPTEN_MAIN_LOOP(void* arg)
 {
 	static_cast<g::core*>(arg)->tick();
 }
+#endif
 
 void g::core::start(const core::opts& opts)
 {
