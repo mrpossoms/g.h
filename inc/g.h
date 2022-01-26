@@ -32,6 +32,7 @@
 #include "g.ai.h"
 #include "g.snd.h"
 #include "g.io.h"
+#include "g.proc.h"
 #ifndef __EMSCRIPTEN__
 #include "g.net.h"
 #endif
