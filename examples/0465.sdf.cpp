@@ -21,6 +21,7 @@ struct terrain_volume
         vec<3, int> index;
         vec<3> bounding_box[2];
         uint8_t vertex_case = 0;
+        bool regenerating = false;
 
         inline bool contains(const vec<3>& pos) const
         {
@@ -42,6 +43,8 @@ struct terrain_volume
     std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
     float scale = 100;
     unsigned depth = 4;
+    std::vector<terrain_block*> to_regenerate;
+    g::proc::thread_pool<5> generator_pool;
 
     terrain_volume() = default;
 
@@ -56,12 +59,12 @@ struct terrain_volume
             terrain_block block;
             block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
 
-            auto pipo = offset.cast<int>();
+            auto pipo = offset.template cast<int>();
 
-            block.bounding_box[0] = (pipo * scale).cast<float>();
-            block.bounding_box[1] = ((pipo + 1) * scale).cast<float>();
+            block.bounding_box[0] = (pipo * scale).template cast<float>();
+            block.bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
 
-            block.index = (offset * scale).cast<int>();
+            block.index = (offset * scale).template cast<int>();
 
             time_t start = time(NULL);
             block.mesh.from_sdf_r(sdf, generator, block.bounding_box, depth);
@@ -75,19 +78,20 @@ struct terrain_volume
     {
         auto pos = cam.position;
         std::set<unsigned> unvisited;
-        std::vector<terrain_block*> to_regenerate;
 
         for (unsigned i = 0; i < offsets.size(); i++) { unvisited.insert(i); }
 
-        auto pidx = ((pos / scale) - 0.5f).cast<int>();
+        auto pidx = ((pos / scale) - 0.5f).template cast<int>();
 
         for (auto& block : blocks)
         {
+            if (block.regenerating) { continue; }
+
             bool needs_regen = true;
 
             for (auto oi : unvisited)
             {
-                auto pipo = pidx + offsets[oi].cast<int>();
+                auto pipo = pidx + offsets[oi].template cast<int>();
 
                 if (block.contains(pipo))
                 {
@@ -109,17 +113,20 @@ struct terrain_volume
         {
             auto offset = offsets[oi];
             auto block_ptr = to_regenerate.back();
-
-            // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
-            auto pipo = pidx + offsets[oi].cast<int>();
-
-            block_ptr->bounding_box[0] = (pipo * scale).cast<float>();
-            block_ptr->bounding_box[1] = ((pipo + 1) * scale).cast<float>();
-            block_ptr->index = pipo;
-
-            block_ptr->mesh.from_sdf_r(sdf, generator, block_ptr->bounding_box, depth);
-
+            block_ptr->regenerating = true;
             to_regenerate.pop_back();
+
+            generator_pool.run([this, oi, pidx, offset, block_ptr](){
+                // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
+                auto pipo = pidx + offsets[oi].template cast<int>();
+
+                block_ptr->bounding_box[0] = (pipo * scale).template cast<float>();
+                block_ptr->bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
+                block_ptr->index = pipo;
+
+                block_ptr->mesh.from_sdf_r(sdf, generator, block_ptr->bounding_box, depth);
+                block_ptr->regenerating = false;
+            });
         }
     }
 
@@ -160,7 +167,7 @@ struct my_core : public g::core
     // g::gfx::mesh<g::gfx::vertex::pos_uv_norm> terrain;
     std::vector<int8_t> v[3];
 
-    terrain_volume<g::gfx::vertex::pos_uv_norm> terrain;
+    terrain_volume<g::gfx::vertex::pos_uv_norm>* terrain;
 
     virtual bool initialize()
     {
@@ -240,7 +247,7 @@ struct my_core : public g::core
             offsets.push_back({x, y, z});
         }
 
-        terrain = terrain_volume<g::gfx::vertex::pos_uv_norm>(sdf, generator, offsets);
+        terrain = new terrain_volume<g::gfx::vertex::pos_uv_norm>(sdf, generator, offsets);
 
         // vec<3> corners[2] = { {-10, -2, -10}, {10, 10, 10} };
 
@@ -276,11 +283,11 @@ struct my_core : public g::core
 
         auto model = mat4::I();
 
-        terrain.update(cam);
+        terrain->update(cam);
 
         auto& wall = assets.tex("rock_wall.repeating.png");
         auto& ground = assets.tex("sand.repeating.png");
-        terrain.draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
+        terrain->draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
             usage["u_wall"].texture(wall)
                  ["u_ground"].texture(ground);
         });

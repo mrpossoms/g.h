@@ -118,9 +118,9 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 		// }
 
 		float bits[3] = {
-			(ci >> 0) & 0x1,
-			(ci >> 1) & 0x1,
-			(ci >> 2) & 0x1,
+			static_cast<float>((ci >> 0) & 0x1),
+			static_cast<float>((ci >> 1) & 0x1),
+			static_cast<float>((ci >> 2) & 0x1),
 		};
 		corner.v[2] = bits[0] * bounds[1].v[2] + (1 - bits[0]) * bounds[0].v[2];
 		corner.v[1] = bits[1] * bounds[1].v[1] + (1 - bits[1]) * bounds[0].v[1];
