@@ -592,8 +592,9 @@ struct mesh
 		}
 	}
 
-
 	void from_sdf_r(
+		std::vector<V>& vertices_out,
+		std::vector<uint32_t>& indices_out,
 		const g::game::sdf& sdf, 
 		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
 		vec<3> volume_corners[2],
@@ -601,11 +602,8 @@ struct mesh
 	{
 		#include "data/marching.cubes.lut"
 
-		static std::vector<V> vertices;
-		static std::vector<uint32_t> indices;
-
-		vertices.clear();
-		indices.clear();
+		vertices_out.clear();
+		indices_out.clear();
 
 		std::function<int(vec<3> corners[2], unsigned)> subdivider = [&](vec<3> corners[2], unsigned depth)
 		{
@@ -700,8 +698,8 @@ struct mesh
 
 					vec<3> _p = p[p1_i] * w[i] + p[p0_i] * (1 - w[i]);
 					
-					indices.push_back(vertices.size());
-					vertices.push_back(generator(sdf, _p));
+					indices_out.push_back(vertices_out.size());
+					vertices_out.push_back(generator(sdf, _p));
 					verts_generated++;
 				}
 
@@ -712,6 +710,23 @@ struct mesh
 		};
 
 		subdivider(volume_corners, max_depth);
+	}
+
+	void from_sdf_r(
+		const g::game::sdf& sdf, 
+		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
+		vec<3> volume_corners[2],
+		unsigned max_depth=4)
+	{
+		#include "data/marching.cubes.lut"
+
+		static std::vector<V> vertices;
+		static std::vector<uint32_t> indices;
+
+		vertices.clear();
+		indices.clear();
+
+		from_sdf_r(vertices, indices, sdf, generator, volume_corners, max_depth);
 		
 		set_vertices(vertices);
 		set_indices(indices);

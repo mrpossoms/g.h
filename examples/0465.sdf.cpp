@@ -17,6 +17,8 @@ struct terrain_volume
     struct terrain_block
     {
         g::gfx::mesh<V> mesh;
+        std::vector<V> vertices;
+        std::vector<uint32_t> indices;
 
         vec<3, int> index;
         vec<3> bounding_box[2];
@@ -44,7 +46,7 @@ struct terrain_volume
     float scale = 100;
     unsigned depth = 4;
     std::vector<terrain_block*> to_regenerate;
-    g::proc::thread_pool<5> generator_pool;
+    g::proc::thread_pool<10> generator_pool;
 
     terrain_volume() = default;
 
@@ -83,6 +85,8 @@ struct terrain_volume
 
         auto pidx = ((pos / scale) - 0.5f).template cast<int>();
 
+        generator_pool.update();
+
         for (auto& block : blocks)
         {
             if (block.regenerating) { continue; }
@@ -105,18 +109,21 @@ struct terrain_volume
         }
 
         
-        assert(to_regenerate.size() == unvisited.size());
+        // assert(to_regenerate.size() == unvisited.size());
 
         // remaining 'unvisited' offset positions need to be regenerated
-        if (to_regenerate.size() > 0)
         for (auto oi : unvisited)
         {
+            if (to_regenerate.size() == 0) { break; }
+
             auto offset = offsets[oi];
             auto block_ptr = to_regenerate.back();
             block_ptr->regenerating = true;
             to_regenerate.pop_back();
 
-            generator_pool.run([this, oi, pidx, offset, block_ptr](){
+            generator_pool.run(
+            // generation task
+            [this, oi, pidx, offset, block_ptr](){
                 // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
                 auto pipo = pidx + offsets[oi].template cast<int>();
 
@@ -124,8 +131,17 @@ struct terrain_volume
                 block_ptr->bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
                 block_ptr->index = pipo;
 
-                block_ptr->mesh.from_sdf_r(sdf, generator, block_ptr->bounding_box, depth);
+                block_ptr->mesh.from_sdf_r(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box, depth);
                 block_ptr->regenerating = false;
+            },
+            // on finish
+            [this, block_ptr](){
+                block_ptr->mesh.set_vertices(block_ptr->vertices);
+                block_ptr->mesh.set_indices(block_ptr->indices);
+
+                char buf[256];
+                snprintf(buf, sizeof(buf), "%lu vertices - block %s\n", block_ptr->vertices.size(), block_ptr->index.to_string().c_str());
+                write(1, buf, strlen(buf));
             });
         }
     }
@@ -144,7 +160,7 @@ struct terrain_volume
 
             chain.template draw<GL_TRIANGLES>();
 
-//            g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
+           g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
         }
     }
 };

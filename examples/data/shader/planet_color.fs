@@ -39,5 +39,7 @@ void main (void)
     // vec4 wall_color = texture(u_wall, uvw.xy * 0.1) * texture(u_wall, uvw.xz * 0.1);
 
     color = mix(wall_color, ground_color, w); //vec4(v_normal * 0.5 + 0.5, 1.0);
+
+    color.rgb *= (dot(v_normal, vec3(0, 1, 0)) + 1) * 0.5;
     // color.xyz = vec3(uvw.xz, 0);
 }
