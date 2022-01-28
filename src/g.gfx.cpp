@@ -30,7 +30,7 @@ float g::gfx::aspect()
 	return width / (float)height;
 }
 
-float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
+float g::gfx::noise::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 {
 	auto ent_data = entropy.data();
 	auto ent_size = entropy.size();
@@ -147,6 +147,58 @@ float g::gfx::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 	return ya0 * (1 - w[0]) + yb0 * w[0];
 }
 
+float g::gfx::noise::value(const vec<3>& p, const std::vector<int8_t>& entropy)
+{
+	auto ent_data = entropy.data();
+	auto ent_size = entropy.size();
+
+	const vec<3> bounds[2] = {
+		p.floor(),
+		p.floor() + vec<3>{1, 1, 1}
+	};
+
+	constexpr auto cn = 8;//1 << 3;
+
+	float s[cn] = {};
+	for (unsigned ci = 0; ci < cn; ci++)
+	{
+		vec<3> corner;
+
+		// construct a corner based on the 
+		// for (unsigned i = 0; i < 3; i++)
+		// {
+		// 	bool bit = (ci >> i) & 0x1;
+		// 	corner[2 - i] = bit * bounds[1][2 - i] + (1 - bit) * bounds[0][2 - i];
+		// }
+
+		float bits[3] = {
+			static_cast<float>((ci >> 0) & 0x1),
+			static_cast<float>((ci >> 1) & 0x1),
+			static_cast<float>((ci >> 2) & 0x1),
+		};
+		corner.v[2] = bits[0] * bounds[1].v[2] + (1 - bits[0]) * bounds[0].v[2];
+		corner.v[1] = bits[1] * bounds[1].v[1] + (1 - bits[1]) * bounds[0].v[1];
+		corner.v[0] = bits[2] * bounds[1].v[0] + (1 - bits[2]) * bounds[0].v[0];
+
+		auto idx = corner.cast<int>();
+		s[ci] = static_cast<float>(entropy[(idx[1] * 1024 + idx[0]) % entropy.size()]) / 256.f;
+
+		//sum += dots[ci];
+	}
+
+	auto w = p - bounds[0];
+	auto za0 = s[0] * (1 - w[2]) + s[1] * w[2];
+	auto za1 = s[2] * (1 - w[2]) + s[3] * w[2];
+
+	auto ya0 = za0 * (1 - w[1]) + za1 * w[1];
+
+	auto zb0 = s[4] * (1 - w[2]) + s[5] * w[2];
+	auto zb1 = s[6] * (1 - w[2]) + s[7] * w[2];
+
+	auto yb0 = zb0 * (1 - w[1]) + zb1 * w[1];
+
+	return ya0 * (1 - w[0]) + yb0 * w[0];
+}
 
 void texture::release_bitmap()
 {

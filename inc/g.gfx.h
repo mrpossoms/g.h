@@ -80,8 +80,14 @@ size_t height();
 
 float aspect();
 
+namespace noise
+{
 
 float perlin(const vec<3>& p, const std::vector<int8_t>& entropy);
+
+float value(const vec<3>& p, const std::vector<int8_t>& entropy);
+
+} // namespace noise
 
 struct texture
 {
@@ -430,6 +436,31 @@ namespace vertex
 			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)0);
 			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)p_size);
 			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)(p_size + uv_size));
+		}
+	};
+
+	struct pos_norm_tan
+	{
+		vec<3> position;
+		vec<3> normal;
+		vec<3> tangent;
+
+		static void attributes(GLuint prog)
+		{
+			auto pos_loc = glGetAttribLocation(prog, "a_position");
+			auto norm_loc = glGetAttribLocation(prog, "a_normal");
+			auto tan_loc = glGetAttribLocation(prog, "a_tangent");
+
+			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
+			if (tan_loc > -1) glEnableVertexAttribArray(tan_loc);
+
+			auto p_size = sizeof(position);
+			auto norm_size = sizeof(normal);
+
+			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)0);
+			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)p_size);
+			if (tan_loc > -1) glVertexAttribPointer(tan_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)(p_size + norm_size));
 		}
 	};
 

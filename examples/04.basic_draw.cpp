@@ -56,7 +56,8 @@ struct my_core : public g::core
                 v.push_back(distribution(generator));
 		}
 
-		auto noise = g::gfx::perlin({ 0.5, 0.5, 0 }, v);
+		//auto noise = g::gfx::noise::perlin({ 0.5, 0.5, 0 }, v);
+		auto noise = g::gfx::noise::value({ 0.5, 0.5, 0 }, v);
 
 		float pmin = 100, pmax = -100;
 
@@ -66,7 +67,7 @@ struct my_core : public g::core
 		.components(4)
 		.fill([&](int x, int y, int z, unsigned char* pixel) {
 			vec<3> p = { x / 8.f, y / 8.f, 0 };
-			auto noise = g::gfx::perlin(p, v);
+			auto noise = g::gfx::noise::value(p, v);
 			pmin = std::min<float>(noise, pmin);
 			pmax = std::max<float>(noise, pmax);
 			auto n = std::max<float>(std::min<float>(noise, 1), -1);

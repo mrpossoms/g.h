@@ -43,14 +43,19 @@ struct terrain_volume
 
     g::game::sdf sdf;
     std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
-    float scale = 100;
-    unsigned depth = 4;
+    float scale = 200;
+    unsigned depth = 5;
+    unsigned kernel = 2;
     std::vector<terrain_block*> to_regenerate;
     g::proc::thread_pool<10> generator_pool;
 
     terrain_volume() = default;
 
-    terrain_volume(const g::game::sdf& sdf, std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator, const std::vector<vec<3>>& offset_config) :
+    terrain_volume(
+        const g::game::sdf& sdf,
+        std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator,
+        const std::vector<vec<3>>& offset_config) :
+        
         offsets(offset_config)
     {
         this->sdf = sdf;
@@ -107,9 +112,6 @@ struct terrain_volume
 
             if (needs_regen) { to_regenerate.push_back(&block); }
         }
-
-        
-        // assert(to_regenerate.size() == unvisited.size());
 
         // remaining 'unvisited' offset positions need to be regenerated
         for (auto oi : unvisited)
@@ -180,16 +182,16 @@ struct my_core : public g::core
     g::gfx::shader basic_shader;
     g::asset::store assets;
     g::game::camera_perspective cam;
-    // g::gfx::mesh<g::gfx::vertex::pos_uv_norm> terrain;
+    // g::gfx::mesh<g::gfx::vertex::pos_norm_tan> terrain;
     std::vector<int8_t> v[3];
 
-    terrain_volume<g::gfx::vertex::pos_uv_norm>* terrain;
+    terrain_volume<g::gfx::vertex::pos_norm_tan>* terrain;
 
     virtual bool initialize()
     {
         std::cout << "initialize your game state here.\n";
 
-        // terrain = g::gfx::mesh_factory{}.empty_mesh<g::gfx::vertex::pos_uv_norm>();
+        // terrain = g::gfx::mesh_factory{}.empty_mesh<g::gfx::vertex::pos_norm_tan>();
 
         srand(time(NULL));
 
@@ -207,28 +209,28 @@ struct my_core : public g::core
         auto sdf = [&](const vec<3>& p) -> float {
             auto r = sqrtf(p.dot(p));
             auto base = r - 500.f;
-            //d += g::gfx::perlin(p * 9, v) * 0.01;
-            // d += g::gfx::perlin(p * 11, v) * 0.01;
-            // d += g::gfx::perlin(p * 3, v) * 0.1;
+            //d += g::gfx::noise::perlin(p * 9, v) * 0.01;
+            // d += g::gfx::noise::perlin(p * 11, v) * 0.01;
+            // d += g::gfx::noise::perlin(p * 3, v) * 0.1;
 
             // if (base <= 0) return base;
 
             // auto d = p[1] - 200;
-            // d += g::gfx::perlin(p*4.03, v[0]) * 0.125;
-            // d += g::gfx::perlin(p*1.96, v[1]) * 0.25;
+            // d += g::gfx::noise::perlin(p*4.03, v[0]) * 0.125;
+            // d += g::gfx::noise::perlin(p*1.96, v[1]) * 0.25;
 
             auto d = base;
-            d += g::gfx::perlin(p*0.065, v[0]) * 10;
-            d += g::gfx::perlin(p*0.0334, v[1]) * 20;
-            d += g::gfx::perlin(p*0.0123, v[2]) * 40;
+            // d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
+            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0334, v[1]) * 20);
+            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0123, v[2]) * 40);
             // d = std::max<float>(d, -1);
 
             return d;
         };
 
-        auto generator = [](const g::game::sdf& sdf, const vec<3>& pos) -> g::gfx::vertex::pos_uv_norm
+        auto generator = [](const g::game::sdf& sdf, const vec<3>& pos) -> g::gfx::vertex::pos_norm_tan
         {
-            g::gfx::vertex::pos_uv_norm v;
+            g::gfx::vertex::pos_norm_tan v;
 
             v.position = pos;
 
@@ -249,13 +251,22 @@ struct my_core : public g::core
             }
 
             v.normal = grad.unit();
+
+            if (fabs(v.normal.dot({0, 1, 0})) > 0.999f)
+            {
+                v.tangent = vec<3>::cross(v.normal, {1, 0, 0});
+            }
+            else
+            {
+                v.tangent = vec<3>::cross(v.normal, {0, 1, 0});   
+            }
         
             return v;
         };
 
         // std::vector<vec<3>> offsets = {{0, 0, 0}};
         std::vector<vec<3>> offsets;
-        auto k = 2;
+        auto k = 1;
         for (float x = -k; x <= k; x++)
         for (float y = -k; y <= k; y++)
         for (float z = -k; z <= k; z++)
@@ -263,7 +274,7 @@ struct my_core : public g::core
             offsets.push_back({x, y, z});
         }
 
-        terrain = new terrain_volume<g::gfx::vertex::pos_uv_norm>(sdf, generator, offsets);
+        terrain = new terrain_volume<g::gfx::vertex::pos_norm_tan>(sdf, generator, offsets);
 
         // vec<3> corners[2] = { {-10, -2, -10}, {10, 10, 10} };
 
@@ -285,7 +296,7 @@ struct my_core : public g::core
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         auto speed = 4.0f;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 4;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
@@ -303,9 +314,14 @@ struct my_core : public g::core
 
         auto& wall = assets.tex("rock_wall.repeating.png");
         auto& ground = assets.tex("sand.repeating.png");
+        auto& wall_normal = assets.tex("rock_wall_normal.repeating.png");
+        auto& ground_normal = assets.tex("sand_normal.repeating.png");
         terrain->draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
             usage["u_wall"].texture(wall)
-                 ["u_ground"].texture(ground);
+                 ["u_ground"].texture(ground)
+                 ["u_wall_normal"].texture(wall_normal)
+                 ["u_ground_normal"].texture(ground_normal)
+                 ["u_time"].flt(t += dt * 0.01f);
         });
 
         // terrain.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
@@ -319,18 +335,9 @@ struct my_core : public g::core
 
 my_core core;
 
-// void main_loop() { core.tick(); }
-
 int main (int argc, const char* argv[])
 {
-
-// #ifdef __EMSCRIPTEN__
-//  core.running = false;
-//  core.start({ "04.basic_draw", true, 512, 512 });
-//  emscripten_set_main_loop(main_loop, 144, 1);
-// #else
     core.start({ "046.heightmap", true, 512, 512 });
-// #endif
 
     return 0;
 }
