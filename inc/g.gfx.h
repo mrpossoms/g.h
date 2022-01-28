@@ -4,10 +4,12 @@
 #define XMTYPE float
 #include <xmath.h>
 #include <g.game.h>
+#include <g.proc.h>
 
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <set>
 #include <algorithm>
 
 #include <string.h>
@@ -1059,6 +1061,162 @@ namespace debug
 		void box(const vec<3> corners[2]);
 	};
 }
+
+
+
+template<typename V>
+struct density_volume
+{
+    struct block
+    {
+        g::gfx::mesh<V> mesh;
+        std::vector<V> vertices;
+        std::vector<uint32_t> indices;
+
+        vec<3, int> index;
+        vec<3> bounding_box[2];
+        uint8_t vertex_case = 0;
+        bool regenerating = false;
+
+        inline bool contains(const vec<3>& pos) const
+        {
+            return pos[0] > bounding_box[0][0] && pos[0] <= bounding_box[1][0] &&
+                   pos[1] > bounding_box[0][1] && pos[1] <= bounding_box[1][1] &&
+                   pos[2] > bounding_box[0][2] && pos[2] <= bounding_box[1][2];
+        }
+
+        inline bool contains(const vec<3, int> idx) const
+        {
+            return index == idx;
+        }
+    };
+
+    std::vector<density_volume::block> blocks;
+    std::vector<vec<3>> offsets;
+
+    g::game::sdf sdf;
+    std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
+    float scale = 200;
+    unsigned depth = 5;
+    unsigned kernel = 2;
+    std::vector<density_volume::block*> to_regenerate;
+    g::proc::thread_pool<10> generator_pool;
+
+    density_volume() = default;
+
+    density_volume(
+        const g::game::sdf& sdf,
+        std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator,
+        const std::vector<vec<3>>& offset_config) :
+        
+        offsets(offset_config)
+    {
+        this->sdf = sdf;
+        this->generator = generator;
+
+        for (auto offset : offsets)
+        {
+            density_volume::block block;
+            block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
+
+            auto pipo = offset.template cast<int>();
+
+            block.bounding_box[0] = (pipo * scale).template cast<float>();
+            block.bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
+
+            block.index = (offset * scale).template cast<int>();
+
+            time_t start = time(NULL);
+            block.mesh.from_sdf_r(sdf, generator, block.bounding_box, depth);
+            time_t end = time(NULL);
+
+            blocks.push_back(block);
+        }
+    }
+
+    void update(const g::game::camera& cam)
+    {
+        auto pos = cam.position;
+        std::set<unsigned> unvisited;
+
+        for (unsigned i = 0; i < offsets.size(); i++) { unvisited.insert(i); }
+
+        auto pidx = ((pos / scale) - 0.5f).template cast<int>();
+
+        generator_pool.update();
+
+        for (auto& block : blocks)
+        {
+            if (block.regenerating) { continue; }
+
+            bool needs_regen = true;
+
+            for (auto oi : unvisited)
+            {
+                auto pipo = pidx + offsets[oi].template cast<int>();
+
+                if (block.contains(pipo))
+                {
+                    unvisited.erase(oi);
+                    needs_regen = false;
+                    break;
+                }
+            }
+
+            if (needs_regen) { to_regenerate.push_back(&block); }
+        }
+
+        // remaining 'unvisited' offset positions need to be regenerated
+        for (auto oi : unvisited)
+        {
+            if (to_regenerate.size() == 0) { break; }
+
+            auto offset = offsets[oi];
+            auto block_ptr = to_regenerate.back();
+            block_ptr->regenerating = true;
+            to_regenerate.pop_back();
+
+            generator_pool.run(
+            // generation task
+            [this, oi, pidx, offset, block_ptr](){
+                // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
+                auto pipo = pidx + offsets[oi].template cast<int>();
+
+                block_ptr->bounding_box[0] = (pipo * scale).template cast<float>();
+                block_ptr->bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
+                block_ptr->index = pipo;
+
+                block_ptr->mesh.from_sdf_r(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box, depth);
+                block_ptr->regenerating = false;
+            },
+            // on finish
+            [this, block_ptr](){
+                block_ptr->mesh.set_vertices(block_ptr->vertices);
+                block_ptr->mesh.set_indices(block_ptr->indices);
+
+                char buf[256];
+                snprintf(buf, sizeof(buf), "%lu vertices - block %s\n", block_ptr->vertices.size(), block_ptr->index.to_string().c_str());
+                write(1, buf, strlen(buf));
+            });
+        }
+    }
+
+    void draw(g::game::camera& cam, g::gfx::shader& s, std::function<void(g::gfx::shader::usage&)> draw_config=nullptr)
+    {
+        for (auto& block : blocks)
+        {
+            auto chain = block.mesh.using_shader(s)
+				                   .set_camera(cam);
+
+            if (draw_config) { draw_config(chain); }
+
+            chain.template draw<GL_TRIANGLES>();
+
+           g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
+        }
+    }
+};
+
 
 
 namespace primative

@@ -11,162 +11,6 @@
 
 using mat4 = xmath::mat<4,4>;
 
-template<typename V>
-struct terrain_volume
-{
-    struct terrain_block
-    {
-        g::gfx::mesh<V> mesh;
-        std::vector<V> vertices;
-        std::vector<uint32_t> indices;
-
-        vec<3, int> index;
-        vec<3> bounding_box[2];
-        uint8_t vertex_case = 0;
-        bool regenerating = false;
-
-        inline bool contains(const vec<3>& pos) const
-        {
-            return pos[0] > bounding_box[0][0] && pos[0] <= bounding_box[1][0] &&
-                   pos[1] > bounding_box[0][1] && pos[1] <= bounding_box[1][1] &&
-                   pos[2] > bounding_box[0][2] && pos[2] <= bounding_box[1][2];
-        }
-
-        inline bool contains(const vec<3, int> idx) const
-        {
-            return index == idx;
-        }
-    };
-
-    std::vector<terrain_block> blocks;
-    std::vector<vec<3>> offsets;
-
-    g::game::sdf sdf;
-    std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
-    float scale = 200;
-    unsigned depth = 5;
-    unsigned kernel = 2;
-    std::vector<terrain_block*> to_regenerate;
-    g::proc::thread_pool<10> generator_pool;
-
-    terrain_volume() = default;
-
-    terrain_volume(
-        const g::game::sdf& sdf,
-        std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator,
-        const std::vector<vec<3>>& offset_config) :
-        
-        offsets(offset_config)
-    {
-        this->sdf = sdf;
-        this->generator = generator;
-
-        for (auto offset : offsets)
-        {
-            terrain_block block;
-            block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
-
-            auto pipo = offset.template cast<int>();
-
-            block.bounding_box[0] = (pipo * scale).template cast<float>();
-            block.bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
-
-            block.index = (offset * scale).template cast<int>();
-
-            time_t start = time(NULL);
-            block.mesh.from_sdf_r(sdf, generator, block.bounding_box, depth);
-            time_t end = time(NULL);
-
-            blocks.push_back(block);
-        }
-    }
-
-    void update(const g::game::camera& cam)
-    {
-        auto pos = cam.position;
-        std::set<unsigned> unvisited;
-
-        for (unsigned i = 0; i < offsets.size(); i++) { unvisited.insert(i); }
-
-        auto pidx = ((pos / scale) - 0.5f).template cast<int>();
-
-        generator_pool.update();
-
-        for (auto& block : blocks)
-        {
-            if (block.regenerating) { continue; }
-
-            bool needs_regen = true;
-
-            for (auto oi : unvisited)
-            {
-                auto pipo = pidx + offsets[oi].template cast<int>();
-
-                if (block.contains(pipo))
-                {
-                    unvisited.erase(oi);
-                    needs_regen = false;
-                    break;
-                }
-            }
-
-            if (needs_regen) { to_regenerate.push_back(&block); }
-        }
-
-        // remaining 'unvisited' offset positions need to be regenerated
-        for (auto oi : unvisited)
-        {
-            if (to_regenerate.size() == 0) { break; }
-
-            auto offset = offsets[oi];
-            auto block_ptr = to_regenerate.back();
-            block_ptr->regenerating = true;
-            to_regenerate.pop_back();
-
-            generator_pool.run(
-            // generation task
-            [this, oi, pidx, offset, block_ptr](){
-                // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
-                auto pipo = pidx + offsets[oi].template cast<int>();
-
-                block_ptr->bounding_box[0] = (pipo * scale).template cast<float>();
-                block_ptr->bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
-                block_ptr->index = pipo;
-
-                block_ptr->mesh.from_sdf_r(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box, depth);
-                block_ptr->regenerating = false;
-            },
-            // on finish
-            [this, block_ptr](){
-                block_ptr->mesh.set_vertices(block_ptr->vertices);
-                block_ptr->mesh.set_indices(block_ptr->indices);
-
-                char buf[256];
-                snprintf(buf, sizeof(buf), "%lu vertices - block %s\n", block_ptr->vertices.size(), block_ptr->index.to_string().c_str());
-                write(1, buf, strlen(buf));
-            });
-        }
-    }
-
-    void draw(g::game::camera& cam, g::gfx::shader& s, std::function<void(g::gfx::shader::usage&)> draw_config=nullptr)
-    {
-        auto model = mat4::I();
-
-        for (auto& block : blocks)
-        {
-            auto chain = block.mesh.using_shader(s)
-                ["u_model"].mat4(model)
-                .set_camera(cam);
-
-            if (draw_config) { draw_config(chain); }
-
-            chain.template draw<GL_TRIANGLES>();
-
-           g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
-        }
-    }
-};
-
 float saturate(float x)
 {
     return std::min<float>(1.f, std::max<float>(0, x));
@@ -185,7 +29,9 @@ struct my_core : public g::core
     // g::gfx::mesh<g::gfx::vertex::pos_norm_tan> terrain;
     std::vector<int8_t> v[3];
 
-    terrain_volume<g::gfx::vertex::pos_norm_tan>* terrain;
+    g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>* terrain;
+
+    g::game::sdf terrain_sdf;
 
     virtual bool initialize()
     {
@@ -206,7 +52,7 @@ struct my_core : public g::core
             }
         }
 
-        auto sdf = [&](const vec<3>& p) -> float {
+        terrain_sdf = [&](const vec<3>& p) -> float {
             auto r = sqrtf(p.dot(p));
             auto base = r - 500.f;
             //d += g::gfx::noise::perlin(p * 9, v) * 0.01;
@@ -274,17 +120,10 @@ struct my_core : public g::core
             offsets.push_back({x, y, z});
         }
 
-        terrain = new terrain_volume<g::gfx::vertex::pos_norm_tan>(sdf, generator, offsets);
+        terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
 
-        // vec<3> corners[2] = { {-10, -2, -10}, {10, 10, 10} };
 
-        // time_t start = time(NULL);
-        // terrain.from_sdf(sdf, generator, corners, 16);
-        // time_t end = time(NULL);
-
-        // std::cerr << "processing time: " << end - start << std::endl;
-
-        cam.position = {0, 501, 0};
+        cam.position = {0, 502, 0};
         //glDisable(GL_CULL_FACE);
 
         return true;
@@ -296,11 +135,12 @@ struct my_core : public g::core
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         auto speed = 4.0f;
+        vec<3> velocity = {};
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) velocity += cam.forward() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) velocity += cam.forward() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) velocity += cam.left() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) velocity += cam.left() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
@@ -308,26 +148,43 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
-        auto model = mat4::I();
+        auto p1 = cam.position + velocity * dt;
+        auto p0_d = terrain_sdf(cam.position);
+        auto p1_d = terrain_sdf(p1);
+
+        if (p1_d <= 0)
+        {
+            auto n = g::game::normal_from_sdf(terrain_sdf, p1);
+            auto w = p0_d / p0_d - p1_d;
+
+            velocity = velocity - (n * (velocity.dot(n) / n.dot(n)));
+
+            cam.position = p1 * (1-w) + cam.position * w;
+            cam.position += velocity * dt;   
+        }
+        else
+        {
+            cam.position = p1; 
+        }
 
         terrain->update(cam);
 
+        // draw terrain
         auto& wall = assets.tex("rock_wall.repeating.png");
         auto& ground = assets.tex("sand.repeating.png");
         auto& wall_normal = assets.tex("rock_wall_normal.repeating.png");
         auto& ground_normal = assets.tex("sand_normal.repeating.png");
+        auto model = mat4::I();
         terrain->draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
+            auto model = mat4::I();
+
             usage["u_wall"].texture(wall)
                  ["u_ground"].texture(ground)
                  ["u_wall_normal"].texture(wall_normal)
                  ["u_ground_normal"].texture(ground_normal)
+                 ["u_model"].mat4(model)
                  ["u_time"].flt(t += dt * 0.01f);
         });
-
-        // terrain.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
-        //     ["u_model"].mat4(model)
-        //     .set_camera(cam)
-        //     .draw<GL_TRIANGLES>();
     }
 
     float t;

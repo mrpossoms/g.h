@@ -56,6 +56,26 @@ struct pose
  */
 using sdf = std::function<float (const vec<3>&)>;
 
+inline vec<3> normal_from_sdf(sdf f, const vec<3>& p, float step=1)
+{
+    vec<3> grad = {};
+    vec<3> deltas[3][2] = {
+        {{ step, 0, 0 }, { -step, 0, 0 }},
+        {{ 0, step, 0 }, { 0, -step, 0 }},
+        {{ 0, 0, step }, { 0,  0, -step }},
+    };
+
+    for (int j = 3; j--;)
+    {
+        vec<3> samples[2];
+        samples[0] = p + deltas[j][0];
+        samples[1] = p + deltas[j][1];
+        grad[j] = f(samples[0]) - f(samples[1]);
+    }
+
+    return grad.unit();
+}
+
 struct camera : public pose
 {
 	quat<float>& d_pitch(float delta)
