@@ -67,8 +67,8 @@ struct my_core : public g::core
 
             auto d = base;
             // d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
-            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0334, v[1]) * 20);
-            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0123, v[2]) * 40);
+            // d += std::min<float>(0, g::gfx::noise::perlin(p*0.0334, v[1]) * 20);
+            // d += std::min<float>(0, g::gfx::noise::perlin(p*0.0123, v[2]) * 40);
             // d = std::max<float>(d, -1);
 
             return d;
@@ -146,8 +146,8 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.left() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.d_yaw(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.yaw += -dt;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.yaw += dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
@@ -176,13 +176,24 @@ struct my_core : public g::core
                 cam.position = (p1 * (1 - w) + (cam.position) * w);
             }
 
-            cam.position += cam.velocity * dt;
+            // cam.position += cam.velocity * dt;
         }
         else
         {
             cam.position = p1;
         }
 
+        cam.up = -down;
+        if (fabs(cam.up.dot({0, 1, 0})) > 0.999f)
+        {
+            cam.right = vec<3>::cross(cam.up, {1, 0, 0});
+        }
+        else
+        {
+            cam.right = vec<3>::cross(cam.up, {0, 1, 0});
+        }
+
+        cam.update(dt, 0);
         terrain->update(cam);
 
         // draw terrain

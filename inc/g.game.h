@@ -170,7 +170,7 @@ struct camera_orthographic : public camera
 	}
 };
 
-struct fps_camera : public camera_perspective
+struct fps_camera final : public camera_perspective, updateable
 {
 	//~fps_camera() = default;
 
@@ -178,10 +178,23 @@ struct fps_camera : public camera_perspective
 	//vec<3> velocity(const vec<3>& v) override { return vel = v; }
 
 	vec<3> velocity = {};
+	vec<3> right = { 1, 0, 0 };
+	vec<3> up = { 0, 1, 0 };
+
 	float yaw = 0;
 	float pitch = 0;
+	const float max_pitch = M_PI / 2.f;
+	const float min_pitch = -M_PI / 2.f;
 
-	float max_pitch = M_PI / 2.f, min_pitch = -M_PI / 2.f;
+	void update(float dt, float t) override
+	{
+		pitch = std::min<float>(max_pitch, std::max<float>(min_pitch, pitch));
+
+		orientation = quat<>::from_axis_angle(up, yaw) * quat<>::from_axis_angle(right, pitch);
+		// look_at(subject, up);
+
+		position += velocity * dt;
+	}
 private:
 	//vec<3> vel = {};
 };
