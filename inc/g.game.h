@@ -170,6 +170,22 @@ struct camera_orthographic : public camera
 	}
 };
 
+struct fps_camera : public camera_perspective
+{
+	//~fps_camera() = default;
+
+	//vec<3> velocity() override { return vel; }
+	//vec<3> velocity(const vec<3>& v) override { return vel = v; }
+
+	vec<3> velocity = {};
+	float yaw = 0;
+	float pitch = 0;
+
+	float max_pitch = M_PI / 2.f, min_pitch = -M_PI / 2.f;
+private:
+	//vec<3> vel = {};
+};
+
 template<typename DAT>
 struct voxels
 {

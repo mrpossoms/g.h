@@ -3,6 +3,7 @@
 #include <thread>
 #include <deque>
 #include <mutex>
+#include <condition_variable>
 #include <functional>
 
 namespace g
@@ -23,7 +24,11 @@ struct thread_pool
 	{
 		bool running;
 		std::thread thread;
-		std::mutex trigger;
+		//std::mutex trigger;
+		std::mutex m;
+		std::condition_variable cv;
+		bool ready=false;
+
 		task current_task;
 	};
 
@@ -32,15 +37,22 @@ struct thread_pool
 		for (unsigned i = 0; i < POOL_SIZE; i++)
 		{
 			// prevent the worker from looping without a task
-			workers[i].trigger.lock();
+			//workers[i].trigger.lock();
 			workers[i].running = true;
+
+			{
+				std::lock_guard<std::mutex> lk(workers[i].m);
+				workers[i].ready = false;
+			}
 
 			// start the worker thread
 			workers[i].thread = std::thread([this, i]() {
 				auto& me = workers[i];
 				while(me.running)
 				{
-					me.trigger.lock();
+					//me.trigger.lock();
+					std::unique_lock<std::mutex> lk(me.m);
+					me.cv.wait(lk, [&] { return me.ready; });
 
 					// execute task
 					if (me.current_task.work)
@@ -65,15 +77,19 @@ struct thread_pool
 							me.current_task = pending_tasks.back();
 							pending_tasks.pop_back();
 
-							me.trigger.unlock();
+							me.cv.notify_one();
 						}
 						else
 						{   // no more work to do.
 							// reinsert self into idle worker queue
 							std::scoped_lock lock(idle_worker_mutex);
 							idle_workers.push_front(i);
+
+							me.ready = false;
 						}
 					}
+
+					lk.unlock();
 				}
 			});
 
@@ -89,7 +105,13 @@ struct thread_pool
 		for (unsigned i = 0; i < POOL_SIZE; i++)
 		{
 			workers[i].running = false;
-			workers[i].trigger.unlock();
+			//workers[i].trigger.unlock();
+
+			{
+				std::lock_guard<std::mutex> lk(workers[i].m);
+				workers[i].ready = true;
+			}
+			workers[i].cv.notify_one();
 
 			if (workers[i].thread.joinable()) { workers[i].thread.join(); }
 		}
@@ -105,7 +127,13 @@ struct thread_pool
 				idle_workers.pop_back();
 
 				workers[i].current_task = { task, on_finish };
-				workers[i].trigger.unlock();
+				//workers[i].trigger.unlock();
+
+				{
+					std::lock_guard<std::mutex> lk(workers[i].m);
+					workers[i].ready = true;
+				}
+				workers[i].cv.notify_one();
 
 				return;
 			}

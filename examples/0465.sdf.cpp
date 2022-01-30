@@ -25,7 +25,7 @@ struct my_core : public g::core
 {
     g::gfx::shader basic_shader;
     g::asset::store assets;
-    g::game::camera_perspective cam;
+    g::game::fps_camera cam;
     // g::gfx::mesh<g::gfx::vertex::pos_norm_tan> terrain;
     std::vector<int8_t> v[3];
 
@@ -123,7 +123,7 @@ struct my_core : public g::core
         terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
 
 
-        cam.position = {0, 502, 0};
+        cam.position = {0, 525, 0};
         //glDisable(GL_CULL_FACE);
 
         return true;
@@ -135,12 +135,15 @@ struct my_core : public g::core
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         auto speed = 4.0f;
-        vec<3> velocity = {};
+
+        vec<3> down = -cam.position.unit();
+        vec<3> feet = down * 2;
+        cam.velocity += down * 1;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) velocity += cam.forward() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) velocity += cam.forward() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) velocity += cam.left() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) velocity += cam.left() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.forward() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.forward() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.left() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.left() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
@@ -148,23 +151,36 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
-        auto p1 = cam.position + velocity * dt;
+        
+        auto p1 = cam.position + cam.velocity * dt;
         auto p0_d = terrain_sdf(cam.position);
         auto p1_d = terrain_sdf(p1);
+
+        auto drag = cam.velocity * -0.01;
+        auto w_bias = 0;
+        cam.velocity += drag;
 
         if (p1_d <= 0)
         {
             auto n = g::game::normal_from_sdf(terrain_sdf, p1);
             auto w = p0_d / p0_d - p1_d;
 
-            velocity = velocity - (n * (velocity.dot(n) / n.dot(n)));
+            cam.velocity = cam.velocity - (n * (cam.velocity.dot(n) / n.dot(n)));
+            auto friction = cam.velocity * -0.3;
+            cam.velocity += friction;
 
-            cam.position = p1 * (1-w) + cam.position * w;
-            cam.position += velocity * dt;   
+            if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
+
+            for (; terrain_sdf(cam.position + cam.velocity * dt) <= 0; w += 0.1)
+            {
+                cam.position = (p1 * (1 - w) + (cam.position) * w);
+            }
+
+            cam.position += cam.velocity * dt;
         }
         else
         {
-            cam.position = p1; 
+            cam.position = p1;
         }
 
         terrain->update(cam);
