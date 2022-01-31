@@ -6,7 +6,7 @@
 
 #include <unordered_set>
 #include <vector>
-
+#include <iostream>
 
 #define G_TERM_GREEN "\033[0;32m"
 #define G_TERM_RED "\033[1;31m"
@@ -96,11 +96,11 @@ struct camera : public pose
 		return orientation *= dq;
 	}
 
-	vec<3> forward() const { return orientation.rotate({0, 0, -1}); }
+	virtual vec<3> forward() const { return orientation.rotate({0, 0, -1}); }
 
-	vec<3> left() const { return orientation.rotate({-1, 0, 0}); }
+	virtual vec<3> left() const { return orientation.rotate({-1, 0, 0}); }
 
-	vec<3> up() const { return orientation.rotate({0, 1, 0}); }
+	virtual vec<3> up() const { return orientation.rotate({0, 1, 0}); }
 
 	void look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
 	{
@@ -133,7 +133,10 @@ struct camera : public pose
 
 	virtual mat<4, 4> view() const
 	{
-		if (_view[3][3] != 0) { return _view; }
+		if (_view[3][3] != 0)
+		{ 
+			return _view; 
+		}
 		return mat<4, 4>::translation(position * -1) * orientation.to_matrix();
 	}
 
@@ -178,19 +181,62 @@ struct fps_camera final : public camera_perspective, updateable
 	//vec<3> velocity(const vec<3>& v) override { return vel = v; }
 
 	vec<3> velocity = {};
-	vec<3> right = { 1, 0, 0 };
-	vec<3> up = { 0, 1, 0 };
+	//vec<3> right = { 1, 0, 0 };
+	//vec<3> up = { 0, 1, 0 };
+	//vec<3> forward;
+
+	mat<3, 3> basis = {
+		{ 1, 0, 0 },
+		{ 0, 1, 0 },
+		{ 0, 0, 1 },
+	};
+
+	quat<> q;
 
 	float yaw = 0;
 	float pitch = 0;
 	const float max_pitch = M_PI / 2.f;
 	const float min_pitch = -M_PI / 2.f;
 
+	vec<3> forward() const override 
+	{
+		//return basis[2];
+		return q.rotate({ 0, 0, -1 });
+	}
+
+	vec<3> left() const override
+	{
+		//return basis[0];
+		return q.rotate({ 1, 0, 0 });
+	}
+
+	vec<3> up() const override
+	{
+		//return basis[1];
+		return q.rotate({ 0, 1, 0 });
+	}
+
+
 	void update(float dt, float t) override
 	{
 		pitch = std::min<float>(max_pitch, std::max<float>(min_pitch, pitch));
 
-		orientation = quat<>::from_axis_angle(up, yaw) * quat<>::from_axis_angle(right, pitch);
+		//forward = vec<3>::cross(up, right);
+
+		//orientation = quat<>::from_matrix({
+		//	{ right[0], right[1], right[2], 0 },
+		//	{ up[0], up[1], up[2], 0 },
+		//	{ forward[0], forward[1], forward[2], 0 },
+		//	{0, 0, 0, 1}
+		//}).inverse();
+
+		//orientation = quat<>::from_axis_angle(left(), pitch) * quat<>::from_axis_angle(up(), yaw);
+		//basis[2] = vec<3>::cross(up(), left());
+		//basis[0] = vec<3>::cross(up(), forward());
+
+
+		orientation = q;//quat<>::from_matrix(basis);
+		
 		// look_at(subject, up);
 
 		position += velocity * dt;

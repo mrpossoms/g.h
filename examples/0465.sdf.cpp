@@ -54,7 +54,7 @@ struct my_core : public g::core
 
         terrain_sdf = [&](const vec<3>& p) -> float {
             auto r = sqrtf(p.dot(p));
-            auto base = r - 500.f;
+            auto base = r - 100.f;
             //d += g::gfx::noise::perlin(p * 9, v) * 0.01;
             // d += g::gfx::noise::perlin(p * 11, v) * 0.01;
             // d += g::gfx::noise::perlin(p * 3, v) * 0.1;
@@ -123,7 +123,7 @@ struct my_core : public g::core
         terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
 
 
-        cam.position = {0, 525, 0};
+        cam.position = {0, 105, 0};
         //glDisable(GL_CULL_FACE);
 
         return true;
@@ -131,14 +131,15 @@ struct my_core : public g::core
 
     virtual void update(float dt)
     {
-        glClearColor(0, 0, 1, 1);
+        glClearColor(0.5, 0.5, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        auto speed = 4.0f;
+        auto speed = 1.0f;
 
         vec<3> down = -cam.position.unit();
         vec<3> feet = down * 2;
-        cam.velocity += down * 1;
+        cam.velocity *= 0;
+        //cam.velocity += down * 1;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.forward() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.forward() * -speed;
@@ -148,8 +149,8 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.yaw += -dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.yaw += dt;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.pitch += dt;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.pitch += -dt;
 
         
         auto p1 = cam.position + cam.velocity * dt;
@@ -183,15 +184,22 @@ struct my_core : public g::core
             cam.position = p1;
         }
 
-        cam.up = -down;
-        if (fabs(cam.up.dot({0, 1, 0})) > 0.999f)
-        {
-            cam.right = vec<3>::cross(cam.up, {1, 0, 0});
-        }
-        else
-        {
-            cam.right = vec<3>::cross(cam.up, {0, 1, 0});
-        }
+        auto up = -down;
+        auto d = up.dot({ 0, 1, 0 });
+        auto a = acos(d);
+        std::cerr << d << " " << a * (180.f / M_PI) << " " << cam.position.magnitude() << std::endl;
+        cam.q = quat<>::from_axis_angle(vec<3>::cross(up, { 0, 1, 0 }), a).inverse();
+
+        g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(cam.position, cam.forward());
+        g::gfx::debug::print(&cam).color({ 1, 0, 0, 1 }).ray(cam.position + cam.forward(), cam.left());
+        g::gfx::debug::print(&cam).color({ 0, 0, 1, 1 }).ray(cam.position + cam.forward(), up);
+
+        g::gfx::debug::print(&cam).color({ 1, 0, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 1000, 0, 0 });
+        g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 1000, 0 });
+        g::gfx::debug::print(&cam).color({ 0, 0, 1, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 0, 1000 });
+        cam.basis[1] = up;
+        //cam.basis[0] = vec<3>::cross(cam.up(), { 0, -1, 0 });
+        //cam.basis[2] = vec<3>::cross(cam.up(), cam.left());
 
         cam.update(dt, 0);
         terrain->update(cam);
@@ -202,6 +210,9 @@ struct my_core : public g::core
         auto& wall_normal = assets.tex("rock_wall_normal.repeating.png");
         auto& ground_normal = assets.tex("sand_normal.repeating.png");
         auto model = mat4::I();
+
+        cam.position += cam.up();
+
         terrain->draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
             auto model = mat4::I();
 
@@ -212,6 +223,8 @@ struct my_core : public g::core
                  ["u_model"].mat4(model)
                  ["u_time"].flt(t += dt * 0.01f);
         });
+
+        cam.position -= cam.up();
     }
 
     float t;
