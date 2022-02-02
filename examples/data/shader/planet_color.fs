@@ -58,4 +58,5 @@ void main (void)
     color = mix(wall_color, ground_color, w);
 
     color.rgb *= (dot(v_basis * textel_norm, light_dir) + 1) * 0.5;
+    // color.rgb *= dot(v_normal, light_dir);
 }

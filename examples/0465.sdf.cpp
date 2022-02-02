@@ -139,7 +139,7 @@ struct my_core : public g::core
         vec<3> down = -cam.position.unit();
         vec<3> feet = down * 2;
         cam.velocity *= 0;
-        //cam.velocity += down * 1;
+        cam.velocity += down * 1;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.forward() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.forward() * -speed;
@@ -147,6 +147,8 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.left() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.yaw += -dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.yaw += dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.pitch += dt;
@@ -185,10 +187,15 @@ struct my_core : public g::core
         }
 
         auto up = -down;
-        auto d = up.dot({ 0, 1, 0 });
+        auto d = up.dot({ 0, 1, 0 }); 
         auto a = acos(d);
-        std::cerr << d << " " << a * (180.f / M_PI) << " " << cam.position.magnitude() << std::endl;
-        cam.q = quat<>::from_axis_angle(vec<3>::cross(up, { 0, 1, 0 }), a).inverse();
+        auto axis = vec<3>::cross(up, { 0, 1, 0 });
+        if (axis.magnitude() < 0.0001) { axis = {1, 0, 0}; }
+        axis = axis.unit();
+        std::cerr << d << " " << a * (180.f / M_PI) << " " << cam.position.magnitude() << " " << axis.to_string() << std::endl;
+
+        cam.q = quat<>::from_axis_angle(axis, a).inverse();
+        cam.u = up;
 
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(cam.position, cam.forward());
         g::gfx::debug::print(&cam).color({ 1, 0, 0, 1 }).ray(cam.position + cam.forward(), cam.left());
