@@ -202,14 +202,14 @@ struct fps_camera final : public camera_perspective, updateable
 	vec<3> forward() const override 
 	{
 		//return basis[2];
-		return q.rotate({ 0, 0, -1 });
+		return (q * r).rotate({ 0, 0, -1 });
 		return f;
 	}
 
 	vec<3> left() const override
 	{
 		//return basis[0];
-		return q.rotate({ 1, 0, 0 });
+		return (q * r).rotate({ 1, 0, 0 });
 		return l;
 	}
 

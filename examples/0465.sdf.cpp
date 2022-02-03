@@ -138,13 +138,13 @@ struct my_core : public g::core
 
         vec<3> down = -cam.position.unit();
         vec<3> feet = down * 2;
-        cam.velocity *= 0;
+        // cam.velocity *= 0;
         cam.velocity += down * 1;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.forward() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.forward() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.left() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.left() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.left() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.left() * -speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
@@ -163,10 +163,12 @@ struct my_core : public g::core
         auto w_bias = 0;
         cam.velocity += drag;
 
+        assert(!std::isnan(p1.magnitude()));
+
         if (p1_d <= 0)
         {
             auto n = g::game::normal_from_sdf(terrain_sdf, p1);
-            auto w = p0_d / p0_d - p1_d;
+            auto w = p1_d / (p1_d - p0_d);
 
             cam.velocity = cam.velocity - (n * (cam.velocity.dot(n) / n.dot(n)));
             auto friction = cam.velocity * -0.3;
@@ -177,6 +179,7 @@ struct my_core : public g::core
             for (; terrain_sdf(cam.position + cam.velocity * dt) <= 0; w += 0.1)
             {
                 cam.position = (p1 * (1 - w) + (cam.position) * w);
+                assert(!std::isnan(cam.position.magnitude()));
             }
 
             // cam.position += cam.velocity * dt;
@@ -184,6 +187,7 @@ struct my_core : public g::core
         else
         {
             cam.position = p1;
+            assert(!std::isnan(cam.position.magnitude()));
         }
 
         auto up = -down;
