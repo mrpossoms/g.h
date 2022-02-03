@@ -193,23 +193,24 @@ struct fps_camera final : public camera_perspective, updateable
 	};
 
 	quat<> q, r;
+	quat<> yaw_q;
 
 	float yaw = 0;
 	float pitch = 0;
-	const float max_pitch = M_PI / 2.f;
-	const float min_pitch = -M_PI / 2.f;
+	const float max_pitch = (M_PI / 2.f) - 0.1f;
+	const float min_pitch = -(M_PI / 2.f) + 0.1f;
 
 	vec<3> forward() const override 
 	{
 		//return basis[2];
-		return (q * r).rotate({ 0, 0, -1 });
+		return (r * q).rotate({ 0, 0, -1 });
 		return f;
 	}
 
 	vec<3> left() const override
 	{
 		//return basis[0];
-		return (q * r).rotate({ 1, 0, 0 });
+		return (r * q).rotate({ 1, 0, 0 });
 		return l;
 	}
 
@@ -220,6 +221,15 @@ struct fps_camera final : public camera_perspective, updateable
 		return u;
 	}
 
+	vec<3> body_forward() const
+	{
+		return yaw_q.rotate({ 0, 0, -1 });
+	}
+
+	vec<3> body_left() const
+	{
+		return yaw_q.rotate({ 1, 0, 0 });
+	}
 
 	void update(float dt, float t) override
 	{
@@ -234,7 +244,8 @@ struct fps_camera final : public camera_perspective, updateable
 		//	{0, 0, 0, 1}
 		//}).inverse();
 
-		r = quat<>::from_axis_angle(left(), pitch) * quat<>::from_axis_angle(up(), yaw);
+		yaw_q = quat<>::from_axis_angle(up(), yaw);
+		r = quat<>::from_axis_angle(left(), pitch) * yaw_q;
 		orientation = r * q;
 		//basis[2] = vec<3>::cross(up(), left());
 		//basis[0] = vec<3>::cross(up(), forward());

@@ -54,7 +54,7 @@ struct my_core : public g::core
 
         terrain_sdf = [&](const vec<3>& p) -> float {
             auto r = sqrtf(p.dot(p));
-            auto base = r - 100.f;
+            auto base = r - 1000.f;
             //d += g::gfx::noise::perlin(p * 9, v) * 0.01;
             // d += g::gfx::noise::perlin(p * 11, v) * 0.01;
             // d += g::gfx::noise::perlin(p * 3, v) * 0.1;
@@ -66,8 +66,8 @@ struct my_core : public g::core
             // d += g::gfx::noise::perlin(p*1.96, v[1]) * 0.25;
 
             auto d = base;
-            // d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
-            // d += std::min<float>(0, g::gfx::noise::perlin(p*0.0334, v[1]) * 20);
+            d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
+            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0334, v[1]) * 20);
             // d += std::min<float>(0, g::gfx::noise::perlin(p*0.0123, v[2]) * 40);
             // d = std::max<float>(d, -1);
 
@@ -123,7 +123,7 @@ struct my_core : public g::core
         terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
 
 
-        cam.position = {0, 105, 0};
+        cam.position = {0, 1005, 0};
         //glDisable(GL_CULL_FACE);
 
         return true;
@@ -141,10 +141,10 @@ struct my_core : public g::core
         // cam.velocity *= 0;
         cam.velocity += down * 1;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.forward() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.forward() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.left() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.left() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
@@ -201,9 +201,10 @@ struct my_core : public g::core
         cam.q = quat<>::from_axis_angle(axis, a).inverse();
         cam.u = up;
 
+        glPointSize(4);
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(cam.position, cam.forward());
         g::gfx::debug::print(&cam).color({ 1, 0, 0, 1 }).ray(cam.position + cam.forward(), cam.left());
-        g::gfx::debug::print(&cam).color({ 0, 0, 1, 1 }).ray(cam.position + cam.forward(), up);
+        g::gfx::debug::print(&cam).color({ 0, 0, 1, 1 }).point(cam.position + cam.forward());
 
         g::gfx::debug::print(&cam).color({ 1, 0, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 1000, 0, 0 });
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 1000, 0 });
