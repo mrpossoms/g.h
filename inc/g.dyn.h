@@ -146,14 +146,16 @@ public:
 namespace cd
 {
 
-struct intersect
+struct intersection
 {
     float time = std::numeric_limits<float>::quiet_NaN();
     vec<3> position = {}, normal = {};
 
-    intersect() = default;
+    intersection() = default;
 
-    intersect(float t, const vec<3>& p, const vec<3>& n) : time(t), position(p), normal(n) {}
+    intersection(float t, const vec<3>& p, const vec<3>& n) : time(t), position(p), normal(n) {}
+
+    operator bool() { return !std::isnan(time); }
 };
 
 struct box
@@ -170,7 +172,7 @@ struct ray
 
     inline vec<3> point_at(float t) const { return position + direction * t; }
 
-    intersect intersect_plane(const ray& r, const vec<3>& plane_o, const vec<3>& plane_n)
+    intersection intersect_plane(const ray& r, const vec<3>& plane_o, const vec<3>& plane_n)
     {
         auto t = xmath::intersect::ray_plane(position, direction, plane_o, plane_n);
 
@@ -181,7 +183,7 @@ struct ray
         };
     }
 
-    intersect intersect_box(const box& b)
+    intersection intersect_box(const box& b)
     {
         vec<3> half_lengths[] = {b.half_x, b.half_y, b.half_z};
         auto t = xmath::intersect::ray_box(position, direction, b.position, half_lengths);
@@ -194,6 +196,70 @@ struct ray
         };
     }
 };
+
+struct collider
+{
+    /**
+     * @brief      Returns an intersection with this collider if one can be generated.
+     *
+     * @param[in]  r     Ray to test intersection against.
+     *
+     * @return     Intersection result from test.
+     */
+    virtual intersection ray_intersects(const ray& r) const = 0;
+    
+    /**
+     * @brief      Indicates whether or not this collider can generate rays
+     *
+     * @return     True if rays are generated, false otherwise.
+     */
+    virtual bool generates_rays() = 0;
+
+    /**
+     * @brief      Returns a vector of rays cast from this collider.
+     *
+     * @return     Vector of arrays. This vector should be retained by the collider to avoid
+     *             redundant allocations.
+     */
+    virtual const std::vector<ray>& rays() = 0;
+
+    /**
+     * @brief      Given this collider, and another return a vector of all points of
+     *             intersection between the two colliders
+     *
+     * @param[in]  other  The other collider to test collision with
+     *
+     * @return     { description_of_the_return_value }
+     */
+    virtual const std::vector<intersection>& intersections(const collider& other) = 0;
+};
+
+struct ray_collider final : public collider, ray
+{
+    intersection ray_intersects(const ray& r) const override { return {}; }
+
+    bool generates_rays() override { return true; }
+
+    const std::vector<ray>& rays() override
+    {
+        ray_list.clear();
+        ray_list.push_back({ position, direction });
+        return ray_list;
+    }
+
+    const std::vector<intersection>& intersections(const collider& other) override
+    {
+        intersection_list.clear();
+        auto i = other.ray_intersects({ position, direction });
+        if (i) { intersection_list.push_back(i); }
+        return intersection_list;
+    }    
+
+private:
+    std::vector<intersection> intersection_list;
+    std::vector<ray> ray_list;
+};
+
 
 } // end namespace cd
 } // end namespace dyn

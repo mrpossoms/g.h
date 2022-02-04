@@ -207,12 +207,12 @@ struct fps_camera final : public camera_perspective, updateable
 
 	vec<3> body_forward() const
 	{
-		return yaw_q.rotate({ 0, 0, -1 });
+		return (yaw_q * q).rotate({ 0, 0, -1 });
 	}
 
 	vec<3> body_left() const
 	{
-		return yaw_q.rotate({ 1, 0, 0 });
+		return (yaw_q * q).rotate({ 1, 0, 0 });
 	}
 
 	void update(float dt, float t) override

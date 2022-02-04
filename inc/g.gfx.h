@@ -1077,6 +1077,7 @@ struct density_volume
         vec<3> bounding_box[2];
         uint8_t vertex_case = 0;
         bool regenerating = false;
+        std::chrono::time_point<std::chrono::system_clock> start;
 
         inline bool contains(const vec<3>& pos) const
         {
@@ -1179,6 +1180,8 @@ struct density_volume
             generator_pool.run(
             // generation task
             [this, oi, pidx, offset, block_ptr](){
+            	block_ptr->start = std::chrono::system_clock::now();
+
                 // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
                 auto pipo = pidx + offsets[oi].template cast<int>();
 
@@ -1195,7 +1198,8 @@ struct density_volume
                 block_ptr->mesh.set_indices(block_ptr->indices);
 
                 char buf[256];
-                snprintf(buf, sizeof(buf), "%lu vertices - block %s\n", block_ptr->vertices.size(), block_ptr->index.to_string().c_str());
+                std::chrono::duration<float> diff = std::chrono::system_clock::now() - block_ptr->start;
+                snprintf(buf, sizeof(buf), "%lu vertices - block %s in %f sec\n", block_ptr->vertices.size(), block_ptr->index.to_string().c_str(), diff.count());
                 write(1, buf, strlen(buf));
             });
         }

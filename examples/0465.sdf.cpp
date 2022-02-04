@@ -67,9 +67,9 @@ struct my_core : public g::core
 
             auto d = base;
             // d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
-            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0634, v[1]) * 40);
+            // d += std::min<float>(0, g::gfx::noise::perlin(p*0.0634, v[1]) * 40);
             d += g::gfx::noise::perlin(p*0.0123, v[2]) * 80;
-            // d = std::min<float>(0, d);
+            // d = std::max<float>(0, d);
 
             return d;
         };
@@ -81,22 +81,7 @@ struct my_core : public g::core
             v.position = pos;
 
             const float s = 1;
-            vec<3> grad = {};
-            vec<3> deltas[3][2] = {
-                {{ s, 0, 0 }, { -s, 0, 0 }},
-                {{ 0, s, 0 }, { 0, -s, 0 }},
-                {{ 0, 0, s }, { 0,  0, -s }},
-            };
-
-            for (int j = 3; j--;)
-            {
-                vec<3> samples[2];
-                samples[0] = pos + deltas[j][0];
-                samples[1] = pos + deltas[j][1];
-                grad[j] = sdf(samples[0]) - sdf(samples[1]);
-            }
-
-            v.normal = grad.unit();
+            v.normal = normal_from_sdf(sdf, pos, s);
 
             if (fabs(v.normal.dot({0, 1, 0})) > 0.999f)
             {
@@ -140,6 +125,13 @@ struct my_core : public g::core
         vec<3> feet = down * 2;
         // cam.velocity *= 0;
         cam.velocity += down * 1;
+
+        auto p1 = cam.position + cam.velocity * dt;
+        auto p0_d = terrain_sdf(cam.position);
+        auto p1_d = terrain_sdf(p1);
+        auto is_touching_ground = p1_d <= 0;
+
+        speed *= is_touching_ground;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
@@ -148,16 +140,16 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * 40 * is_touching_ground;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.yaw += -dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.yaw += dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.pitch += dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.pitch += -dt;
 
-        
-        auto p1 = cam.position + cam.velocity * dt;
-        auto p0_d = terrain_sdf(cam.position);
-        auto p1_d = terrain_sdf(p1);
+        p1 = cam.position + cam.velocity * dt;
+        p1_d = terrain_sdf(p1);
+        is_touching_ground = p1_d <= 0;
+
 
         auto drag = cam.velocity * -0.01;
         auto w_bias = 0;
@@ -165,10 +157,11 @@ struct my_core : public g::core
 
         assert(!std::isnan(p1.magnitude()));
 
-        if (p1_d <= 0)
+        if (is_touching_ground)
         {
             auto n = g::game::normal_from_sdf(terrain_sdf, p1);
             auto w = p1_d / (p1_d - p0_d);
+            assert(!std::isnan(w));
 
             cam.velocity = cam.velocity - (n * (cam.velocity.dot(n) / n.dot(n)));
             auto friction = cam.velocity * -0.3;
