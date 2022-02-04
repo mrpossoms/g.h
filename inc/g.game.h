@@ -181,16 +181,6 @@ struct fps_camera final : public camera_perspective, updateable
 	//vec<3> velocity(const vec<3>& v) override { return vel = v; }
 
 	vec<3> velocity = {};
-	vec<3> l = { 1, 0, 0 };
-	vec<3> u = { 0, 1, 0 };
-	vec<3> f = { 0, 0, 1};
-
-
-	mat<3, 3> basis = {
-		{ 1, 0, 0 },
-		{ 0, 1, 0 },
-		{ 0, 0, 1 },
-	};
 
 	quat<> q, r;
 	quat<> yaw_q;
@@ -202,23 +192,17 @@ struct fps_camera final : public camera_perspective, updateable
 
 	vec<3> forward() const override 
 	{
-		//return basis[2];
 		return (r * q).rotate({ 0, 0, -1 });
-		return f;
 	}
 
 	vec<3> left() const override
 	{
-		//return basis[0];
 		return (r * q).rotate({ 1, 0, 0 });
-		return l;
 	}
 
 	vec<3> up() const override
 	{
-		//return basis[1];
 		return q.rotate({ 0, 1, 0 });
-		return u;
 	}
 
 	vec<3> body_forward() const
@@ -235,27 +219,9 @@ struct fps_camera final : public camera_perspective, updateable
 	{
 		pitch = std::min<float>(max_pitch, std::max<float>(min_pitch, pitch));
 
-		//forward = vec<3>::cross(up, right);
-
-		//orientation = quat<>::from_matrix({
-		//	{ right[0], right[1], right[2], 0 },
-		//	{ up[0], up[1], up[2], 0 },
-		//	{ forward[0], forward[1], forward[2], 0 },
-		//	{0, 0, 0, 1}
-		//}).inverse();
-
 		yaw_q = quat<>::from_axis_angle(up(), yaw);
 		r = quat<>::from_axis_angle(left(), pitch) * yaw_q;
 		orientation = r * q;
-		//basis[2] = vec<3>::cross(up(), left());
-		//basis[0] = vec<3>::cross(up(), forward());
-
-		f = vec<3>::cross(u, l);
-		l = vec<3>::cross(f, u);
-
-		// orientation *= q;//quat<>::from_matrix(basis);
-		
-		// look_at(subject, up);
 
 		position += velocity * dt;
 	}

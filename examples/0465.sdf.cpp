@@ -66,10 +66,10 @@ struct my_core : public g::core
             // d += g::gfx::noise::perlin(p*1.96, v[1]) * 0.25;
 
             auto d = base;
-            d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
-            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0334, v[1]) * 20);
-            // d += std::min<float>(0, g::gfx::noise::perlin(p*0.0123, v[2]) * 40);
-            // d = std::max<float>(d, -1);
+            // d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
+            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0634, v[1]) * 40);
+            d += g::gfx::noise::perlin(p*0.0123, v[2]) * 80;
+            // d = std::min<float>(0, d);
 
             return d;
         };
@@ -123,7 +123,7 @@ struct my_core : public g::core
         terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
 
 
-        cam.position = {0, 1005, 0};
+        cam.position = {0, 1100, 0};
         //glDisable(GL_CULL_FACE);
 
         return true;
@@ -196,10 +196,7 @@ struct my_core : public g::core
         auto axis = vec<3>::cross(up, { 0, 1, 0 });
         if (axis.magnitude() < 0.0001) { axis = {1, 0, 0}; }
         axis = axis.unit();
-        std::cerr << d << " " << a * (180.f / M_PI) << " " << cam.position.magnitude() << " " << axis.to_string() << std::endl;
-
         cam.q = quat<>::from_axis_angle(axis, a).inverse();
-        cam.u = up;
 
         glPointSize(4);
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(cam.position, cam.forward());
@@ -209,7 +206,6 @@ struct my_core : public g::core
         g::gfx::debug::print(&cam).color({ 1, 0, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 1000, 0, 0 });
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 1000, 0 });
         g::gfx::debug::print(&cam).color({ 0, 0, 1, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 0, 1000 });
-        cam.basis[1] = up;
         //cam.basis[0] = vec<3>::cross(cam.up(), { 0, -1, 0 });
         //cam.basis[2] = vec<3>::cross(cam.up(), cam.left());
 
@@ -223,7 +219,7 @@ struct my_core : public g::core
         auto& ground_normal = assets.tex("sand_normal.repeating.png");
         auto model = mat4::I();
 
-        cam.position += cam.up();
+        cam.position += cam.up() * 3;
 
         terrain->draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
             auto model = mat4::I();
@@ -236,7 +232,7 @@ struct my_core : public g::core
                  ["u_time"].flt(t += dt * 0.01f);
         });
 
-        cam.position -= cam.up();
+        cam.position -= cam.up() * 3;
     }
 
     float t;
