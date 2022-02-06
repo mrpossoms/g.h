@@ -146,20 +146,56 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.pitch += dt;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.pitch += -dt;
 
-        p1 = cam.position + cam.velocity * dt;
-        p1_d = terrain_sdf(p1);
-        is_touching_ground = p1_d <= 0;
+        // p1 = cam.position + cam.velocity * dt;
+        // p1_d = terrain_sdf(p1);
+        // is_touching_ground = p1_d <= 0;
 
 
-        auto drag = cam.velocity * -0.01;
-        auto w_bias = 0;
-        cam.velocity += drag;
+        // auto drag = cam.velocity * -0.01;
+        // auto w_bias = 0;
+        // cam.velocity += drag;
 
-        assert(!std::isnan(p1.magnitude()));
+        // assert(!std::isnan(p1.magnitude()));
+
+        // if (is_touching_ground)
+        // {
+        //     auto n = g::game::normal_from_sdf(terrain_sdf, p1);
+        //     auto w = p1_d / (p1_d - p0_d);
+        //     assert(!std::isnan(w));
+
+        //     cam.velocity = cam.velocity - (n * (cam.velocity.dot(n) / n.dot(n)));
+        //     auto friction = cam.velocity * -0.3;
+        //     cam.velocity += friction;
+
+        //     if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
+
+        //     for (; terrain_sdf(cam.position + cam.velocity * dt) <= 0; w += 0.1)
+        //     {
+        //         cam.position = (p1 * (1 - w) + (cam.position) * w);
+        //         assert(!std::isnan(cam.position.magnitude()));
+        //     }
+
+        //     // cam.position += cam.velocity * dt;
+        // }
+        // else
+        // {
+        //     cam.position = p1;
+        //     assert(!std::isnan(cam.position.magnitude()));
+        // }
+
+        g::dyn::cd::ray_collider cam_collider;
+        g::dyn::cd::sdf_collider ground_collider(terrain_sdf);
+
+        cam_collider.position = cam.position;
+        cam_collider.direction = cam.velocity * dt;
+
+        auto intersections = cam_collider.intersections(sdf_collider);
+
+        is_touching_ground = intersections.size() > 0;
 
         if (is_touching_ground)
         {
-            auto n = g::game::normal_from_sdf(terrain_sdf, p1);
+            auto n = intersections[0].normal;
             auto w = p1_d / (p1_d - p0_d);
             assert(!std::isnan(w));
 

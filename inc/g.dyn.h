@@ -6,6 +6,7 @@
 #define XMTYPE float
 #endif
 #include <xmath.h>
+#include "g.game.h"
 
 namespace g {
 namespace dyn {
@@ -231,7 +232,7 @@ struct collider
      *
      * @return     { description_of_the_return_value }
      */
-    virtual const std::vector<intersection>& intersections(const collider& other) = 0;
+    virtual const std::vector<intersection>& intersections(collider& other) = 0;
 };
 
 struct ray_collider final : public collider, ray
@@ -247,7 +248,7 @@ struct ray_collider final : public collider, ray
         return ray_list;
     }
 
-    const std::vector<intersection>& intersections(const collider& other) override
+    const std::vector<intersection>& intersections(collider& other) override
     {
         intersection_list.clear();
         auto i = other.ray_intersects({ position, direction });
@@ -255,9 +256,89 @@ struct ray_collider final : public collider, ray
         return intersection_list;
     }    
 
+    ray_collider& operator=(const ray& other)
+    {
+        position = other.position;
+        direction = other.direction;
+
+        return *this;
+    }
+
 private:
     std::vector<intersection> intersection_list;
     std::vector<ray> ray_list;
+
+};
+
+struct sdf_collider : public collider
+{
+    sdf_collider(const g::game::sdf& s) : sdf(s) {}
+
+    intersection ray_intersects(const ray& r) const override
+    {
+        constexpr auto stop_threshold = 0.1f;
+        vec<3> p0 = r.position;
+        vec<3> p = p0;
+        auto d0 = sdf(p0);
+        auto d = d0;
+        auto t = 0.f;
+
+        unsigned i = 5;
+        for (; i-- && fabsf(d) > stop_threshold;)
+        {
+            t += d;
+            p = r.direction * t;
+            d = sdf(p);
+        }
+
+        auto d0_sign = (d0 > 0) - (d0 < 0);
+        auto d_sign = (d > 0) - (d < 0);
+        if (i > 0 || (d0_sign != d_sign))
+        {
+            auto inter_p = r.point_at(t);
+
+            return {
+                t,
+                inter_p,
+                g::game::normal_from_sdf(sdf, inter_p)
+            };
+        }
+
+        return {}; // no intersection
+    }
+
+    bool generates_rays() override { return false; }
+
+    const std::vector<ray>& rays() override
+    {
+        ray_list.clear();
+        return ray_list;
+    }
+
+    const std::vector<intersection>& intersections(collider& other) override
+    {
+        intersection_list.clear();
+        if (other.generates_rays())
+        {
+            for (auto& r : other.rays())
+            {
+                auto i = ray_intersects(r);
+                if (i) { intersection_list.push_back(i); }
+            }
+        }
+        return intersection_list;
+    }
+
+    // ray_collider& operator=(const ray& other)
+    // {
+    //     position = other.position;
+    //     direction = other.direction;
+    // }
+
+private:
+    std::vector<intersection> intersection_list;
+    std::vector<ray> ray_list;
+    g::game::sdf sdf;
 };
 
 
