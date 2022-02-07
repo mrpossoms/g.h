@@ -232,7 +232,7 @@ struct collider
      *
      * @return     { description_of_the_return_value }
      */
-    virtual const std::vector<intersection>& intersections(collider& other) = 0;
+    virtual const std::vector<intersection>& intersections(collider& other, float max_t=std::numeric_limits<float>::infinity()) = 0;
 };
 
 struct ray_collider final : public collider, ray
@@ -248,11 +248,16 @@ struct ray_collider final : public collider, ray
         return ray_list;
     }
 
-    const std::vector<intersection>& intersections(collider& other) override
+    const std::vector<intersection>& intersections(collider& other, float max_t = std::numeric_limits<float>::infinity()) override
     {
         intersection_list.clear();
-        auto i = other.ray_intersects({ position, direction });
-        if (i) { intersection_list.push_back(i); }
+
+        auto mag = direction.magnitude();
+
+        if (mag == 0) { return intersection_list; }
+
+        auto i = other.ray_intersects({ position, direction / mag});
+        if (i && i.time < max_t) { intersection_list.push_back(i); }
         return intersection_list;
     }    
 
@@ -282,12 +287,13 @@ struct sdf_collider : public collider
         auto d0 = sdf(p0);
         auto d = d0;
         auto t = 0.f;
+        auto dir_mag = r.direction.magnitude();
 
         unsigned i = 5;
         for (; i-- && fabsf(d) > stop_threshold;)
         {
-            t += d;
-            p = r.direction * t;
+            t += d / dir_mag;
+            p = p0 + r.direction * t;
             d = sdf(p);
         }
 
@@ -315,7 +321,7 @@ struct sdf_collider : public collider
         return ray_list;
     }
 
-    const std::vector<intersection>& intersections(collider& other) override
+    const std::vector<intersection>& intersections(collider& other, float max_t = std::numeric_limits<float>::infinity()) override
     {
         intersection_list.clear();
         if (other.generates_rays())
@@ -323,7 +329,7 @@ struct sdf_collider : public collider
             for (auto& r : other.rays())
             {
                 auto i = ray_intersects(r);
-                if (i) { intersection_list.push_back(i); }
+                if (i && i.time < max_t) { intersection_list.push_back(i); }
             }
         }
         return intersection_list;

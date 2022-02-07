@@ -68,8 +68,9 @@ struct my_core : public g::core
             auto d = base;
             // d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
             // d += std::min<float>(0, g::gfx::noise::perlin(p*0.0634, v[1]) * 40);
+            
             d += g::gfx::noise::perlin(p*0.0123, v[2]) * 80;
-            // d = std::max<float>(0, d);
+           
 
             return d;
         };
@@ -131,20 +132,6 @@ struct my_core : public g::core
         auto p1_d = terrain_sdf(p1);
         auto is_touching_ground = p1_d <= 0;
 
-        speed *= is_touching_ground;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * 40 * is_touching_ground;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.yaw += -dt;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.yaw += dt;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.pitch += dt;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.pitch += -dt;
 
         // p1 = cam.position + cam.velocity * dt;
         // p1_d = terrain_sdf(p1);
@@ -189,9 +176,24 @@ struct my_core : public g::core
         cam_collider.position = cam.position;
         cam_collider.direction = cam.velocity * dt;
 
-        auto intersections = cam_collider.intersections(sdf_collider);
+        auto intersections = cam_collider.intersections(ground_collider, 1);
 
         is_touching_ground = intersections.size() > 0;
+
+        speed *= is_touching_ground;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * 40 * is_touching_ground;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.yaw += -dt;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.yaw += dt;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.pitch += dt;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.pitch += -dt;
 
         if (is_touching_ground)
         {
