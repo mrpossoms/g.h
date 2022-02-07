@@ -127,11 +127,6 @@ struct my_core : public g::core
         // cam.velocity *= 0;
         cam.velocity += down * 1;
 
-        auto p1 = cam.position + cam.velocity * dt;
-        auto p0_d = terrain_sdf(cam.position);
-        auto p1_d = terrain_sdf(p1);
-        auto is_touching_ground = p1_d <= 0;
-
 
         // p1 = cam.position + cam.velocity * dt;
         // p1_d = terrain_sdf(p1);
@@ -177,8 +172,7 @@ struct my_core : public g::core
         cam_collider.direction = cam.velocity * dt;
 
         auto intersections = cam_collider.intersections(ground_collider, 1);
-
-        is_touching_ground = intersections.size() > 0;
+        auto is_touching_ground = intersections.size() > 0;
 
         speed *= is_touching_ground;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
@@ -197,6 +191,10 @@ struct my_core : public g::core
 
         if (is_touching_ground)
         {
+            auto p1 = intersections[0].position;//cam.position + cam.velocity * dt;
+            auto p0_d = terrain_sdf(cam.position);
+            auto p1_d = terrain_sdf(p1);
+
             auto n = intersections[0].normal;
             auto w = p1_d / (p1_d - p0_d);
             assert(!std::isnan(w));
@@ -217,7 +215,7 @@ struct my_core : public g::core
         }
         else
         {
-            cam.position = p1;
+            cam.position = cam.position + cam.velocity * dt;
             assert(!std::isnan(cam.position.magnitude()));
         }
 
