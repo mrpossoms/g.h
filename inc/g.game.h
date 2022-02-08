@@ -187,8 +187,10 @@ struct fps_camera final : public camera_perspective, updateable
 
 	float yaw = 0;
 	float pitch = 0;
-	const float max_pitch = (M_PI / 2.f) - 0.1f;
-	const float min_pitch = -(M_PI / 2.f) + 0.1f;
+	// const float max_pitch = (M_PI / 2.f) - 0.1f;
+	// const float min_pitch = -(M_PI / 2.f) + 0.1f;
+	const float max_pitch = +0.4f;
+	const float min_pitch = -0.4f;
 
 	vec<3> forward() const override 
 	{

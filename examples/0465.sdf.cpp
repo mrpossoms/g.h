@@ -112,6 +112,8 @@ struct my_core : public g::core
         cam.position = {0, 1100, 0};
         //glDisable(GL_CULL_FACE);
 
+        glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
         return true;
     }
 
@@ -174,20 +176,37 @@ struct my_core : public g::core
         auto intersections = cam_collider.intersections(ground_collider, 1);
         auto is_touching_ground = intersections.size() > 0;
 
+
         speed *= is_touching_ground;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * 40 * is_touching_ground;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.yaw += -dt;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_RIGHT) == GLFW_PRESS) cam.yaw += dt;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.pitch += dt;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.pitch += -dt;
+
+
+
+        static double xlast, ylast;
+        float sensitivity = 0.5f;
+        double xpos = 0, ypos = 0;
+        auto mode = glfwGetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR);
+
+        if (GLFW_CURSOR_DISABLED == mode)
+        {
+            glfwGetCursorPos(g::gfx::GLFW_WIN, &xpos, &ypos);
+        }
+
+        if (xlast != 0 || ylast != 0)
+        {
+            auto dx = xpos - xlast;
+            auto dy = ypos - ylast;
+            cam.pitch += (-dy * dt * sensitivity);
+            cam.yaw += (dx * dt * sensitivity);
+        }
+
+        xlast = xpos; ylast = ypos;
 
         if (is_touching_ground)
         {
@@ -262,6 +281,8 @@ struct my_core : public g::core
         });
 
         cam.position -= cam.up() * 3;
+    
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_ESCAPE) == GLFW_PRESS) { this->running = false; }
     }
 
     float t;
