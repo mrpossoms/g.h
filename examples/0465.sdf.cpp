@@ -110,6 +110,7 @@ struct my_core : public g::core
 
 
         cam.position = {0, 1100, 0};
+        cam.foot_offset = { 0, -1.5, 0 };
         //glDisable(GL_CULL_FACE);
 
         glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -125,8 +126,6 @@ struct my_core : public g::core
         auto speed = 1.0f;
 
         vec<3> down = -cam.position.unit();
-        vec<3> feet = down * 2;
-        // cam.velocity *= 0;
         cam.velocity += down * 1;
 
 
@@ -170,23 +169,12 @@ struct my_core : public g::core
         g::dyn::cd::ray_collider cam_collider;
         g::dyn::cd::sdf_collider ground_collider(terrain_sdf);
 
-        cam_collider.position = cam.position;
+        auto feet = cam.feet();
+        cam_collider.position = feet;
         cam_collider.direction = cam.velocity * dt;
 
         auto intersections = cam_collider.intersections(ground_collider, 1);
         auto is_touching_ground = intersections.size() > 0;
-
-
-        speed *= is_touching_ground;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * 40 * is_touching_ground;
-
-
 
         static double xlast, ylast;
         float sensitivity = 0.5f;
@@ -211,7 +199,7 @@ struct my_core : public g::core
         if (is_touching_ground)
         {
             auto n = intersections[0].normal;
-            auto p1 = cam.position + cam.velocity * dt;
+            auto p1 = feet + cam.velocity * dt;
             auto p0_d = terrain_sdf(cam.position + n);
             auto p1_d = terrain_sdf(p1);
 
@@ -224,13 +212,15 @@ struct my_core : public g::core
 
             if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
 
-            for (; terrain_sdf(cam.position + cam.velocity * dt) <= 0; w += 0.1)
+            cam.position = intersections[0].position - cam.q.rotate(cam.foot_offset);
+
+            for(unsigned i = 5; terrain_sdf(cam.feet()) <= 0 && i--;)
             {
-                cam.position = (p1 * (1 - w) + (cam.position) * w);
-                assert(!std::isnan(cam.position.magnitude()));
+                // cam.position += intersections[0].normal * 0.05;
+                // assert(!std::isnan(cam.position.magnitude()));
             }
 
-            // cam.position += cam.velocity * dt;
+            cam.position += cam.velocity * dt;
         }
         else
         {
@@ -245,6 +235,18 @@ struct my_core : public g::core
         if (axis.magnitude() < 0.0001) { axis = {1, 0, 0}; }
         axis = axis.unit();
         cam.q = quat<>::from_axis_angle(axis, a).inverse();
+
+        speed *= is_touching_ground;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * 40 * is_touching_ground;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_1) == GLFW_PRESS) cam.position = {0, 1100, 0};
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_2) == GLFW_PRESS) cam.position = {1100, 0, 0};
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_3) == GLFW_PRESS) cam.position = {0, 0, 1100};
 
         glPointSize(4);
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(cam.position, cam.forward());
@@ -267,7 +269,7 @@ struct my_core : public g::core
         auto& ground_normal = assets.tex("sand_normal.repeating.png");
         auto model = mat4::I();
 
-        cam.position += cam.up() * 3;
+        // cam.position += cam.up() * 3;
 
         terrain->draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
             auto model = mat4::I();
@@ -280,7 +282,7 @@ struct my_core : public g::core
                  ["u_time"].flt(t += dt * 0.01f);
         });
 
-        cam.position -= cam.up() * 3;
+        // cam.position -= cam.up() * 3;
     
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_ESCAPE) == GLFW_PRESS) { this->running = false; }
     }

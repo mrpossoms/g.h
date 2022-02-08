@@ -256,7 +256,7 @@ struct ray_collider final : public collider, ray
 
         if (mag == 0) { return intersection_list; }
 
-        auto i = other.ray_intersects({ position, direction / mag});
+        auto i = other.ray_intersects({ position, direction });
         if (i && i.time < max_t) { intersection_list.push_back(i); }
         return intersection_list;
     }    
@@ -281,7 +281,7 @@ struct sdf_collider : public collider
 
     intersection ray_intersects(const ray& r) const override
     {
-        constexpr auto stop_threshold = 0.1f;
+        // constexpr auto stop_threshold = 2e-05;
         vec<3> p0 = r.position;
         vec<3> p = p0;
         auto d0 = sdf(p0);
@@ -289,13 +289,23 @@ struct sdf_collider : public collider
         auto t = 0.f;
         auto dir_mag = r.direction.magnitude();
 
-        unsigned i = 5;
-        for (; i-- && fabsf(d) > stop_threshold;)
+        unsigned i = 3;
+        for (; i--;)// && fabsf(d) > stop_threshold;)
         {
             t += d / dir_mag;
             p = p0 + r.direction * t;
             d = sdf(p);
+            std::cerr << d << ", ";
         }
+        std::cerr << std::endl;
+
+        // if (d > 0)
+        // {
+        //     auto dw = sdf(p + r.direction);
+        //     auto w = dw / (dw - d);
+        //     std::cerr << w << std::endl;
+        //     //t += w;// / dir_mag;
+        // }
 
         auto d0_sign = (d0 > 0) - (d0 < 0);
         auto d_sign = (d > 0) - (d < 0);

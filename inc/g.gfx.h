@@ -1127,9 +1127,7 @@ struct density_volume
 
             block.index = (offset * scale).template cast<int>();
 
-            time_t start = time(NULL);
             block.mesh.from_sdf_r(sdf, generator, block.bounding_box, depth);
-            time_t end = time(NULL);
 
             blocks.push_back(block);
         }

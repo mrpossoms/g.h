@@ -181,6 +181,7 @@ struct fps_camera final : public camera_perspective, updateable
 	//vec<3> velocity(const vec<3>& v) override { return vel = v; }
 
 	vec<3> velocity = {};
+	vec<3> foot_offset = {0, -1, 0};
 
 	quat<> q, r;
 	quat<> yaw_q;
@@ -215,6 +216,16 @@ struct fps_camera final : public camera_perspective, updateable
 	vec<3> body_left() const
 	{
 		return (yaw_q * q).rotate({ 1, 0, 0 });
+	}
+
+	vec<3> body_up() const
+	{
+		return q.rotate({ 0, 1, 0 });
+	}
+
+	vec<3> feet() const
+	{
+		return position + q.rotate(foot_offset);
 	}
 
 	void update(float dt, float t) override

@@ -46,7 +46,7 @@ float g::gfx::noise::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 		for (unsigned i = 0; i < 3; i++)
 		{
 			a[i] *= *(const unsigned*)(ent_data + (a[i] % ent_size - sizeof(unsigned)));
-			a[(i + 1) % 3] ^= a[i] << s | a[i] >> w - s;
+			a[(i + 1) % 3] ^= a[i] << s | a[i] >> (w - s);
 		}
 
 		// a.v[0] *= *(const unsigned*)(ent_data + (a.v[0] % ent_size - sizeof(unsigned)));
@@ -104,7 +104,6 @@ float g::gfx::noise::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 	constexpr auto cn = 8;//1 << 3;
 
 	auto w = p - bounds[0];
-	float sum = 0;
 	float s[cn] = {};
 	for (unsigned ci = 0; ci < cn; ci++)
 	{
