@@ -66,8 +66,8 @@ struct my_core : public g::core
             // d += g::gfx::noise::perlin(p*1.96, v[1]) * 0.25;
 
             auto d = base;
-            // d += g::gfx::noise::perlin(p*0.065, v[0]) * 10;
-            // d += std::min<float>(0, g::gfx::noise::perlin(p*0.0634, v[1]) * 40);
+            d += g::gfx::noise::perlin(p*0.065, v[0]);
+            d += std::min<float>(0, g::gfx::noise::perlin(p*0.0234, v[1]) * 40);
             
             d += g::gfx::noise::perlin(p*0.0123, v[2]) * 80;
            
