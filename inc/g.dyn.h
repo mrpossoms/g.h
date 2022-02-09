@@ -295,9 +295,7 @@ struct sdf_collider : public collider
             t += d / dir_mag;
             p = p0 + r.direction * t;
             d = sdf(p);
-            std::cerr << d << ", ";
         }
-        std::cerr << std::endl;
 
         // if (d > 0)
         // {

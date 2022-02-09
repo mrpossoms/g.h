@@ -661,12 +661,14 @@ struct mesh
 			uint8_t voxel_case = 0;
 			vec<3> p[8];  // voxel corners
 			float d[8]; // densities at each corner
+			float avg_density = 0;
 
 			for (int i = 8; i--;)
 			{
 				c[i] *= block_delta;
 				p[i] = p0 + c[i];
 				d[i] = sdf(p[i]);
+				avg_density += d[i];
 
 				// if d[i] >= 0
 				voxel_case |= ((d[i] >= 0) << i);
@@ -678,8 +680,11 @@ struct mesh
 			{ // test for density function boundaries
 				int verts_generated = 0;
 
-				// auto d_mid = sdf(mid);
-				if ((voxel_case != 0 && voxel_case != 255))// || d_mid >= 0)
+				avg_density += sdf(mid);
+				avg_density /= 9.f;
+
+				//if ((voxel_case != 0 && voxel_case != 255))// || d_mid >= 0)
+				if (fabs(avg_density) < 200)
 				{
 					for (int i = 8; i--;)
 					{
@@ -696,6 +701,10 @@ struct mesh
 					}
 
 					if (verts_generated == 0) { verts_generated = subdivider(corners, 0); }
+				}
+				else
+				{
+					std::cerr << "excluded " << avg_density << std::endl;
 				}
 
 				return verts_generated;
@@ -776,9 +785,6 @@ struct mesh
 	{
 		#include "data/marching.cubes.lut"
 
-		static std::vector<V> vertices;
-		static std::vector<uint32_t> indices;
-
 		vertices_out.clear();
 		indices_out.clear();
 
@@ -818,10 +824,7 @@ struct mesh
 				p[i] = p0 + (voxel_delta * voxel_index) + c[i];
 				d[i] = sdf(p[i]);
 
-				if (d[i] <= 0)
-				{
-					voxel_case |= (1 << i);
-				}
+				voxel_case |= ((d[i] >= 0) << i);
 			}
 
 			// compute lerp weights between verts for each edge
@@ -850,8 +853,8 @@ struct mesh
 
 				vec<3> _p = p[p1_i] * w[i] + p[p0_i] * (1 - w[i]);
 				
-				indices.push_back(vertices.size());
-				vertices.push_back(generator(sdf, _p));
+				indices_out.push_back(vertices_out.size());
+				vertices_out.push_back(generator(sdf, _p));
 			}
 
 		}
@@ -1176,7 +1179,7 @@ struct density_volume
                 block_ptr->index = pipo;
 
                 block_ptr->mesh.from_sdf_r(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box, depth);
-                //block_ptr->mesh.from_sdf(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box);
+                // block_ptr->mesh.from_sdf(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box);
                 block_ptr->regenerating = false;
             },
             // on finish

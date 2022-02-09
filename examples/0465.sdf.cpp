@@ -107,8 +107,8 @@ struct my_core : public g::core
         }
 
         terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
-        terrain->scale = 100;
-        terrain->depth = 6;
+        terrain->scale = 200;
+        terrain->depth = 5;
 
         cam.position = {0, 1100, 0};
         cam.foot_offset = { 0, -1.5, 0 };
