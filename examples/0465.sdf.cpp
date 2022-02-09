@@ -107,7 +107,8 @@ struct my_core : public g::core
         }
 
         terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
-
+        terrain->scale = 100;
+        terrain->depth = 6;
 
         cam.position = {0, 1100, 0};
         cam.foot_offset = { 0, -1.5, 0 };
@@ -242,8 +243,7 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_C) == GLFW_PRESS) cam.velocity -= cam.up() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.up() * 40 * is_touching_ground;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.body_up() * 40 * is_touching_ground;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_1) == GLFW_PRESS) cam.position = {0, 1100, 0};
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_2) == GLFW_PRESS) cam.position = {1100, 0, 0};
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_3) == GLFW_PRESS) cam.position = {0, 0, 1100};
@@ -256,8 +256,6 @@ struct my_core : public g::core
         g::gfx::debug::print(&cam).color({ 1, 0, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 1000, 0, 0 });
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 1000, 0 });
         g::gfx::debug::print(&cam).color({ 0, 0, 1, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 0, 1000 });
-        //cam.basis[0] = vec<3>::cross(cam.up(), { 0, -1, 0 });
-        //cam.basis[2] = vec<3>::cross(cam.up(), cam.left());
 
         cam.update(dt, 0);
         terrain->update(cam);
@@ -269,8 +267,6 @@ struct my_core : public g::core
         auto& ground_normal = assets.tex("sand_normal.repeating.png");
         auto model = mat4::I();
 
-        // cam.position += cam.up() * 3;
-
         terrain->draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
             auto model = mat4::I();
 
@@ -281,8 +277,6 @@ struct my_core : public g::core
                  ["u_model"].mat4(model)
                  ["u_time"].flt(t += dt * 0.01f);
         });
-
-        // cam.position -= cam.up() * 3;
     
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_ESCAPE) == GLFW_PRESS) { this->running = false; }
     }

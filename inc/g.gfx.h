@@ -678,8 +678,8 @@ struct mesh
 			{ // test for density function boundaries
 				int verts_generated = 0;
 
-				auto d_mid = sdf(mid);
-				if ((voxel_case != 0 && voxel_case != 255) || d_mid >= 0)
+				// auto d_mid = sdf(mid);
+				if ((voxel_case != 0 && voxel_case != 255))// || d_mid >= 0)
 				{
 					for (int i = 8; i--;)
 					{
@@ -767,6 +767,8 @@ struct mesh
 
 
 	void from_sdf(
+		std::vector<V>& vertices_out,
+		std::vector<uint32_t>& indices_out,
 		const g::game::sdf& sdf, 
 		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
 		vec<3> corners[2],
@@ -777,8 +779,8 @@ struct mesh
 		static std::vector<V> vertices;
 		static std::vector<uint32_t> indices;
 
-		vertices.clear();
-		indices.clear();
+		vertices_out.clear();
+		indices_out.clear();
 
 		float div = divisions;
 
@@ -853,35 +855,21 @@ struct mesh
 			}
 
 		}
+	}
 
-		std::reverse(indices.begin(), indices.end());
+	void from_sdf(
+		const g::game::sdf& sdf,
+		std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator,
+		vec<3> corners[2],
+		unsigned divisions = 32)
+	{
+		static std::vector<V> vertices;
+		static std::vector<uint32_t> indices;
+
+		from_sdf(vertices, indices, sdf, generator, corners, divisions);
 
 		set_vertices(vertices);
 		set_indices(indices);
-
-		// use the gradient of the density function to compute the
-		// normal vector for each vertex
-		// for (int i = 0; i < vertices.size(); i++)
-		// {
-		// 	const float s = 0.1;
-		// 	vec3 grad;
-		// 	vec3 deltas[3][2] = {
-		// 		{{ s, 0, 0 }, { -s, 0, 0 }},
-		// 		{{ 0, s, 0 }, { 0, -s, 0 }},
-		// 		{{ 0, 0, s }, { 0,  0, -s }},
-		// 	};
-		// 	Vertex& v = vertices[i];
-
-		// 	for (int j = 3; j--;)
-		// 	{
-		// 		vec3 samples[2];
-		// 		vec3_add(samples[0], v.position, deltas[j][0]);
-		// 		vec3_add(samples[1], v.position, deltas[j][1]);
-		// 		grad[j] = density_at(samples[0]) - density_at(samples[1]);
-		// 	}
-
-		// 	vec3_norm(v.normal, grad);
-		// }
 	}
 };
 
@@ -1097,8 +1085,8 @@ struct density_volume
 
     g::game::sdf sdf;
     std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
-    float scale = 200;
-    unsigned depth = 5;
+    float scale = 1;
+    unsigned depth = 1;
     unsigned kernel = 2;
     std::vector<density_volume::block*> to_regenerate;
     g::proc::thread_pool<10> generator_pool;
@@ -1120,14 +1108,15 @@ struct density_volume
             density_volume::block block;
             block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
 
-            auto pipo = offset.template cast<int>();
+            // auto pipo = offset.template cast<int>();
 
-            block.bounding_box[0] = (pipo * scale).template cast<float>();
-            block.bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
+            // block.bounding_box[0] = (pipo * scale).template cast<float>();
+            // block.bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
 
-            block.index = (offset * scale).template cast<int>();
+            // block.index = (offset * scale).template cast<int>();
 
-            block.mesh.from_sdf_r(sdf, generator, block.bounding_box, depth);
+            // // block.mesh.from_sdf_r(sdf, generator, block.bounding_box, depth);
+            // block.mesh.from_sdf(sdf, generator, block.bounding_box);
 
             blocks.push_back(block);
         }
@@ -1180,7 +1169,6 @@ struct density_volume
             [this, oi, pidx, offset, block_ptr](){
             	block_ptr->start = std::chrono::system_clock::now();
 
-                // auto ppo = (((pos / scale).floor() + 0.5f) + offsets[oi]) * scale;
                 auto pipo = pidx + offsets[oi].template cast<int>();
 
                 block_ptr->bounding_box[0] = (pipo * scale).template cast<float>();
@@ -1188,6 +1176,7 @@ struct density_volume
                 block_ptr->index = pipo;
 
                 block_ptr->mesh.from_sdf_r(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box, depth);
+                //block_ptr->mesh.from_sdf(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box);
                 block_ptr->regenerating = false;
             },
             // on finish
