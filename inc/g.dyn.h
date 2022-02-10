@@ -147,24 +147,25 @@ public:
 namespace cd
 {
 
-struct intersection
-{
-    float time = std::numeric_limits<float>::quiet_NaN();
-    vec<3> origin = {}, position = {}, normal = {};
-
-    intersection() = default;
-
-    intersection(float t, const vec<3>& o, const vec<3>& p, const vec<3>& n) : time(t), origin(o), position(p), normal(n) {}
-
-    operator bool() { return !std::isnan(time); }
-};
-
 struct box
 {
     vec<3> position;
     vec<3> half_x;
     vec<3> half_y;
     vec<3> half_z;
+};
+
+
+struct intersection
+{
+    float time = std::numeric_limits<float>::quiet_NaN();
+    vec<3> origin = {}, direction = {}, point = {}, normal = {};
+
+    intersection() = default;
+
+    intersection(float t, const vec<3>& o, const vec<3>& d, const vec<3>& p, const vec<3>& n) : time(t), origin(o), direction(d), point(p), normal(n) {}
+
+    operator bool() { return !std::isnan(time); }
 };
 
 struct ray
@@ -180,6 +181,7 @@ struct ray
         return {
             t,
             position,
+            direction,
             point_at(t),
             plane_n
         };
@@ -187,13 +189,14 @@ struct ray
 
     intersection intersect_box(const box& b)
     {
-        vec<3> half_lengths[] = {b.half_x, b.half_y, b.half_z};
+        vec<3> half_lengths[] = { b.half_x, b.half_y, b.half_z };
         auto t = xmath::intersect::ray_box(position, direction, b.position, half_lengths);
         auto face_normal = vec<3>{}; // TODO: compute normal here
 
         return {
             t,
             position,
+            direction,
             point_at(t),
             face_normal
         };
@@ -255,7 +258,7 @@ struct ray_collider final : public collider
 
             if (mag == 0) { return intersection_list; }
 
-            auto i = other.ray_intersects({ r.position, r.direction });
+            auto i = other.ray_intersects(r);
             if (i && i.time < max_t) { intersection_list.push_back(i); }
         }
 
@@ -305,7 +308,8 @@ struct sdf_collider : public collider
 
             return {
                 t,
-                p0,
+                r.position,
+                r.direction,
                 inter_p,
                 g::game::normal_from_sdf(sdf, inter_p)
             };

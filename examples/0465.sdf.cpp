@@ -110,7 +110,8 @@ struct my_core : public g::core
         terrain->scale = 200;
         terrain->depth = 6;
 
-        cam.position = {0, 1100, 0};
+        //cam.position = {218.369263, 968.625732, -140.036774};
+        cam.position = { 0, 1100, 0 };
         cam.foot_offset = { 0, -1.5, 0 };
         //glDisable(GL_CULL_FACE);
 
@@ -180,9 +181,9 @@ struct my_core : public g::core
         rays.clear();
         rays.push_back({feet, dir});
         rays.push_back({cam.position + cam.body_forward() * 2, dir});
-        rays.push_back({cam.position - cam.body_forward() * 2, dir});
-        rays.push_back({cam.position + cam.body_left() * 2, dir});
-        rays.push_back({cam.position - cam.body_left() * 2, dir});
+        //rays.push_back({cam.position - cam.body_forward() * 2, dir});
+        //rays.push_back({cam.position + cam.body_left() * 2, dir});
+        //rays.push_back({cam.position - cam.body_left() * 2, dir});
 
         // rays.push_back({feet, dir});
 
@@ -223,8 +224,9 @@ struct my_core : public g::core
                 if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
 
                 // cam.position = intersections[0].position - cam.q.rotate(cam.foot_offset);
-                cam.position = intersection.position - (intersection.origin - cam.position);
-            }
+                std::cerr << intersection.time << ", ";
+                cam.position = intersection.point - (intersection.origin - cam.position);
+            } std::cerr << std::endl;
 
             cam.position += cam.velocity * dt;
         }

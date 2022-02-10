@@ -702,10 +702,6 @@ struct mesh
 
 					if (verts_generated == 0) { verts_generated = subdivider(corners, 0); }
 				}
-				else
-				{
-					std::cerr << "excluded " << avg_density << std::endl;
-				}
 
 				return verts_generated;
 			}
