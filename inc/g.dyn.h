@@ -150,11 +150,11 @@ namespace cd
 struct intersection
 {
     float time = std::numeric_limits<float>::quiet_NaN();
-    vec<3> position = {}, normal = {};
+    vec<3> origin = {}, position = {}, normal = {};
 
     intersection() = default;
 
-    intersection(float t, const vec<3>& p, const vec<3>& n) : time(t), position(p), normal(n) {}
+    intersection(float t, const vec<3>& o, const vec<3>& p, const vec<3>& n) : time(t), origin(o), position(p), normal(n) {}
 
     operator bool() { return !std::isnan(time); }
 };
@@ -179,6 +179,7 @@ struct ray
 
         return {
             t,
+            position,
             point_at(t),
             plane_n
         };
@@ -192,6 +193,7 @@ struct ray
 
         return {
             t,
+            position,
             point_at(t),
             face_normal
         };
@@ -222,7 +224,7 @@ struct collider
      * @return     Vector of arrays. This vector should be retained by the collider to avoid
      *             redundant allocations.
      */
-    virtual const std::vector<ray>& rays() = 0;
+    virtual std::vector<ray>& rays() = 0;
 
     /**
      * @brief      Given this collider, and another return a vector of all points of
@@ -235,84 +237,32 @@ struct collider
     virtual const std::vector<intersection>& intersections(collider& other, float max_t=std::numeric_limits<float>::infinity()) = 0;
 };
 
-struct ray_collider final : public collider, ray
+struct ray_collider final : public collider
 {
     intersection ray_intersects(const ray& r) const override { return {}; }
 
     bool generates_rays() override { return true; }
 
-    const std::vector<ray>& rays() override
-    {
-        ray_list.clear();
-        ray_list.push_back({ position, direction });
-        return ray_list;
-    }
+    std::vector<ray>& rays() override { return ray_list; }
 
     const std::vector<intersection>& intersections(collider& other, float max_t = std::numeric_limits<float>::infinity()) override
     {
         intersection_list.clear();
 
-        auto mag = direction.magnitude();
-
-        if (mag == 0) { return intersection_list; }
-
-        auto i = other.ray_intersects({ position, direction });
-        if (i && i.time < max_t) { intersection_list.push_back(i); }
-        return intersection_list;
-    }    
-
-    ray_collider& operator=(const ray& other)
-    {
-        position = other.position;
-        direction = other.direction;
-
-        return *this;
-    }
-
-private:
-    std::vector<intersection> intersection_list;
-    std::vector<ray> ray_list;
-};
-
-struct points_collider final : public collider, g::game::pose, g::game::moveable
-{
-    points_collider(const std::vector<vec<3>>& points) : points_list(points) {}
-
-    intersection ray_intersects(const ray& r) const override { return {}; }
-
-    bool generates_rays() override { return true; }
-
-    const std::vector<ray>& rays() override
-    {
-        ray_list.clear();
-
-        for (const auto& point : points_list)
+        for (const auto& r : ray_list)
         {
-            ray_list.push_back({ position + orientation.rotate(point), vel });            
+            auto mag = r.direction.magnitude();
+
+            if (mag == 0) { return intersection_list; }
+
+            auto i = other.ray_intersects({ r.position, r.direction });
+            if (i && i.time < max_t) { intersection_list.push_back(i); }
         }
 
-        return ray_list;
-    }
-
-    const std::vector<intersection>& intersections(collider& other, float max_t = std::numeric_limits<float>::infinity()) override
-    {
-        intersection_list.clear();
-
-        auto mag = vel.magnitude();
-
-        if (mag == 0) { return intersection_list; }
-
-        auto i = other.ray_intersects({ position, vel });
-        if (i && i.time < max_t) { intersection_list.push_back(i); }
         return intersection_list;
     }    
 
-    vec<3> velocity(const vec<3>& vel) override { this->vel = vel; return this->vel; }
-    vec<3> velocity() override { return vel; }
-
 private:
-    vec<3> vel;
-    std::vector<vec<3>> points_list;
     std::vector<intersection> intersection_list;
     std::vector<ray> ray_list;
 };
@@ -355,6 +305,7 @@ struct sdf_collider : public collider
 
             return {
                 t,
+                p0,
                 inter_p,
                 g::game::normal_from_sdf(sdf, inter_p)
             };
@@ -365,7 +316,7 @@ struct sdf_collider : public collider
 
     bool generates_rays() override { return false; }
 
-    const std::vector<ray>& rays() override
+    std::vector<ray>& rays() override
     {
         ray_list.clear();
         return ray_list;
@@ -379,7 +330,7 @@ struct sdf_collider : public collider
             for (auto& r : other.rays())
             {
                 auto i = ray_intersects(r);
-                if (i && i.time < max_t) { intersection_list.push_back(i); }
+                if (i && i.time >= 0 && i.time < max_t) { intersection_list.push_back(i); }
             }
         }
         return intersection_list;

@@ -33,22 +33,22 @@ void main (void)
     w_y /= sum;
     w_z /= sum;
 
-    vec4 ground_color = texture(u_ground, uvw.yz * 0.1) * w_x;
-    ground_color += texture(u_ground, uvw.xz * 0.1) * w_y;
-    ground_color += texture(u_ground, uvw.xy * 0.1) * w_z;
+    vec4 ground_color = texture(u_ground, uvw.yz * 0.4) * w_x;
+    ground_color += texture(u_ground, uvw.xz * 0.4) * w_y;
+    ground_color += texture(u_ground, uvw.xy * 0.4) * w_z;
 
-    vec3 ground_normal = texture(u_ground_normal, uvw.yz * 0.1).rbg * w_x;
-    ground_normal += texture(u_ground_normal, uvw.xz * 0.1).rbg * w_y;
-    ground_normal += texture(u_ground_normal, uvw.xy * 0.1).rbg * w_z;
+    vec3 ground_normal = texture(u_ground_normal, uvw.yz * 0.4).rbg * w_x;
+    ground_normal += texture(u_ground_normal, uvw.xz * 0.4).rbg * w_y;
+    ground_normal += texture(u_ground_normal, uvw.xy * 0.4).rbg * w_z;
 
 
-    vec4 wall_color = texture(u_wall, uvw.yz * 0.1) * w_x;
-    wall_color += texture(u_wall, uvw.xz * 0.1) * w_y;
-    wall_color += texture(u_wall, uvw.xy * 0.1) * w_z;
+    vec4 wall_color = texture(u_wall, uvw.yz * 0.4) * w_x;
+    wall_color += texture(u_wall, uvw.xz * 0.4) * w_y;
+    wall_color += texture(u_wall, uvw.xy * 0.4) * w_z;
 
-    vec3 wall_normal = texture(u_wall_normal, uvw.yz * 0.1).rbg * w_x;
-    wall_normal += texture(u_wall_normal, uvw.xz * 0.1).rbg * w_y;
-    wall_normal += texture(u_wall_normal, uvw.xy * 0.1).rbg * w_z;
+    vec3 wall_normal = texture(u_wall_normal, uvw.yz * 0.4).rbg * w_x;
+    wall_normal += texture(u_wall_normal, uvw.xz * 0.4).rbg * w_y;
+    wall_normal += texture(u_wall_normal, uvw.xy * 0.4).rbg * w_z;
     // vec4 wall_color = texture(u_wall, uvw.xy * 0.1) * texture(u_wall, uvw.xz * 0.1);
 
     vec3 textel_norm = (normalize(mix(wall_normal, ground_normal, w)) - 0.5) * 2.0;

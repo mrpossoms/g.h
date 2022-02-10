@@ -108,7 +108,7 @@ struct my_core : public g::core
 
         terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
         terrain->scale = 200;
-        terrain->depth = 5;
+        terrain->depth = 6;
 
         cam.position = {0, 1100, 0};
         cam.foot_offset = { 0, -1.5, 0 };
@@ -174,8 +174,17 @@ struct my_core : public g::core
         g::dyn::cd::sdf_collider ground_collider(terrain_sdf);
 
         auto feet = cam.feet();
-        cam_collider.position = feet;
-        cam_collider.direction = cam.velocity * dt;
+
+        auto& rays = cam_collider.rays();
+        auto dir = cam.velocity * dt;
+        rays.clear();
+        rays.push_back({feet, dir});
+        rays.push_back({cam.position + cam.body_forward() * 2, dir});
+        rays.push_back({cam.position - cam.body_forward() * 2, dir});
+        rays.push_back({cam.position + cam.body_left() * 2, dir});
+        rays.push_back({cam.position - cam.body_left() * 2, dir});
+
+        // rays.push_back({feet, dir});
 
         auto intersections = cam_collider.intersections(ground_collider, 1);
         auto is_touching_ground = intersections.size() > 0;
@@ -203,15 +212,19 @@ struct my_core : public g::core
 
         if (is_touching_ground)
         {
-            auto n = intersections[0].normal;
+            for (auto& intersection : intersections)
+            {
+                auto n = intersection.normal;
 
-            cam.velocity = cam.velocity - (n * (cam.velocity.dot(n) / n.dot(n)));
-            auto friction = cam.velocity * -0.3;
-            cam.velocity += friction;
+                cam.velocity = cam.velocity - (n * (std::min<float>(0, cam.velocity.dot(n))));
+                auto friction = cam.velocity * -0.3;
+                cam.velocity += friction;
 
-            if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
+                if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
 
-            cam.position = intersections[0].position - cam.q.rotate(cam.foot_offset);
+                // cam.position = intersections[0].position - cam.q.rotate(cam.foot_offset);
+                cam.position = intersection.position - (intersection.origin - cam.position);
+            }
 
             cam.position += cam.velocity * dt;
         }

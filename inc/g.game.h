@@ -151,7 +151,7 @@ private:
 struct camera_perspective : public camera
 {
 	float field_of_view = M_PI / 2;
-	float near = 0.1f, far = 1000.f;
+	float near = 0.01f, far = 1000.f;
 	float aspect = 1;
 
 	virtual mat<4, 4> projection() const
