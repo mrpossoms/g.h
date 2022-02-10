@@ -168,6 +168,9 @@ struct my_core : public g::core
         // }
 
         g::dyn::cd::ray_collider cam_collider;
+        // g::dyn::cd::point_collider cam_collider({
+
+        // });
         g::dyn::cd::sdf_collider ground_collider(terrain_sdf);
 
         auto feet = cam.feet();
@@ -187,6 +190,7 @@ struct my_core : public g::core
             glfwGetCursorPos(g::gfx::GLFW_WIN, &xpos, &ypos);
         }
 
+        if (glfwGetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         if (xlast != 0 || ylast != 0)
         {
             auto dx = xpos - xlast;
@@ -200,12 +204,6 @@ struct my_core : public g::core
         if (is_touching_ground)
         {
             auto n = intersections[0].normal;
-            auto p1 = feet + cam.velocity * dt;
-            auto p0_d = terrain_sdf(cam.position + n);
-            auto p1_d = terrain_sdf(p1);
-
-            auto w = p1_d / (p1_d - p0_d);
-            assert(std::isfinite(w));
 
             cam.velocity = cam.velocity - (n * (cam.velocity.dot(n) / n.dot(n)));
             auto friction = cam.velocity * -0.3;
@@ -214,12 +212,6 @@ struct my_core : public g::core
             if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
 
             cam.position = intersections[0].position - cam.q.rotate(cam.foot_offset);
-
-            for(unsigned i = 5; terrain_sdf(cam.feet()) <= 0 && i--;)
-            {
-                // cam.position += intersections[0].normal * 0.05;
-                // assert(!std::isnan(cam.position.magnitude()));
-            }
 
             cam.position += cam.velocity * dt;
         }
@@ -247,6 +239,13 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_1) == GLFW_PRESS) cam.position = {0, 1100, 0};
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_2) == GLFW_PRESS) cam.position = {1100, 0, 0};
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_3) == GLFW_PRESS) cam.position = {0, 0, 1100};
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+        if (glfwGetMouseButton(g::gfx::GLFW_WIN, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        {
+            glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        }
+
 
         glPointSize(4);
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(cam.position, cam.forward());

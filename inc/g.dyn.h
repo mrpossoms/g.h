@@ -272,7 +272,49 @@ struct ray_collider final : public collider, ray
 private:
     std::vector<intersection> intersection_list;
     std::vector<ray> ray_list;
+};
 
+struct points_collider final : public collider, g::game::pose, g::game::moveable
+{
+    points_collider(const std::vector<vec<3>>& points) : points_list(points) {}
+
+    intersection ray_intersects(const ray& r) const override { return {}; }
+
+    bool generates_rays() override { return true; }
+
+    const std::vector<ray>& rays() override
+    {
+        ray_list.clear();
+
+        for (const auto& point : points_list)
+        {
+            ray_list.push_back({ position + orientation.rotate(point), vel });            
+        }
+
+        return ray_list;
+    }
+
+    const std::vector<intersection>& intersections(collider& other, float max_t = std::numeric_limits<float>::infinity()) override
+    {
+        intersection_list.clear();
+
+        auto mag = vel.magnitude();
+
+        if (mag == 0) { return intersection_list; }
+
+        auto i = other.ray_intersects({ position, vel });
+        if (i && i.time < max_t) { intersection_list.push_back(i); }
+        return intersection_list;
+    }    
+
+    vec<3> velocity(const vec<3>& vel) override { this->vel = vel; return this->vel; }
+    vec<3> velocity() override { return vel; }
+
+private:
+    vec<3> vel;
+    std::vector<vec<3>> points_list;
+    std::vector<intersection> intersection_list;
+    std::vector<ray> ray_list;
 };
 
 struct sdf_collider : public collider
