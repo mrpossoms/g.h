@@ -59,5 +59,5 @@ void main (void)
 
     color.rgb *= (dot(v_basis * textel_norm, light_dir) + 1) * 0.5;
     // color.rgb *= dot(v_normal, light_dir);
-    color.rgb = (textel_norm + 1.0) * 0.5;
+    // color.rgb = (textel_norm + 1.0) * 0.5;
 }

@@ -144,7 +144,7 @@ public:
     }
 };
 
-namespace cd
+namespace cd //< Collision detection
 {
 
 struct box
@@ -354,5 +354,43 @@ private:
 
 
 } // end namespace cd
+
+
+namespace cr //< Collision resolution
+{
+    /**
+     * @brief      Resolves collision for and object which only has translational
+     *             degrees of freedom.
+     * 
+     * @param[inout] obj            The object which we are resolving the collision for.
+     * @param[in]    intersections  The intersections.
+     *
+     * @tparam       T            A type compatible with this function must have 
+     *                            `position` and `velocity` vec<3> members
+     */
+    template<typename T>
+    void resolve_linear(T& obj, const std::vector<cd::intersection>& intersections)
+    {
+        bool printed = false;
+
+        for (auto& intersection : intersections)
+        {
+            auto n = intersection.normal;
+
+            // allow the velocity components parallel to the surface plane persist
+            // which will allow the object to slide along the surface
+            obj.velocity = obj.velocity - (n * (std::min<float>(0, obj.velocity.dot(n))));
+            auto friction = obj.velocity * -0.3;
+            obj.velocity += friction;
+
+            // static coefficent of friction fudge factor
+            if (obj.velocity.magnitude() < 0.5) obj.velocity *= 0;
+
+            // correct penetration
+            obj.position = intersection.point - (intersection.origin - obj.position);
+        } 
+    }
+} // end namespace cr
+
 } // end namespace dyn
 } // end namespace g

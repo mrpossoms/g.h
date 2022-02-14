@@ -130,44 +130,6 @@ struct my_core : public g::core
         vec<3> down = -cam.position.unit();
         cam.velocity += down * 1;
 
-
-        // p1 = cam.position + cam.velocity * dt;
-        // p1_d = terrain_sdf(p1);
-        // is_touching_ground = p1_d <= 0;
-
-
-        // auto drag = cam.velocity * -0.01;
-        // auto w_bias = 0;
-        // cam.velocity += drag;
-
-        // assert(!std::isnan(p1.magnitude()));
-
-        // if (is_touching_ground)
-        // {
-        //     auto n = g::game::normal_from_sdf(terrain_sdf, p1);
-        //     auto w = p1_d / (p1_d - p0_d);
-        //     assert(!std::isnan(w));
-
-        //     cam.velocity = cam.velocity - (n * (cam.velocity.dot(n) / n.dot(n)));
-        //     auto friction = cam.velocity * -0.3;
-        //     cam.velocity += friction;
-
-        //     if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
-
-        //     for (; terrain_sdf(cam.position + cam.velocity * dt) <= 0; w += 0.1)
-        //     {
-        //         cam.position = (p1 * (1 - w) + (cam.position) * w);
-        //         assert(!std::isnan(cam.position.magnitude()));
-        //     }
-
-        //     // cam.position += cam.velocity * dt;
-        // }
-        // else
-        // {
-        //     cam.position = p1;
-        //     assert(!std::isnan(cam.position.magnitude()));
-        // }
-
         g::dyn::cd::ray_collider cam_collider;
         // g::dyn::cd::point_collider cam_collider({
 
@@ -186,9 +148,6 @@ struct my_core : public g::core
         //rays.push_back({cam.position - cam.body_left() * 2, dir});
 
         // rays.push_back({feet, dir});
-
-        auto intersections = cam_collider.intersections(ground_collider, 1);
-        auto is_touching_ground = intersections.size() > 0;
 
         static double xlast, ylast;
         float sensitivity = 0.5f;
@@ -211,38 +170,13 @@ struct my_core : public g::core
 
         xlast = xpos; ylast = ypos;
 
+        auto intersections = cam_collider.intersections(ground_collider, 1);
+        auto is_touching_ground = intersections.size() > 0;
+
         if (is_touching_ground)
         {
-            for (auto& intersection : intersections)
-            {
-                auto n = intersection.normal;
-
-                cam.velocity = cam.velocity - (n * (std::min<float>(0, cam.velocity.dot(n))));
-                auto friction = cam.velocity * -0.3;
-                cam.velocity += friction;
-
-                if (cam.velocity.magnitude() < 0.5) cam.velocity *= 0;
-
-                // cam.position = intersections[0].position - cam.q.rotate(cam.foot_offset);
-                std::cerr << intersection.time << ", ";
-                cam.position = intersection.point - (intersection.origin - cam.position);
-            } std::cerr << std::endl;
-
-            cam.position += cam.velocity * dt;
+            g::dyn::cr::resolve_linear<fps_camera>(cam, intersections);
         }
-        else
-        {
-            cam.position = cam.position + cam.velocity * dt;
-            assert(!std::isnan(cam.position.magnitude()));
-        }
-
-        auto up = -down;
-        auto d = up.dot({ 0, 1, 0 }); 
-        auto a = acos(d);
-        auto axis = vec<3>::cross(up, { 0, 1, 0 });
-        if (axis.magnitude() < 0.0001) { axis = {1, 0, 0}; }
-        axis = axis.unit();
-        cam.q = quat<>::from_axis_angle(axis, a).inverse();
 
         speed *= is_touching_ground;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
@@ -256,11 +190,13 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_3) == GLFW_PRESS) cam.position = {0, 0, 1100};
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
+        cam.gravity = down * 9.8;
+        cam.update(dt, 0);
+
         if (glfwGetMouseButton(g::gfx::GLFW_WIN, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
         {
             glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
-
 
         glPointSize(4);
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(cam.position, cam.forward());
@@ -271,7 +207,6 @@ struct my_core : public g::core
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 1000, 0 });
         g::gfx::debug::print(&cam).color({ 0, 0, 1, 1 }).ray(vec<3>{ 0, 0, 0 }, { 0, 0, 1000 });
 
-        cam.update(dt, 0);
         terrain->update(cam);
 
         // draw terrain

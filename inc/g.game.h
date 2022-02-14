@@ -182,6 +182,7 @@ struct fps_camera final : public camera_perspective, updateable
 
 	vec<3> velocity = {};
 	vec<3> foot_offset = {0, -1, 0};
+	vec<3> gravity = { 0, -9.8, 0 };
 
 	quat<> q, r;
 	quat<> yaw_q;
@@ -230,6 +231,16 @@ struct fps_camera final : public camera_perspective, updateable
 
 	void update(float dt, float t) override
 	{
+		//velocity += gravity * dt;
+
+		auto up = -gravity.unit();
+		auto d = up.dot({ 0, 1, 0 });
+		auto a = acos(d);
+		auto axis = vec<3>::cross(up, { 0, 1, 0 });
+		if (axis.magnitude() < 0.0001) { axis = { 1, 0, 0 }; }
+		axis = axis.unit();
+		q = quat<>::from_axis_angle(axis, a).inverse();
+
 		pitch = std::min<float>(max_pitch, std::max<float>(min_pitch, pitch));
 
 		yaw_q = quat<>::from_axis_angle(body_up(), yaw);
