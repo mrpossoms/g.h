@@ -26,6 +26,7 @@
 #include "g.utils.h"
 #include "g.gfx.h"
 #include "g.game.h"
+#include "g.camera.h"
 #include "g.assets.h"
 #include "g.dyn.h"
 #include "g.ui.h"

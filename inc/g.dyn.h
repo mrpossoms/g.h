@@ -240,7 +240,7 @@ struct collider
     virtual const std::vector<intersection>& intersections(collider& other, float max_t=std::numeric_limits<float>::infinity()) = 0;
 };
 
-struct ray_collider final : public collider
+struct ray_collider : public collider
 {
     intersection ray_intersects(const ray& r) const override { return {}; }
 
@@ -265,7 +265,7 @@ struct ray_collider final : public collider
         return intersection_list;
     }    
 
-private:
+protected:
     std::vector<intersection> intersection_list;
     std::vector<ray> ray_list;
 };

@@ -113,6 +113,48 @@ struct my_core : public g::core
         //cam.position = {218.369263, 968.625732, -140.036774};
         cam.position = { 0, 1100, 0 };
         cam.foot_offset = { 0, -1.5, 0 };
+
+        cam.on_input = [](fps_camera& cam, float dt){
+            static double xlast, ylast;
+            float sensitivity = 0.5f;
+            double xpos = 0, ypos = 0;
+            auto mode = glfwGetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR);
+
+            if (GLFW_CURSOR_DISABLED == mode)
+            {
+                glfwGetCursorPos(g::gfx::GLFW_WIN, &xpos, &ypos);
+            }
+
+            if (glfwGetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+            if (xlast != 0 || ylast != 0)
+            {
+                auto dx = xpos - xlast;
+                auto dy = ypos - ylast;
+                cam.pitch += (-dy * dt * sensitivity);
+                cam.yaw += (dx * dt * sensitivity);
+            }
+
+            xlast = xpos; ylast = ypos;
+
+            auto speed = cam.speed;
+            speed *= cam.touching_surface;
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.body_up() * 40 * cam.touching_surface;
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_1) == GLFW_PRESS) cam.position = {0, 1100, 0};
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_2) == GLFW_PRESS) cam.position = {1100, 0, 0};
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_3) == GLFW_PRESS) cam.position = {0, 0, 1100};
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        
+            if (glfwGetMouseButton(g::gfx::GLFW_WIN, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+            {
+                glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            }
+        };
+
         //glDisable(GL_CULL_FACE);
 
         glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -128,75 +170,28 @@ struct my_core : public g::core
         auto speed = 1.0f;
 
         vec<3> down = -cam.position.unit();
-        cam.velocity += down * 1;
+        // cam.velocity += down * 1;
 
-        g::dyn::cd::ray_collider cam_collider;
+        // g::dyn::cd::ray_collider cam_collider;
         // g::dyn::cd::point_collider cam_collider({
 
         // });
         g::dyn::cd::sdf_collider ground_collider(terrain_sdf);
 
-        auto feet = cam.feet();
-
-        auto& rays = cam_collider.rays();
-        auto dir = cam.velocity * dt;
-        rays.clear();
-        rays.push_back({feet, dir});
-        rays.push_back({cam.position + cam.body_forward() * 2, dir});
-        //rays.push_back({cam.position - cam.body_forward() * 2, dir});
-        //rays.push_back({cam.position + cam.body_left() * 2, dir});
-        //rays.push_back({cam.position - cam.body_left() * 2, dir});
-
         // rays.push_back({feet, dir});
 
-        static double xlast, ylast;
-        float sensitivity = 0.5f;
-        double xpos = 0, ypos = 0;
-        auto mode = glfwGetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR);
+        cam.gravity = down * 9.8;
+        cam.pre_update(dt, 0);
 
-        if (GLFW_CURSOR_DISABLED == mode)
-        {
-            glfwGetCursorPos(g::gfx::GLFW_WIN, &xpos, &ypos);
-        }
+        auto intersections = cam.intersections(ground_collider, 1);
+        cam.touching_surface = intersections.size() > 0;
 
-        if (glfwGetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
-        if (xlast != 0 || ylast != 0)
-        {
-            auto dx = xpos - xlast;
-            auto dy = ypos - ylast;
-            cam.pitch += (-dy * dt * sensitivity);
-            cam.yaw += (dx * dt * sensitivity);
-        }
-
-        xlast = xpos; ylast = ypos;
-
-        auto intersections = cam_collider.intersections(ground_collider, 1);
-        auto is_touching_ground = intersections.size() > 0;
-
-        if (is_touching_ground)
+        if (cam.touching_surface)
         {
             g::dyn::cr::resolve_linear<fps_camera>(cam, intersections);
         }
 
-        speed *= is_touching_ground;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.body_up() * 40 * is_touching_ground;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_1) == GLFW_PRESS) cam.position = {0, 1100, 0};
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_2) == GLFW_PRESS) cam.position = {1100, 0, 0};
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_3) == GLFW_PRESS) cam.position = {0, 0, 1100};
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-
-        cam.gravity = down * 9.8;
         cam.update(dt, 0);
-
-        if (glfwGetMouseButton(g::gfx::GLFW_WIN, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-        {
-            glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        }
 
         glPointSize(4);
         g::gfx::debug::print(&cam).color({ 0, 1, 0, 1 }).ray(cam.position, cam.forward());

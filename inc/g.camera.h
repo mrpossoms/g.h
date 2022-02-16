@@ -103,7 +103,8 @@ struct camera_orthographic : public camera
 	}
 };
 
-struct fps_camera final : public camera_perspective, updateable
+
+struct fps_camera : public camera_perspective, updateable, g::dyn::cd::ray_collider
 {
 	//~fps_camera() = default;
 
@@ -118,9 +119,12 @@ struct fps_camera final : public camera_perspective, updateable
 
 	g::dyn::cd::ray_collider cam_collider;
 
+	std::function<void(fps_camera& cam)> on_input;
+
 	quat<> q, r;
 	quat<> yaw_q;
 
+	float speed = 1;
 	float yaw = 0;
 	float pitch = 0;
 	const float max_pitch = (M_PI / 2.f) - 0.1f;
@@ -162,9 +166,9 @@ struct fps_camera final : public camera_perspective, updateable
 		return position + q.rotate(foot_offset);
 	}
 
-	void update(float dt, float t) override
+	void pre_update(float dt, float time) override
 	{
-		//velocity += gravity * dt;
+		if (on_input) on_input(*this, dt);
 
 		auto up = -gravity.unit();
 		auto d = up.dot({ 0, 1, 0 });
@@ -178,7 +182,23 @@ struct fps_camera final : public camera_perspective, updateable
 
 		yaw_q = quat<>::from_axis_angle(body_up(), yaw);
 		r = quat<>::from_axis_angle(body_left(), pitch) * yaw_q;
-		orientation = r * q;
+		orientation = r * q;		
+
+		velocity += gravity * dt;
+
+        auto dir = velocity * dt;
+        ray_list.clear();
+        ray_list.push_back({feet(), dir});
+        ray_list.push_back({position + body_forward() * 2, dir});
+        //rays.push_back({position - body_forward() * 2, dir});
+        //rays.push_back({position + body_left() * 2, dir});
+        //rays.push_back({position - body_left() * 2, dir});
+
+	}
+
+	void update(float dt, float t) override
+	{
+		//velocity += gravity * dt;
 
 		position += velocity * dt;
 	}

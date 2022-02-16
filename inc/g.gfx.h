@@ -4,6 +4,7 @@
 #define XMTYPE float
 #include <xmath.h>
 #include <g.game.h>
+#include <g.camera.h>
 #include <g.proc.h>
 
 #include <iostream>
