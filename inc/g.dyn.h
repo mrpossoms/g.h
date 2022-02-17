@@ -174,7 +174,7 @@ struct ray
 
     inline vec<3> point_at(float t) const { return position + direction * t; }
 
-    intersection intersect_plane(const ray& r, const vec<3>& plane_o, const vec<3>& plane_n)
+    intersection intersect_plane(const vec<3>& plane_o, const vec<3>& plane_n)
     {
         auto t = xmath::intersect::ray_plane(position, direction, plane_o, plane_n);
 
@@ -252,7 +252,7 @@ struct ray_collider : public collider
     {
         intersection_list.clear();
 
-        for (const auto& r : ray_list)
+        for (const auto& r : rays())
         {
             auto mag = r.direction.magnitude();
 
@@ -387,7 +387,7 @@ namespace cr //< Collision resolution
             if (obj.velocity.magnitude() < 0.5) obj.velocity *= 0;
 
             // correct penetration
-            obj.position = intersection.point - (intersection.origin - obj.position);
+            // obj.position = intersection.point - (intersection.origin - obj.position);
         } 
     }
 } // end namespace cr

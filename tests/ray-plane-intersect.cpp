@@ -11,37 +11,37 @@ TEST
 
     { // plane facing up in the +y direction
         // ray over the origin
-        auto inter = cd::ray_plane(cd::ray{{ 0, 1, 0}, { 0, -1, 0}}, {0, 0, 0}, {0, 1, 0});
+        auto inter = cd::ray{{ 0, 1, 0}, { 0, -1, 0}}.intersect_plane({0, 0, 0}, {0, 1, 0});
         assert(near(inter.time, 1));
 
         // ray positioned randomly above the plane
         auto y = (rand() % 100) + 1.f;
-        inter = cd::ray_plane(cd::ray{{(rand() % 100) - 50.f, y, (rand() % 100) - 50.f}, { 0, -1, 0}}, {0, 0, 0}, {0, 1, 0});
+        inter = cd::ray{{(rand() % 100) - 50.f, y, (rand() % 100) - 50.f}, { 0, -1, 0}}.intersect_plane({0, 0, 0}, {0, 1, 0});
         assert(near(inter.time, y));
 
         // ray over the origin
         // <-1   2->
-        inter = cd::ray_plane(cd::ray{{ 0, 1, 0}, { 0, -1, 0}}, {0, 2, 0}, {0, 1, 0});
+        inter = cd::ray{{ 0, 1, 0}, { 0, -1, 0}}.intersect_plane({0, 2, 0}, {0, 1, 0});
         assert(std::isnan(inter.time));
     }
 
     { // plane facing up in the +x direction
         // ray over the origin
-        auto inter = cd::ray_plane(cd::ray{{ 1, 0, 0}, { -1, 0, 0}}, {0, 0, 0}, {1, 0, 0});
+        auto inter = cd::ray{{ 1, 0, 0}, { -1, 0, 0}}.intersect_plane({0, 0, 0}, {1, 0, 0});
         assert(near(inter.time, 1));
 
         // ray pointing away from the plane (no collision)
-        inter = cd::ray_plane(cd::ray{{ 1, 0, 0}, { 1, 0, 0}}, {0, 0, 0}, {1, 0, 0});
+        inter = cd::ray{{ 1, 0, 0}, { 1, 0, 0}}.intersect_plane({0, 0, 0}, {1, 0, 0});
         assert(std::isnan(inter.time));
     }
 
     { // plane facing up in the +z direction
         // ray over the origin
-        auto inter = cd::ray_plane(cd::ray{{ 0, 0, 1}, { 0, 0, -1}}, {0, 0, 0}, {0, 0, 1});
+        auto inter = cd::ray{{ 0, 0, 1}, { 0, 0, -1}}.intersect_plane({0, 0, 0}, {0, 0, 1});
         assert(near(inter.time, 1));
 
         // plane is above the ray (no collision)
-        inter = cd::ray_plane(cd::ray{{ 0, 0, 1}, { 0, 0, -1}}, {0, 0, 2}, {0, 0, 1});
+        inter = cd::ray{{ 0, 0, 1}, { 0, 0, -1}}.intersect_plane({0, 0, 2}, {0, 0, 1});
         assert(std::isnan(inter.time));
     }
 

@@ -104,22 +104,18 @@ struct camera_orthographic : public camera
 };
 
 
-struct fps_camera : public camera_perspective, updateable, g::dyn::cd::ray_collider
+using namespace g::dyn::cd;
+
+struct fps_camera : public camera_perspective, updateable, ray_collider
 {
-	//~fps_camera() = default;
-
-	//vec<3> velocity() override { return vel; }
-	//vec<3> velocity(const vec<3>& v) override { return vel = v; }
-
 	vec<3> velocity = {};
 	vec<3> foot_offset = {0, -1, 0};
 	vec<3> gravity = { 0, -9.8, 0 };
+	float drag = 0.3;
 
 	bool touching_surface = false;
 
-	g::dyn::cd::ray_collider cam_collider;
-
-	std::function<void(fps_camera& cam)> on_input;
+	std::function<void(fps_camera& cam, float dt)> on_input;
 
 	quat<> q, r;
 	quat<> yaw_q;
@@ -130,6 +126,17 @@ struct fps_camera : public camera_perspective, updateable, g::dyn::cd::ray_colli
 	const float max_pitch = (M_PI / 2.f) - 0.1f;
 	const float min_pitch = -(M_PI / 2.f) + 0.1f;
 
+    std::vector<ray>& rays() override
+    {
+        ray_list.clear();
+        ray_list.push_back({feet(), dir});
+        ray_list.push_back({position + body_forward() * 2, dir});
+        //rays.push_back({position - body_forward() * 2, dir});
+        //rays.push_back({position + body_left() * 2, dir});
+        //rays.push_back({position - body_left() * 2, dir});
+
+        return ray_list;
+    }
 
 	vec<3> forward() const override 
 	{
@@ -184,15 +191,11 @@ struct fps_camera : public camera_perspective, updateable, g::dyn::cd::ray_colli
 		r = quat<>::from_axis_angle(body_left(), pitch) * yaw_q;
 		orientation = r * q;		
 
+
+		velocity += -velocity * drag * dt;
 		velocity += gravity * dt;
 
-        auto dir = velocity * dt;
-        ray_list.clear();
-        ray_list.push_back({feet(), dir});
-        ray_list.push_back({position + body_forward() * 2, dir});
-        //rays.push_back({position - body_forward() * 2, dir});
-        //rays.push_back({position + body_left() * 2, dir});
-        //rays.push_back({position - body_left() * 2, dir});
+		dir = velocity * dt;
 
 	}
 
@@ -203,7 +206,7 @@ struct fps_camera : public camera_perspective, updateable, g::dyn::cd::ray_colli
 		position += velocity * dt;
 	}
 private:
-	//vec<3> vel = {};
+	vec<3> dir; //< used for ray generation in collision detection
 };
 
 } // namespace game

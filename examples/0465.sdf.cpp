@@ -26,7 +26,6 @@ struct my_core : public g::core
     g::gfx::shader basic_shader;
     g::asset::store assets;
     g::game::fps_camera cam;
-    // g::gfx::mesh<g::gfx::vertex::pos_norm_tan> terrain;
     std::vector<int8_t> v[3];
 
     g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>* terrain;
@@ -36,8 +35,6 @@ struct my_core : public g::core
     virtual bool initialize()
     {
         std::cout << "initialize your game state here.\n";
-
-        // terrain = g::gfx::mesh_factory{}.empty_mesh<g::gfx::vertex::pos_norm_tan>();
 
         srand(time(NULL));
 
@@ -96,7 +93,6 @@ struct my_core : public g::core
             return v;
         };
 
-        // std::vector<vec<3>> offsets = {{0, 0, 0}};
         std::vector<vec<3>> offsets;
         auto k = 1;
         for (float x = -k; x <= k; x++)
@@ -108,7 +104,7 @@ struct my_core : public g::core
 
         terrain = new g::gfx::density_volume<g::gfx::vertex::pos_norm_tan>(terrain_sdf, generator, offsets);
         terrain->scale = 200;
-        terrain->depth = 6;
+        terrain->depth = 4;
 
         //cam.position = {218.369263, 968.625732, -140.036774};
         cam.position = { 0, 1100, 0 };
@@ -137,16 +133,13 @@ struct my_core : public g::core
             xlast = xpos; ylast = ypos;
 
             auto speed = cam.speed;
-            speed *= cam.touching_surface;
-            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 10;
+            speed *= cam.touching_surface ? 1 : 0.3;
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed *= 5;
             if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.velocity += cam.body_forward() * speed;
             if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.velocity += cam.body_forward() * -speed;
             if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.velocity += cam.body_left() * speed;
             if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.velocity += cam.body_left() * -speed;
-            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.body_up() * 40 * cam.touching_surface;
-            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_1) == GLFW_PRESS) cam.position = {0, 1100, 0};
-            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_2) == GLFW_PRESS) cam.position = {1100, 0, 0};
-            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_3) == GLFW_PRESS) cam.position = {0, 0, 1100};
+            if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) cam.velocity += cam.body_up() * 5 * cam.touching_surface;
             if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetInputMode(g::gfx::GLFW_WIN, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         
             if (glfwGetMouseButton(g::gfx::GLFW_WIN, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
@@ -167,19 +160,9 @@ struct my_core : public g::core
         glClearColor(0.5, 0.5, 1, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        auto speed = 1.0f;
-
-        vec<3> down = -cam.position.unit();
-        // cam.velocity += down * 1;
-
-        // g::dyn::cd::ray_collider cam_collider;
-        // g::dyn::cd::point_collider cam_collider({
-
-        // });
         g::dyn::cd::sdf_collider ground_collider(terrain_sdf);
 
-        // rays.push_back({feet, dir});
-
+        vec<3> down = -cam.position.unit();
         cam.gravity = down * 9.8;
         cam.pre_update(dt, 0);
 
@@ -204,13 +187,15 @@ struct my_core : public g::core
 
         terrain->update(cam);
 
-        // draw terrain
+
+        // grab textures for terrain
         auto& wall = assets.tex("rock_wall.repeating.png");
         auto& ground = assets.tex("sand.repeating.png");
         auto& wall_normal = assets.tex("rock_wall_normal.repeating.png");
         auto& ground_normal = assets.tex("sand_normal.repeating.png");
         auto model = mat4::I();
 
+        // draw terrain
         terrain->draw(cam, assets.shader("planet.vs+planet_color.fs"), [&](g::gfx::shader::usage& usage) {
             auto model = mat4::I();
 
