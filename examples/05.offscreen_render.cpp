@@ -3,7 +3,6 @@
 using mat4 = xmath::mat<4,4>;
 
 const std::string vs_src =
-"#version 410\n"
 "in vec3 a_position;"
 "in vec2 a_uv;"
 "in vec3 a_normal;"
@@ -17,7 +16,6 @@ const std::string vs_src =
 "}";
 
 const std::string fs_src =
-"#version 410\n"
 "in vec2 v_uv;"
 "out vec4 color;"
 "uniform sampler2D u_tex;"
@@ -60,18 +58,19 @@ struct my_core : public g::core
 
 		auto model = mat4::rotation({0, 0, 1}, t) * mat4::translation({0, 0, -1});
 
-		// cam.d_pitch(dt);
+		{ // by using the scoped_draw object, everything drawn within this
+		  // block will be written to the framebuffer fb
+			g::gfx::framebuffer::scoped_draw draw(fb);
 
-		fb.bind_as_target();
-		glClearColor(0, 0, 1, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		plane.using_shader(basic_shader)
-		.set_camera(cam)
-		["u_model"].mat4(model)
-		["u_tex"].texture(grid_tex)
-		.draw<GL_TRIANGLE_FAN>();
-		fb.unbind_as_target();
-
+			glClearColor(0, 0, 1, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			plane.using_shader(basic_shader)
+				.set_camera(cam)
+				["u_model"].mat4(model)
+				["u_tex"].texture(grid_tex)
+				.draw<GL_TRIANGLE_FAN>();
+		}
+		
 		model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, 0, -2});
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

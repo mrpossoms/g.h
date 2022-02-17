@@ -185,6 +185,14 @@ struct texture_factory
 
 struct framebuffer
 {
+	struct scoped_draw
+	{
+		framebuffer& fb_ref;
+
+		scoped_draw(framebuffer& fb) : fb_ref(fb) { fb_ref.bind_as_target(); }
+		~scoped_draw() { fb_ref.unbind_as_target(); }
+	};
+
 	GLuint fbo;
 	unsigned size[3];
 	texture color;
