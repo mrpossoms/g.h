@@ -156,12 +156,11 @@ float g::gfx::noise::value(const vec<3>& p, const std::vector<int8_t>& entropy)
 		p.floor() + vec<3>{1, 1, 1}
 	};
 
-	constexpr auto cn = 8;//1 << 3;
+	constexpr auto cn = 1 << 3;
 
 	float s[cn] = {};
 	for (unsigned ci = 0; ci < cn; ci++)
 	{
-		vec<3> corner;
 
 		// construct a corner based on the 
 		// for (unsigned i = 0; i < 3; i++)
@@ -175,9 +174,12 @@ float g::gfx::noise::value(const vec<3>& p, const std::vector<int8_t>& entropy)
 			static_cast<float>((ci >> 1) & 0x1),
 			static_cast<float>((ci >> 2) & 0x1),
 		};
-		corner.v[2] = bits[0] * bounds[1].v[2] + (1 - bits[0]) * bounds[0].v[2];
-		corner.v[1] = bits[1] * bounds[1].v[1] + (1 - bits[1]) * bounds[0].v[1];
-		corner.v[0] = bits[2] * bounds[1].v[0] + (1 - bits[2]) * bounds[0].v[0];
+
+		vec<3> corner = {
+			bits[0] * bounds[1].v[2] + (1 - bits[0]) * bounds[0].v[2],
+			bits[1] * bounds[1].v[1] + (1 - bits[1]) * bounds[0].v[1],
+			bits[2] * bounds[1].v[0] + (1 - bits[2]) * bounds[0].v[0]
+		};
 
 		auto idx = corner.cast<int>();
 		s[ci] = static_cast<float>(entropy[(idx[1] * 1024 + idx[0]) % entropy.size()]) / 256.f;

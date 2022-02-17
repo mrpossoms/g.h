@@ -40,7 +40,7 @@ struct kind
 struct store
 {
 	private: std::string root;
-	private: bool hot_reload;;
+	private: bool hot_reload;
 	private: std::unordered_map<std::string, kind<g::gfx::texture>> textures;
 	private: std::unordered_map<std::string, kind<g::game::voxels_paletted>> voxels;
 	private: std::unordered_map<std::string, kind<g::gfx::shader>> shaders;
@@ -49,6 +49,8 @@ struct store
 	private: std::unordered_map<std::string, kind<g::snd::track>> sounds;
 
 	public: store(const std::string& root_path="data", bool do_hot_reload=true) : root(root_path), hot_reload(do_hot_reload) { }
+
+	~store();
 
 	g::gfx::texture& tex(const std::string& partial_path);
 
