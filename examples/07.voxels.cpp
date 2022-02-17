@@ -88,15 +88,17 @@ struct voxel_world : public g::core
 		light.position = vec<3>{cos(t * 0.1f) * 60, sin(t * 0.1f) * 60, 60};
 		light.look_at(vec<3>{0, 0, 0}, vec<3>{0, 0, 1});
 
-		shadow_map.bind_as_target();
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		temple.using_shader(assets.shader("depth_only.vs+depth_only.fs"))
-		.set_camera(light)
-		["u_model"].mat4(model)
-		.draw<GL_TRIANGLES>();
-		shadow_map.unbind_as_target();
+		{ // draw shadow map
+			g::gfx::framebuffer::scoped_draw sd(shadow_map);
+			glClearColor(0, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			temple.using_shader(assets.shader("depth_only.vs+depth_only.fs"))
+				.set_camera(light)
+				["u_model"].mat4(model)
+				.draw<GL_TRIANGLES>();
 
+		}
+		
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
