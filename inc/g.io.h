@@ -54,5 +54,11 @@ private:
 	std::unique_ptr<impl> file_impl;
 };
 
+// TODO
+struct keyboard
+{
+	static bool is_pressed(int key) { return false; }
+};
+
 } // namespace io
 } // namespace g

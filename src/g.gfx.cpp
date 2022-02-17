@@ -30,6 +30,176 @@ float g::gfx::aspect()
 	return width / (float)height;
 }
 
+float g::gfx::noise::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
+{
+	auto ent_data = entropy.data();
+	auto ent_size = entropy.size();
+
+	auto rand_grad = [&](vec<3, unsigned> a) -> vec<3>
+	{
+		const unsigned w = 8 * sizeof(int);
+		const unsigned s = w / 2; // rotation width
+
+		// unsigned a[3];
+		// for (unsigned i = 3; i--;) { a[i] = index[i]; }
+
+		for (unsigned i = 0; i < 3; i++)
+		{
+			a[i] *= *(const unsigned*)(ent_data + (a[i] % ent_size - sizeof(unsigned)));
+			a[(i + 1) % 3] ^= a[i] << s | a[i] >> (w - s);
+		}
+
+		// a.v[0] *= *(const unsigned*)(ent_data + (a.v[0] % ent_size - sizeof(unsigned)));
+		// a.v[(0 + 1) % 3] ^= a.v[0] << s | a.v[0] >> w - s;
+		// a.v[1] *= *(const unsigned*)(ent_data + (a.v[1] % ent_size - sizeof(unsigned)));
+		// a.v[(1 + 1) % 3] ^= a.v[1] << s | a.v[1] >> w - s;
+		// a.v[2] *= *(const unsigned*)(ent_data + (a.v[2] % ent_size - sizeof(unsigned)));
+		// a.v[(2 + 1) % 3] ^= a.v[2] << s | a.v[2] >> w - s;
+
+		vec<3> grad = {
+			(float)entropy[a.v[0] % ent_size],
+			(float)entropy[a.v[1] % ent_size],
+			(float)entropy[a.v[2] % ent_size],
+		};
+
+		return grad.unit();
+	};
+
+	/**
+	 * 0-------1
+	 * |       |
+	 * x----*--x
+	 * |       |
+	 * 2-------3
+	 *
+	 * 00 -> 0
+	 * 01 -> 2
+	 * 10 -> 1
+	 * 11 -> 3
+	 *
+	 *      0-------1
+	 *     /       /|
+	 *    /       / |
+	 *   2-------3  |
+	 *   |  4    |  5
+	 *   |       | /
+	 *   |       |/
+	 *   6-------7
+	 *
+	 *0 000 -> 0
+	 *1 001 -> 4
+	 *2 010 -> 2
+	 *3 011 -> 6
+	 *4 100 -> 1
+	 *5 101 -> 5
+	 *6 110 -> 3
+	 *7 111 -> 7
+	 */
+
+	const vec<3> bounds[2] = {
+		p.floor(),
+		p.floor() + vec<3>{1, 1, 1}
+	};
+
+	constexpr auto cn = 8;//1 << 3;
+
+	auto w = p - bounds[0];
+	float s[cn] = {};
+	for (unsigned ci = 0; ci < cn; ci++)
+	{
+		vec<3> corner;
+
+		// construct a corner based on the 
+		// for (unsigned i = 0; i < 3; i++)
+		// {
+		// 	bool bit = (ci >> i) & 0x1;
+		// 	corner[2 - i] = bit * bounds[1][2 - i] + (1 - bit) * bounds[0][2 - i];
+		// }
+
+		float bits[3] = {
+			static_cast<float>((ci >> 0) & 0x1),
+			static_cast<float>((ci >> 1) & 0x1),
+			static_cast<float>((ci >> 2) & 0x1),
+		};
+		corner.v[2] = bits[0] * bounds[1].v[2] + (1 - bits[0]) * bounds[0].v[2];
+		corner.v[1] = bits[1] * bounds[1].v[1] + (1 - bits[1]) * bounds[0].v[1];
+		corner.v[0] = bits[2] * bounds[1].v[0] + (1 - bits[2]) * bounds[0].v[0];
+		auto grad = rand_grad(corner.template cast<unsigned>());
+
+		// std::cout << ci << ": " << corner.to_string() << " -> " << grad.to_string() << std::endl;
+
+		s[ci] = grad.dot(corner - p);
+
+		//sum += dots[ci];
+	}
+
+	auto za0 = s[0] * (1 - w[2]) + s[1] * w[2];
+	auto za1 = s[2] * (1 - w[2]) + s[3] * w[2];
+
+	auto ya0 = za0 * (1 - w[1]) + za1 * w[1];
+
+	auto zb0 = s[4] * (1 - w[2]) + s[5] * w[2];
+	auto zb1 = s[6] * (1 - w[2]) + s[7] * w[2];
+
+	auto yb0 = zb0 * (1 - w[1]) + zb1 * w[1];
+
+	return ya0 * (1 - w[0]) + yb0 * w[0];
+}
+
+float g::gfx::noise::value(const vec<3>& p, const std::vector<int8_t>& entropy)
+{
+	auto ent_data = entropy.data();
+	auto ent_size = entropy.size();
+
+	const vec<3> bounds[2] = {
+		p.floor(),
+		p.floor() + vec<3>{1, 1, 1}
+	};
+
+	constexpr auto cn = 1 << 3;
+
+	float s[cn] = {};
+	for (unsigned ci = 0; ci < cn; ci++)
+	{
+
+		// construct a corner based on the 
+		// for (unsigned i = 0; i < 3; i++)
+		// {
+		// 	bool bit = (ci >> i) & 0x1;
+		// 	corner[2 - i] = bit * bounds[1][2 - i] + (1 - bit) * bounds[0][2 - i];
+		// }
+
+		float bits[3] = {
+			static_cast<float>((ci >> 0) & 0x1),
+			static_cast<float>((ci >> 1) & 0x1),
+			static_cast<float>((ci >> 2) & 0x1),
+		};
+
+		vec<3> corner = {
+			bits[0] * bounds[1].v[2] + (1 - bits[0]) * bounds[0].v[2],
+			bits[1] * bounds[1].v[1] + (1 - bits[1]) * bounds[0].v[1],
+			bits[2] * bounds[1].v[0] + (1 - bits[2]) * bounds[0].v[0]
+		};
+
+		auto idx = corner.cast<int>();
+		s[ci] = static_cast<float>(entropy[(idx[1] * 1024 + idx[0]) % entropy.size()]) / 256.f;
+
+		//sum += dots[ci];
+	}
+
+	auto w = p - bounds[0];
+	auto za0 = s[0] * (1 - w[2]) + s[1] * w[2];
+	auto za1 = s[2] * (1 - w[2]) + s[3] * w[2];
+
+	auto ya0 = za0 * (1 - w[1]) + za1 * w[1];
+
+	auto zb0 = s[4] * (1 - w[2]) + s[5] * w[2];
+	auto zb1 = s[6] * (1 - w[2]) + s[7] * w[2];
+
+	auto yb0 = zb0 * (1 - w[1]) + zb1 * w[1];
+
+	return ya0 * (1 - w[0]) + yb0 * w[0];
+}
 
 void texture::release_bitmap()
 {
@@ -588,6 +758,12 @@ shader::usage shader::uniform_usage::texture(const g::gfx::texture& tex)
 	parent_usage.texture_unit++;
 	return parent_usage;
 }
+
+#ifdef __EMSCRIPTEN__
+	std::string shader_factory::shader_header = "#version 300 es\n";
+#else
+	std::string shader_factory::shader_header = "#version 410\n";
+#endif
 
 GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
 {

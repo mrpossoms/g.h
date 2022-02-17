@@ -6,6 +6,7 @@
 
 #ifdef __APPLE__
 #include <CoreServices/CoreServices.h>
+#include <sys/stat.h>
 #elif __linux__
 #include <unistd.h>
 #include <sys/inotify.h>

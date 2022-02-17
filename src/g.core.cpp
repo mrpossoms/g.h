@@ -1,5 +1,6 @@
 #include "g.h"
 #include <chrono>
+#include <regex>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -30,10 +31,12 @@ static void error_callback(int error, const char* description)
     std::cerr << description << std::endl;
 }
 
+#ifdef __EMSCRIPTEN__
 static void EMSCRIPTEN_MAIN_LOOP(void* arg)
 {
 	static_cast<g::core*>(arg)->tick();
 }
+#endif
 
 void g::core::start(const core::opts& opts)
 {
@@ -79,7 +82,25 @@ void g::core::start(const core::opts& opts)
 
 		glfwMakeContextCurrent(g::gfx::GLFW_WIN);
 
+		auto glsl_ver_str = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 		std::cerr << "GL renderer: " << glGetString(GL_VERSION) << std::endl;
+		std::cerr << "GLSL version: " << glsl_ver_str << std::endl;
+
+		// set the correct glsl shader header based on the version we found
+		std::cmatch m;
+		std::regex re("[0-9]+[.][0-9]+");
+		if(std::regex_search (glsl_ver_str, m, re))
+		{
+			std::string version = m[0];
+			version.erase(version.find("."), 1);
+
+			g::gfx::shader_factory::shader_header = std::string("#version ") + version + std::string("\n");
+		}
+		else
+		{
+			std::cerr << "Couldn't identify glsl version" << std::endl;	
+		}
+
 
 	}
 

@@ -12,6 +12,31 @@
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
 
+g::asset::store::~store()
+{
+	// tear down assets
+
+	for (auto& t : textures)
+	{
+		t.second.get().destroy();
+	}
+
+	for (auto& s : shaders)
+	{
+		s.second.get().destroy();
+	}
+
+	for (auto& f : fonts)
+	{
+		f.second.get().face.destroy();
+	}
+
+	for (auto& g : geos)
+	{
+		g.second.get().destroy();
+	}
+}
+
 g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
 {
 	auto itr = textures.find(partial_path);

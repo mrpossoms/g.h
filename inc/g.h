@@ -26,12 +26,14 @@
 #include "g.utils.h"
 #include "g.gfx.h"
 #include "g.game.h"
+#include "g.camera.h"
 #include "g.assets.h"
 #include "g.dyn.h"
 #include "g.ui.h"
 #include "g.ai.h"
 #include "g.snd.h"
 #include "g.io.h"
+#include "g.proc.h"
 #ifndef __EMSCRIPTEN__
 #include "g.net.h"
 #endif

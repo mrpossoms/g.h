@@ -4,10 +4,13 @@
 #define XMTYPE float
 #include <xmath.h>
 #include <g.game.h>
+#include <g.camera.h>
+#include <g.proc.h>
 
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <set>
 #include <algorithm>
 
 #include <string.h>
@@ -79,6 +82,15 @@ size_t width();
 size_t height();
 
 float aspect();
+
+namespace noise
+{
+
+float perlin(const vec<3>& p, const std::vector<int8_t>& entropy);
+
+float value(const vec<3>& p, const std::vector<int8_t>& entropy);
+
+} // namespace noise
 
 struct texture
 {
@@ -322,11 +334,7 @@ struct shader_factory
 {
 	std::unordered_map<GLenum, GLuint> shaders;
 
-#ifdef __EMSCRIPTEN__
-	std::string shader_header = "#version 300 es\n";
-#else
-	std::string shader_header = "#version 410\n";
-#endif
+	static std::string shader_header;
 
 	static GLuint compile_shader (GLenum type, const GLchar* src, GLsizei len);
 
@@ -431,6 +439,31 @@ namespace vertex
 			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)0);
 			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)p_size);
 			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)(p_size + uv_size));
+		}
+	};
+
+	struct pos_norm_tan
+	{
+		vec<3> position;
+		vec<3> normal;
+		vec<3> tangent;
+
+		static void attributes(GLuint prog)
+		{
+			auto pos_loc = glGetAttribLocation(prog, "a_position");
+			auto norm_loc = glGetAttribLocation(prog, "a_normal");
+			auto tan_loc = glGetAttribLocation(prog, "a_tangent");
+
+			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
+			if (tan_loc > -1) glEnableVertexAttribArray(tan_loc);
+
+			auto p_size = sizeof(position);
+			auto norm_size = sizeof(normal);
+
+			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)0);
+			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)p_size);
+			if (tan_loc > -1) glVertexAttribPointer(tan_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)(p_size + norm_size));
 		}
 	};
 
@@ -555,11 +588,174 @@ struct mesh
 		return usage;
 	}
 
-	void from_sdf(
+
+	static void compute_normals(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
+	{
+		for(unsigned i = 0; i < indices.size(); i += 3)
+		{
+			vec<3> diff[2] = {
+				vertices[indices[i + 0]].position - vertices[indices[i + 1]].position,
+				vertices[indices[i + 0]].position - vertices[indices[i + 2]].position,
+			};
+
+			auto& vert = vertices[indices[i]];
+			auto cross = vec<3>::cross(diff[0], diff[1]);
+			vert.normal = cross.unit();
+
+			if(isnan(vert.normal[0]) || isnan(vert.normal[1]) || isnan(vert.normal[2]))
+			{
+				// assert(0);
+			}
+
+			i = (i + 1) - 1;
+		}
+	}
+
+
+	static void compute_tangents(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
+	{
+		for(unsigned int i = 0; i < indices.size(); i += 3)
+		{
+
+			vertices[indices[i + 0]].tangent = vertices[indices[i]].position - vertices[indices[i + 1]].position;
+
+			for(int j = 3; j--;)
+			{
+				vertices[indices[i + j]].tangent = vertices[indices[i + j]].tangent.unit();
+			}
+		}
+	}
+
+	void from_sdf_r(
+		std::vector<V>& vertices_out,
+		std::vector<uint32_t>& indices_out,
 		const g::game::sdf& sdf, 
 		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
-		vec<3> corners[2],
-		unsigned divisions=32)
+		vec<3> volume_corners[2],
+		unsigned max_depth=4)
+	{
+		#include "data/marching.cubes.lut"
+
+		vertices_out.clear();
+		indices_out.clear();
+
+		std::function<int(vec<3> corners[2], unsigned)> subdivider = [&](vec<3> corners[2], unsigned depth)
+		{
+			vec<3> c[8] = {
+				{ 0.f, 0.f, 0.f },
+				{ 0.f, 1.f, 0.f },
+				{ 1.f, 1.f, 0.f },
+				{ 1.f, 0.f, 0.f },
+
+				{ 0.f, 0.f, 1.f },
+				{ 0.f, 1.f, 1.f },
+				{ 1.f, 1.f, 1.f },
+				{ 1.f, 0.f, 1.f },
+			};
+			auto& p0 = corners[0];
+			auto& p1 = corners[1];
+			auto block_delta = (p1 - p0);
+			auto mid = p0 + block_delta * 0.5f;
+
+			// compute positions of the corners for voxel x,y,z as well
+			// as the case for the voxel
+			uint8_t voxel_case = 0;
+			vec<3> p[8];  // voxel corners
+			float d[8]; // densities at each corner
+			float avg_density = 0;
+
+			for (int i = 8; i--;)
+			{
+				c[i] *= block_delta;
+				p[i] = p0 + c[i];
+				d[i] = sdf(p[i]);
+				avg_density += d[i];
+
+				// if d[i] >= 0
+				voxel_case |= ((d[i] >= 0) << i);
+			}				
+
+			// std::cerr << "voxel_case: " << static_cast<int>(voxel_case) << std::endl;
+
+			if (depth > 0)
+			{ // test for density function boundaries
+				int verts_generated = 0;
+
+				avg_density += sdf(mid);
+				avg_density /= 9.f;
+
+				//if ((voxel_case != 0 && voxel_case != 255))// || d_mid >= 0)
+				if (fabs(avg_density) < 200)
+				{
+					for (int i = 8; i--;)
+					{
+						//if (d[i] > 0  && d_mid > 0) { continue; }
+
+						vec<3> next_corners[2];
+
+						next_corners[0] = p[i];
+						next_corners[0].take_min(mid);
+						next_corners[1] = p[i];
+						next_corners[1].take_max(mid);
+
+						verts_generated += subdivider(next_corners, depth - 1);
+					}
+
+					if (verts_generated == 0) { verts_generated = subdivider(corners, 0); }
+				}
+
+				return verts_generated;
+			}
+			else
+			{ // time to generate geometry
+			// compute lerp weights between verts for each edge
+				int verts_generated = 0;
+				if (voxel_case == 0 || voxel_case == 255) { return verts_generated; }
+
+				float w[12];
+				for (int i = 0; i < 12; ++i)
+				{
+					int e_i = tri_edge_list_case[voxel_case][i];
+
+					if (e_i == -1) break;
+
+					// v0 * w + v1 * (1 - w)
+					// w = 0.5
+					// -1 * w + 1 * (1 - w) = 0
+					//
+					// d0 * w + d1 * (1 - w) = 0
+					// d0 * w + d1 - d1 * w = 0
+					// (d0 * w - d1 * w) / w = -d1 / w
+					// d0 - d1 = -d1 / w
+					// -d1 / (d0 - d1) = w
+
+					int p0_i = edge_list[e_i][0];
+					int p1_i = edge_list[e_i][1];
+
+					// solve for the weight that will lerp between
+					w[i] = d[p0_i] / (d[p0_i] - d[p1_i]);
+
+					vec<3> _p = p[p1_i] * w[i] + p[p0_i] * (1 - w[i]);
+					
+					indices_out.push_back(vertices_out.size());
+					vertices_out.push_back(generator(sdf, _p));
+					verts_generated++;
+				}
+
+				return verts_generated;
+			}
+
+			return 0;
+		};
+
+		subdivider(volume_corners, max_depth);
+	}
+
+	void from_sdf_r(
+		const g::game::sdf& sdf, 
+		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
+		vec<3> volume_corners[2],
+		unsigned max_depth=4)
 	{
 		#include "data/marching.cubes.lut"
 
@@ -568,6 +764,26 @@ struct mesh
 
 		vertices.clear();
 		indices.clear();
+
+		from_sdf_r(vertices, indices, sdf, generator, volume_corners, max_depth);
+		
+		set_vertices(vertices);
+		set_indices(indices);
+	}
+
+
+	void from_sdf(
+		std::vector<V>& vertices_out,
+		std::vector<uint32_t>& indices_out,
+		const g::game::sdf& sdf, 
+		std::function<V (const g::game::sdf& sdf, const vec<3>& pos)> generator, 
+		vec<3> corners[2],
+		unsigned divisions=32)
+	{
+		#include "data/marching.cubes.lut"
+
+		vertices_out.clear();
+		indices_out.clear();
 
 		float div = divisions;
 
@@ -605,10 +821,7 @@ struct mesh
 				p[i] = p0 + (voxel_delta * voxel_index) + c[i];
 				d[i] = sdf(p[i]);
 
-				if (d[i] <= 0)
-				{
-					voxel_case |= (1 << i);
-				}
+				voxel_case |= ((d[i] >= 0) << i);
 			}
 
 			// compute lerp weights between verts for each edge
@@ -637,74 +850,26 @@ struct mesh
 
 				vec<3> _p = p[p1_i] * w[i] + p[p0_i] * (1 - w[i]);
 				
-				indices.push_back(vertices.size());
-				vertices.push_back(generator(sdf, _p));
+				indices_out.push_back(vertices_out.size());
+				vertices_out.push_back(generator(sdf, _p));
 			}
 
 		}
+	}
+
+	void from_sdf(
+		const g::game::sdf& sdf,
+		std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator,
+		vec<3> corners[2],
+		unsigned divisions = 32)
+	{
+		static std::vector<V> vertices;
+		static std::vector<uint32_t> indices;
+
+		from_sdf(vertices, indices, sdf, generator, corners, divisions);
 
 		set_vertices(vertices);
 		set_indices(indices);
-
-		// use the gradient of the density function to compute the
-		// normal vector for each vertex
-		// for (int i = 0; i < vertices.size(); i++)
-		// {
-		// 	const float s = 0.1;
-		// 	vec3 grad;
-		// 	vec3 deltas[3][2] = {
-		// 		{{ s, 0, 0 }, { -s, 0, 0 }},
-		// 		{{ 0, s, 0 }, { 0, -s, 0 }},
-		// 		{{ 0, 0, s }, { 0,  0, -s }},
-		// 	};
-		// 	Vertex& v = vertices[i];
-
-		// 	for (int j = 3; j--;)
-		// 	{
-		// 		vec3 samples[2];
-		// 		vec3_add(samples[0], v.position, deltas[j][0]);
-		// 		vec3_add(samples[1], v.position, deltas[j][1]);
-		// 		grad[j] = density_at(samples[0]) - density_at(samples[1]);
-		// 	}
-
-		// 	vec3_norm(v.normal, grad);
-		// }
-	}
-
-	static void compute_normals(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
-	{
-		for(unsigned i = 0; i < indices.size(); i += 3)
-		{
-			vec<3> diff[2] = {
-				vertices[indices[i + 0]].position - vertices[indices[i + 1]].position,
-				vertices[indices[i + 0]].position - vertices[indices[i + 2]].position,
-			};
-
-			auto& vert = vertices[indices[i]];
-			auto cross = vec<3>::cross(diff[0], diff[1]);
-			vert.normal = cross.unit();
-
-			if(isnan(vert.normal[0]) || isnan(vert.normal[1]) || isnan(vert.normal[2]))
-			{
-				// assert(0);
-			}
-
-			i = (i + 1) - 1;
-		}
-	}
-
-	static void compute_tangents(std::vector<V>& vertices, const std::vector<uint32_t>& indices)
-	{
-		for(unsigned int i = 0; i < indices.size(); i += 3)
-		{
-
-			vertices[indices[i + 0]].tangent = vertices[indices[i]].position - vertices[indices[i + 1]].position;
-
-			for(int j = 3; j--;)
-			{
-				vertices[indices[i + j]].tangent = vertices[indices[i + j]].tangent.unit();
-			}
-		}
 	}
 };
 
@@ -880,8 +1045,169 @@ namespace debug
 		void point(const vec<2>& o);
 
 		void point(const vec<3>& o);
+
+		void box(const vec<3> corners[2]);
 	};
 }
+
+
+
+template<typename V>
+struct density_volume
+{
+    struct block
+    {
+        g::gfx::mesh<V> mesh;
+        std::vector<V> vertices;
+        std::vector<uint32_t> indices;
+
+        vec<3, int> index;
+        vec<3> bounding_box[2];
+        uint8_t vertex_case = 0;
+        bool regenerating = false;
+        std::chrono::time_point<std::chrono::system_clock> start;
+
+        inline bool contains(const vec<3>& pos) const
+        {
+            return pos[0] > bounding_box[0][0] && pos[0] <= bounding_box[1][0] &&
+                   pos[1] > bounding_box[0][1] && pos[1] <= bounding_box[1][1] &&
+                   pos[2] > bounding_box[0][2] && pos[2] <= bounding_box[1][2];
+        }
+
+        inline bool contains(const vec<3, int> idx) const
+        {
+            return index == idx;
+        }
+    };
+
+    std::vector<density_volume::block> blocks;
+    std::vector<vec<3>> offsets;
+
+    g::game::sdf sdf;
+    std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
+    float scale = 1;
+    unsigned depth = 1;
+    unsigned kernel = 2;
+    std::vector<density_volume::block*> to_regenerate;
+    g::proc::thread_pool<10> generator_pool;
+
+    density_volume() = default;
+
+    density_volume(
+        const g::game::sdf& sdf,
+        std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator,
+        const std::vector<vec<3>>& offset_config) :
+        
+        offsets(offset_config)
+    {
+        this->sdf = sdf;
+        this->generator = generator;
+
+        for (auto offset : offsets)
+        {
+            density_volume::block block;
+            block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
+
+            // auto pipo = offset.template cast<int>();
+
+            // block.bounding_box[0] = (pipo * scale).template cast<float>();
+            // block.bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
+
+            // block.index = (offset * scale).template cast<int>();
+
+            // // block.mesh.from_sdf_r(sdf, generator, block.bounding_box, depth);
+            // block.mesh.from_sdf(sdf, generator, block.bounding_box);
+
+            blocks.push_back(block);
+        }
+    }
+
+    void update(const g::game::camera& cam)
+    {
+        auto pos = cam.position;
+        std::set<unsigned> unvisited;
+
+        for (unsigned i = 0; i < offsets.size(); i++) { unvisited.insert(i); }
+
+        auto pidx = ((pos / scale) - 0.5f).template cast<int>();
+
+        generator_pool.update();
+
+        for (auto& block : blocks)
+        {
+            if (block.regenerating) { continue; }
+
+            bool needs_regen = true;
+
+            for (auto oi : unvisited)
+            {
+                auto pipo = pidx + offsets[oi].template cast<int>();
+
+                if (block.contains(pipo))
+                {
+                    unvisited.erase(oi);
+                    needs_regen = false;
+                    break;
+                }
+            }
+
+            if (needs_regen) { to_regenerate.push_back(&block); }
+        }
+
+        // remaining 'unvisited' offset positions need to be regenerated
+        for (auto oi : unvisited)
+        {
+            if (to_regenerate.size() == 0) { break; }
+
+            auto offset = offsets[oi];
+            auto block_ptr = to_regenerate.back();
+            block_ptr->regenerating = true;
+            to_regenerate.pop_back();
+
+            generator_pool.run(
+            // generation task
+            [this, oi, pidx, offset, block_ptr](){
+            	block_ptr->start = std::chrono::system_clock::now();
+
+                auto pipo = pidx + offsets[oi].template cast<int>();
+
+                block_ptr->bounding_box[0] = (pipo * scale).template cast<float>();
+                block_ptr->bounding_box[1] = ((pipo + 1) * scale).template cast<float>();
+                block_ptr->index = pipo;
+
+                block_ptr->mesh.from_sdf_r(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box, depth);
+                // block_ptr->mesh.from_sdf(block_ptr->vertices, block_ptr->indices, sdf, generator, block_ptr->bounding_box);
+                block_ptr->regenerating = false;
+            },
+            // on finish
+            [this, block_ptr](){
+                block_ptr->mesh.set_vertices(block_ptr->vertices);
+                block_ptr->mesh.set_indices(block_ptr->indices);
+
+                char buf[256];
+                std::chrono::duration<float> diff = std::chrono::system_clock::now() - block_ptr->start;
+                snprintf(buf, sizeof(buf), "%lu vertices - block %s in %f sec\n", block_ptr->vertices.size(), block_ptr->index.to_string().c_str(), diff.count());
+                write(1, buf, strlen(buf));
+            });
+        }
+    }
+
+    void draw(g::game::camera& cam, g::gfx::shader& s, std::function<void(g::gfx::shader::usage&)> draw_config=nullptr)
+    {
+        for (auto& block : blocks)
+        {
+            auto chain = block.mesh.using_shader(s)
+				                   .set_camera(cam);
+
+            if (draw_config) { draw_config(chain); }
+
+            chain.template draw<GL_TRIANGLES>();
+
+           g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
+        }
+    }
+};
+
 
 
 namespace primative
