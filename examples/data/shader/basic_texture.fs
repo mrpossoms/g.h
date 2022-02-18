@@ -1,4 +1,3 @@
-#version 410
 in vec4 v_screen_pos;
 in vec2 v_uv;
 

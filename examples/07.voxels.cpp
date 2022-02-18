@@ -14,7 +14,7 @@ struct voxel_world : public g::core
 
 	g::gfx::mesh<g::gfx::vertex::pos_norm_color> temple;
 	g::gfx::mesh<g::gfx::vertex::pos_norm_color> light_mesh;
-	g::gfx::framebuffer shadow_map;
+	g::gfx::framebuffer shadow_map, render_target;
 
 	g::game::voxels_paletted light_vox;
 	g::game::camera_perspective cam;
@@ -25,6 +25,7 @@ struct voxel_world : public g::core
 	{
 		{ // graphics init
 			shadow_map = g::gfx::framebuffer_factory{1024, 1024}.shadow_map().create();
+			render_target = g::gfx::framebuffer_factory{(unsigned)g::gfx::width(), (unsigned)g::gfx::height()}.color().depth().create();
 		}
 
 
@@ -100,24 +101,40 @@ struct voxel_world : public g::core
 		}
 		
 
+		{
+			g::gfx::framebuffer::scoped_draw sd(render_target);
+
+			glClearColor(0, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+			auto light_model = mat4::translation(light.position + light_vox.center_of_bounds() * -1);
+			light_mesh.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
+			.set_camera(cam)
+			["u_model"].mat4(light_model)
+			.draw<GL_TRIANGLES>();
+
+			temple.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
+			.set_camera(cam)
+			["u_model"].mat4(model)
+			["u_light_view"].mat4(light.view())
+			["u_light_proj"].mat4(light.projection())
+			["u_light_diffuse"].vec3({1, 1, 1})
+			["u_light_ambient"].vec3({13.5f/255.f, 20.6f/255.f, 23.5f/255.f})
+			["u_shadow_map"].texture(shadow_map.depth)
+			.draw<GL_TRIANGLES>();
+		}
+
+		{
+			g::gfx::framebuffer::scoped_draw sd(render_target);
+			g::gfx::effect::shadow(shadow_map, render_target);
+		}
+
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		auto light_model = mat4::translation(light.position + light_vox.center_of_bounds() * -1);
-		light_mesh.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
-		.set_camera(cam)
-		["u_model"].mat4(light_model)
-		.draw<GL_TRIANGLES>();
-
-		temple.using_shader(assets.shader("basic_color.vs+shadowed_color.fs"))
-		.set_camera(cam)
-		["u_model"].mat4(model)
-		["u_light_view"].mat4(light.view())
-		["u_light_proj"].mat4(light.projection())
-		["u_light_diffuse"].vec3({1, 1, 1})
-		["u_light_ambient"].vec3({13.5f/255.f, 20.6f/255.f, 23.5f/255.f})
-		["u_shadow_map"].texture(shadow_map.depth)
-		.draw<GL_TRIANGLES>();
+		g::gfx::effect::blit(render_target);
+		// g::gfx::effect::fullscreen_quad().using_shader(assets.shader("basic_post.vs+basic_texture.fs"))
+		// ["u_texture"].texture(render_target.color)
+		// .draw<GL_TRIANGLE_FAN>();
 
 		t += dt;
 	}
