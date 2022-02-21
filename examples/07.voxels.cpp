@@ -24,7 +24,7 @@ struct voxel_world : public g::core
 	virtual bool initialize()
 	{
 		{ // graphics init
-			shadow_map = g::gfx::framebuffer_factory{1024, 1024}.shadow_map().create();
+			shadow_map = g::gfx::framebuffer_factory{1024, 1024}.color().depth().create();
 			render_target = g::gfx::framebuffer_factory{(unsigned)g::gfx::width(), (unsigned)g::gfx::height()}.color().depth().create();
 		}
 
