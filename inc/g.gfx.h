@@ -1220,7 +1220,7 @@ namespace effect
 
 mesh<vertex::pos_uv_norm>& fullscreen_quad();
 
-void shadow(const framebuffer& shadow_map, const framebuffer& depth_map);
+void shadow(const framebuffer& shadow_map, game::camera& light, game::camera& view);
 
 void blit(const framebuffer& fb);
 
