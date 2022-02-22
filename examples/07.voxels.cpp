@@ -107,35 +107,27 @@ struct voxel_world : public g::core
 			glClearColor(1, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			// auto light_model = mat4::translation(light.position + light_vox.center_of_bounds() * -1);
-			// light_mesh.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
-			// .set_camera(cam)
-			// ["u_model"].mat4(light_model)
-			// .draw<GL_TRIANGLES>();
+			auto light_model = mat4::translation(light.position + light_vox.center_of_bounds() * -1);
+			light_mesh.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
+			.set_camera(cam)
+			["u_model"].mat4(light_model)
+			.draw<GL_TRIANGLES>();
 
-			// temple.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
-			// .set_camera(cam)
-			// ["u_model"].mat4(model)
-			// ["u_light_view"].mat4(light.view())
-			// ["u_light_proj"].mat4(light.projection())
-			// ["u_light_diffuse"].vec3({1, 1, 1})
-			// ["u_light_ambient"].vec3({13.5f/255.f, 20.6f/255.f, 23.5f/255.f})
-			// ["u_shadow_map"].texture(shadow_map.depth)
-			// .draw<GL_TRIANGLES>();
+			temple.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
+			.set_camera(cam)
+			["u_model"].mat4(model)
+			["u_light_view"].mat4(light.view())
+			["u_light_proj"].mat4(light.projection())
+			["u_light_diffuse"].vec3({1, 1, 1})
+			["u_light_ambient"].vec3({13.5f/255.f, 20.6f/255.f, 23.5f/255.f})
+			.draw<GL_TRIANGLES>();
 		}
 
 		{
-			// g::gfx::framebuffer::scoped_draw sd(render_target);
-			g::gfx::effect::shadow(shadow_map, light, cam);
+			g::gfx::effect::shadow_0<g::gfx::vertex::pos_norm_color>(temple, shadow_map, light, cam, [&](g::gfx::shader::usage& chain) {
+				chain["u_model"].mat4(model);
+			});
 		}
-
-		// glClearColor(0, 0, 0, 1);
-		// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		// g::gfx::effect::blit(render_target);
-
-		// g::gfx::effect::fullscreen_quad().using_shader(assets.shader("basic_post.vs+basic_texture.fs"))
-		// ["u_texture"].texture(render_target.color)
-		// .draw<GL_TRIANGLE_FAN>();
 
 		t += dt;
 	}
