@@ -84,6 +84,7 @@ struct voxel_world : public g::core
 
 		// cam.orientation = quat::from_axis_angle({0, 0, 1}, 0);
 
+		cam.aspect_ratio(g::gfx::aspect());
 
 		auto model = mat4::translation(assets.vox("temple.vox").center_of_bounds() * -1);
 		light.position = vec<3>{cos(t * 0.1f) * 60, sin(t * 0.1f) * 60, 60};
@@ -102,7 +103,7 @@ struct voxel_world : public g::core
 		
 
 		{
-			// g::gfx::framebuffer::scoped_draw sd(render_target);
+			g::gfx::framebuffer::scoped_draw sd(render_target);
 
 			glClearColor(1, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -123,10 +124,23 @@ struct voxel_world : public g::core
 			.draw<GL_TRIANGLES>();
 		}
 
+		// {
+		// 	g::gfx::effect::shadow_0<g::gfx::vertex::pos_norm_color>(temple, shadow_map, light, cam, [&](g::gfx::shader::usage& chain) {
+		// 		chain["u_model"].mat4(model);
+		// 	});
+		// }
+
 		{
-			g::gfx::effect::shadow_0<g::gfx::vertex::pos_norm_color>(temple, shadow_map, light, cam, [&](g::gfx::shader::usage& chain) {
-				chain["u_model"].mat4(model);
-			});
+			// g::gfx::framebuffer::scoped_draw sd(render_target);
+			glClearColor(1, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			g::gfx::effect::shadow(shadow_map, render_target, light, cam);
+		}
+
+		{
+			// glClearColor(1, 0, 0, 1);
+			// glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			// g::gfx::effect::blit(render_target);
 		}
 
 		t += dt;
