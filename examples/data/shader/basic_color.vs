@@ -19,8 +19,9 @@ out vec4 v_light_proj_pos;
 
 void main (void)
 {
- vec4 v_world_pos = u_model * vec4(a_position, 1.0);
-	gl_Position = u_proj * u_view * v_world_pos;
+	vec4 v_world_pos = u_model * vec4(a_position, 1.0);
+	vec4 screen_pos = u_proj * u_view * v_world_pos;
+	gl_Position = screen_pos / screen_pos.w;
 
 	v_color = a_color * vec4(1.0/254.0);
 

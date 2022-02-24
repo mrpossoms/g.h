@@ -1385,6 +1385,8 @@ void shadow_0(const mesh<V>& m, const framebuffer& shadow_map, game::camera& lig
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
+void shadow(const framebuffer& shadow_map, const framebuffer& camera_fb, game::camera& light, game::camera& cam);
+
 void blit(const framebuffer& fb);
 
 } // end namespace effect
