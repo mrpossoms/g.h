@@ -14,7 +14,7 @@ struct voxel_world : public g::core
 
 	g::gfx::mesh<g::gfx::vertex::pos_norm_color> temple;
 	g::gfx::mesh<g::gfx::vertex::pos_norm_color> light_mesh;
-	g::gfx::framebuffer shadow_map;
+	g::gfx::framebuffer shadow_map, render_target;
 
 	g::game::voxels_paletted light_vox;
 	g::game::camera_perspective cam;
@@ -24,7 +24,8 @@ struct voxel_world : public g::core
 	virtual bool initialize()
 	{
 		{ // graphics init
-			shadow_map = g::gfx::framebuffer_factory{1024, 1024}.shadow_map().create();
+			shadow_map = g::gfx::framebuffer_factory{1024, 1024}.color().depth().create();
+			render_target = g::gfx::framebuffer_factory{(unsigned)g::gfx::width(), (unsigned)g::gfx::height()}.color().depth().create();
 		}
 
 
@@ -88,34 +89,45 @@ struct voxel_world : public g::core
 		light.position = vec<3>{cos(t * 0.1f) * 60, sin(t * 0.1f) * 60, 60};
 		light.look_at(vec<3>{0, 0, 0}, vec<3>{0, 0, 1});
 
-		shadow_map.bind_as_target();
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		temple.using_shader(assets.shader("depth_only.vs+depth_only.fs"))
-		.set_camera(light)
-		["u_model"].mat4(model)
-		.draw<GL_TRIANGLES>();
-		shadow_map.unbind_as_target();
+		{ // draw shadow map
+			g::gfx::framebuffer::scoped_draw sd(shadow_map);
+			glClearColor(0, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			temple.using_shader(assets.shader("depth_only.vs+depth_only.fs"))
+				.set_camera(light)
+				["u_model"].mat4(model)
+				.draw<GL_TRIANGLES>();
 
+		}
+		
 
-		glClearColor(0, 0, 0, 1);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		{
+			// g::gfx::framebuffer::scoped_draw sd(render_target);
 
-		auto light_model = mat4::translation(light.position + light_vox.center_of_bounds() * -1);
-		light_mesh.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
-		.set_camera(cam)
-		["u_model"].mat4(light_model)
-		.draw<GL_TRIANGLES>();
+			glClearColor(1, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		temple.using_shader(assets.shader("basic_color.vs+shadowed_color.fs"))
-		.set_camera(cam)
-		["u_model"].mat4(model)
-		["u_light_view"].mat4(light.view())
-		["u_light_proj"].mat4(light.projection())
-		["u_light_diffuse"].vec3({1, 1, 1})
-		["u_light_ambient"].vec3({13.5f/255.f, 20.6f/255.f, 23.5f/255.f})
-		["u_shadow_map"].texture(shadow_map.depth)
-		.draw<GL_TRIANGLES>();
+			auto light_model = mat4::translation(light.position + light_vox.center_of_bounds() * -1);
+			light_mesh.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
+			.set_camera(cam)
+			["u_model"].mat4(light_model)
+			.draw<GL_TRIANGLES>();
+
+			temple.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
+			.set_camera(cam)
+			["u_model"].mat4(model)
+			["u_light_view"].mat4(light.view())
+			["u_light_proj"].mat4(light.projection())
+			["u_light_diffuse"].vec3({1, 1, 1})
+			["u_light_ambient"].vec3({13.5f/255.f, 20.6f/255.f, 23.5f/255.f})
+			.draw<GL_TRIANGLES>();
+		}
+
+		{
+			g::gfx::effect::shadow_0<g::gfx::vertex::pos_norm_color>(temple, shadow_map, light, cam, [&](g::gfx::shader::usage& chain) {
+				chain["u_model"].mat4(model);
+			});
+		}
 
 		t += dt;
 	}
