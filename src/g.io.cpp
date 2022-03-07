@@ -126,6 +126,8 @@ struct g::io::file::impl
 	}
 
 	void on_changed(std::function<void(file&)> callback){}
+
+	bool exists() { return fd >= 0; }
 };
 
 g::io::file::file(const std::string& path, const mode& mode)
@@ -135,7 +137,7 @@ g::io::file::file(const std::string& path, const mode& mode)
 
 g::io::file::file(const char* path, const mode& mode)
 {
-
+	file_impl = std::make_unique<g::io::file::impl>(path, mode);
 }
 
 g::io::file::~file()
@@ -194,3 +196,5 @@ void g::io::file::on_changed(std::function<void(g::io::file&)> callback)
 {
 
 }
+
+bool g::io::file::exists() const { return impl->exists(); }

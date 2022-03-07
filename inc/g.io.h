@@ -50,6 +50,7 @@ struct file
 
 	void on_changed(std::function<void(file&)> callback);
 
+	bool exists() const ;
 private:
 	std::unique_ptr<impl> file_impl;
 };
