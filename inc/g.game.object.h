@@ -1,5 +1,9 @@
 #pragma once
+#include <unordered_map>
+
 #include <g.io.h>
+#include <ryml_std.hpp>
+#include <ryml.hpp>
 
 namespace g
 {
@@ -10,7 +14,7 @@ struct object
 {
 	struct trait
 	{
-		enum value_type
+		enum class value_type
 		{
 			number,
 			string,
@@ -24,7 +28,7 @@ struct object
 			number = f;
 		}
 
-		trait(const char* s) explicit
+		explicit trait(const char* s)
 		{
 			type = value_type::string;
 			auto len = strlen(s);
@@ -46,19 +50,23 @@ struct object
 		union
 		{
 			float number;
-			const char* string;
-		}
+			char* string;
+		};
 	};
 
 	using trait_map = std::unordered_map<std::string, trait>;
 
+	// TODO: move to factory method
 	object(const std::string& name, const trait_map traits) : _name(name), _traits(traits)
 	{
 		auto f = g::io::file(name);
 
 		if (f.exists())
 		{
-			// TODO: load
+			auto buffer = f.read_all();
+			ryml::Tree tree = ryml::parse_in_place(ryml::to_substr((char*)buffer.data()));
+
+
 		}
 		else
 		{

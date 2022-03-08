@@ -15,3 +15,19 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_executable(voxel-hash voxel-hash.cpp)
 add_executable(ray-plane-intersect ray-plane-intersect.cpp)
 add_executable(thread-pool thread-pool.cpp)
+add_executable(game-object game-object.cpp)
+
+if (WIN32)
+message(STATUS "NOTE: Windows requires elevated permissions to create symlinks. Please run visual studio as an administrator.")
+add_custom_command(TARGET game-object PRE_BUILD
+                   COMMAND cmake -E create_symlink
+                   ${CMAKE_SOURCE_DIR}/tests/data
+                   $<TARGET_FILE_DIR:game-object>/../data
+                  )
+endif ()
+
+add_custom_command(TARGET game-object PRE_BUILD
+                   COMMAND cmake -E create_symlink
+                   ${CMAKE_SOURCE_DIR}/tests/data
+                   $<TARGET_FILE_DIR:game-object>/data
+                  )

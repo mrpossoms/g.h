@@ -40,6 +40,7 @@ struct file
 
 	int read(void* buf, size_t bytes);
 	std::vector<uint8_t> read(size_t bytes);
+	std::vector<uint8_t> read_all();
 
 	int write(void* buf, size_t bytes);
 	int write(const std::vector<uint8_t>& buf);

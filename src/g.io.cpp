@@ -55,11 +55,6 @@ struct g::io::file::impl
 			}
 		}
 
-		// if (impl::in_fd < 0)
-		// {
-		// 	impl::in_fd = inotify_init();
-		// }
-
 		fd = open(path, flags, 0x666);
 	}
 
@@ -90,6 +85,7 @@ struct g::io::file::impl
 	{
 		std::vector<uint8_t> buf;
 		buf.reserve(bytes);
+		buf.resize(bytes);
 
 		auto size = ::read(fd, buf.data(), bytes);
 		buf.resize(size);
@@ -171,6 +167,12 @@ std::vector<uint8_t> g::io::file::read(size_t bytes)
 {
 	return file_impl->read(bytes);
 }
+
+std::vector<uint8_t> g::io::file::read_all()
+{
+	auto bytes = size();
+	return read(bytes);
+}	
 
 int g::io::file::write(void* buf, size_t bytes)
 {
