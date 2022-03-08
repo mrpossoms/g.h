@@ -6,7 +6,6 @@ namespace g
 namespace game
 {
 
-template<typename T>
 struct object
 {
 	struct trait
@@ -14,7 +13,9 @@ struct object
 		enum value_type
 		{
 			number,
-			string
+			string,
+			texture,
+
 		};
 
 		trait(float f)
@@ -65,7 +66,6 @@ struct object
 		}
 	}
 
-	void operator()(T& recipient) const { recipient.map_traits(_traits); }
 	const std::unordered_map<std::string, trait>& traits() const { return _traits; }
 private:
 	std::string _name;

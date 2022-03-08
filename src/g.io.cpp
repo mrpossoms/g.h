@@ -197,4 +197,4 @@ void g::io::file::on_changed(std::function<void(g::io::file&)> callback)
 
 }
 
-bool g::io::file::exists() const { return impl->exists(); }
+bool g::io::file::exists() const { return file_impl->exists(); }

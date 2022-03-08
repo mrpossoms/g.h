@@ -74,6 +74,10 @@ sources:
     sparse_paths:
       -
     rev: integer-formats
+  - name: rapidyaml
+    type: git
+    repo: git@github.com:biojppm/rapidyaml.git
+    rev: master
 
 default_group: ''
 groups:

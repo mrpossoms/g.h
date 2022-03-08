@@ -248,3 +248,5 @@ g::snd::track& g::asset::store::sound(const std::string& partial_path)
 
 	return sounds[partial_path].get();
 }
+
+// g::game::object& g::asset::store::game_object(const std::string& partial_path);
