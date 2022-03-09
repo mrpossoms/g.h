@@ -27,6 +27,7 @@ struct file
 		bool truncate = false;
 
 		static mode read_only() { return mode{}; }
+		static mode write_only() { return mode{true, false, false}; }
 	};
 
 	file(const std::string& path, const mode& mode=mode::read_only());
@@ -51,7 +52,9 @@ struct file
 
 	void on_changed(std::function<void(file&)> callback);
 
-	bool exists() const ;
+	bool exists() const;
+
+	int get_fd() const;
 private:
 	std::unique_ptr<impl> file_impl;
 };

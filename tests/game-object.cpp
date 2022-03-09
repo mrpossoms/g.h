@@ -15,5 +15,10 @@ TEST
     assert(foo.traits()["hp"].number == 99);
     assert(foo.traits()["speed"].number == 1);
 
+    g::game::object foobar("data/foobar.yaml", {
+        { "hp", 100 },
+        { "name", "foobar" }
+    });    
+
 	return 0;
 }

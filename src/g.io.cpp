@@ -55,7 +55,7 @@ struct g::io::file::impl
 			}
 		}
 
-		fd = open(path, flags, 0x666);
+		fd = open(path, flags, 0666);
 	}
 
 	~impl()
@@ -124,6 +124,8 @@ struct g::io::file::impl
 	void on_changed(std::function<void(file&)> callback){}
 
 	bool exists() { return fd >= 0; }
+
+	int get_fd() const { return fd; }
 };
 
 g::io::file::file(const std::string& path, const mode& mode)
@@ -200,3 +202,5 @@ void g::io::file::on_changed(std::function<void(g::io::file&)> callback)
 }
 
 bool g::io::file::exists() const { return file_impl->exists(); }
+
+int g::io::file::get_fd() const { return file_impl->get_fd(); }

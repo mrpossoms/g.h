@@ -35,12 +35,27 @@ struct object
 			number = f;
 		}
 
-		explicit trait(const char* s)
+		trait(const char* s)
 		{
 			type = value_type::string;
 			auto len = strlen(s);
 			string = new char[len];
 			strncpy(string, s, len);
+		}
+
+		trait(char* s)
+		{
+			type = value_type::string;
+			auto len = strlen(s);
+			string = new char[len];
+			strncpy(string, s, len);
+		}
+
+		trait(const std::string& s)
+		{
+			type = value_type::string;
+			string = new char[s.length()];
+			strncpy(string, s.c_str(), s.length());
 		}
 
 		trait(const trait& o)
@@ -161,7 +176,31 @@ struct object
 		}
 		else
 		{
-			// TODO: create
+			auto of = g::io::file(name, g::io::file::mode::write_only());
+
+			ryml::Tree tree;
+			ryml::NodeRef root = tree.rootref();
+			root |= ryml::MAP;
+			root["traits"] |= ryml::MAP;
+			for (auto& kvp : _traits)
+			{
+				auto& trait = kvp.second;
+				switch(trait.type)
+				{
+					case trait::value_type::number:
+						root["traits"].append_child() << ryml::key(kvp.first) << trait.number;
+						break;
+					case trait::value_type::string:
+						root["traits"].append_child() << ryml::key(kvp.first) << trait.string;
+						break;
+
+				}
+			}
+
+			// TODO: this is super jank. Look into using ryml's stream api
+			auto fp = fdopen(of.get_fd(), "w");
+			ryml::emit(tree, fp);
+			fclose(fp);
 		}
 	}
 
