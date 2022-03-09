@@ -11,6 +11,9 @@ TEST
         { "hp", 100 }
     });
 
+    assert(strncmp(foo.traits()["name"].string, "foo", 3) == 0);
+    assert(foo.traits()["hp"].number == 99);
+    assert(foo.traits()["speed"].number == 1);
 
 	return 0;
 }

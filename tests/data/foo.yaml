@@ -1,7 +1,8 @@
-- traits
+traits:
+  name: "foo"
   hp: 99
   speed: 1
-- textures
-  skin: foo.png
-- sounds
-  step: foot.wav
+textures:
+  skin: "foo.png"
+sounds:
+  step: "foot.wav"
