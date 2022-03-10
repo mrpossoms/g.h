@@ -15,10 +15,24 @@ TEST
     assert(foo.traits()["hp"].number == 99);
     assert(foo.traits()["speed"].number == 1);
 
+    unlink("data/foobar.yaml");
+
+    // save a default config object for something that doesn't exist
     g::game::object foobar("data/foobar.yaml", {
         { "hp", 100 },
         { "name", "foobar" }
     });    
+    assert(foobar.traits()["hp"].number == 100);
+    assert(strcmp(foobar.traits()["name"].string, "foobar") == 0);
+
+    // ensure non-default values are loaded
+    g::game::object foobar1("data/foobar.yaml", {
+        { "hp", 99 },
+        { "name", "foodar" }
+    });
+    assert(foobar1.traits()["hp"].number == 100);
+    assert(strcmp(foobar1.traits()["name"].string, "foobar") == 0);
+
 
 	return 0;
 }

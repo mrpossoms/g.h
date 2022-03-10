@@ -38,7 +38,7 @@ struct object
 		trait(const char* s)
 		{
 			type = value_type::string;
-			auto len = strlen(s);
+			auto len = strlen(s) + 1;
 			string = new char[len];
 			strncpy(string, s, len);
 		}
@@ -46,7 +46,7 @@ struct object
 		trait(char* s)
 		{
 			type = value_type::string;
-			auto len = strlen(s);
+			auto len = strlen(s) + 1;
 			string = new char[len];
 			strncpy(string, s, len);
 		}
@@ -54,8 +54,8 @@ struct object
 		trait(const std::string& s)
 		{
 			type = value_type::string;
-			string = new char[s.length()];
-			strncpy(string, s.c_str(), s.length());
+			string = new char[s.length() + 1];
+			strncpy(string, s.c_str(), s.length() + 1);
 		}
 
 		trait(const trait& o)
@@ -69,7 +69,7 @@ struct object
 					break;
 				case value_type::string:
 				{
-					auto len = strlen(o.string);
+					auto len = strlen(o.string) + 1;
 					string = new char[len];
 					strncpy(string, o.string, len);
 				} break;
@@ -151,7 +151,7 @@ struct object
 		if (f.exists())
 		{
 			auto buffer = f.read_all();
-			ryml::Tree tree = ryml::parse_in_place(ryml::to_substr((char*)buffer.data()));
+			ryml::Tree tree = ryml::parse_in_place(ryml::substr((char*)buffer.data(), buffer.size()));
 
 			for (const auto& trait : tree["traits"])
 			{
@@ -161,22 +161,23 @@ struct object
 				if (!trait.is_val_quoted())
 				{ // try to infer type
 					char* end_ptr;
-					auto f = strtof(val.str, &end_ptr);
+					auto float_val = strtof(val.str, &end_ptr);
 
 					if (end_ptr != val.str)
 					{
-						_traits[key] = object::trait{ f };
+						_traits[key] = object::trait{ float_val };
+						continue;
 					}
 				}
-				else
+
 				{ // it's a string
-					_traits[key] = object::trait{ val.str };
+					_traits[key] = object::trait{ std::string{val.str, val.len} };
 				}
 			}
 		}
 		else
 		{
-			auto of = g::io::file(name, g::io::file::mode::write_only());
+			g::io::file of(name, g::io::file::mode::write_only());
 
 			ryml::Tree tree;
 			ryml::NodeRef root = tree.rootref();
@@ -191,16 +192,14 @@ struct object
 						root["traits"].append_child() << ryml::key(kvp.first) << trait.number;
 						break;
 					case trait::value_type::string:
-						root["traits"].append_child() << ryml::key(kvp.first) << trait.string;
+						root["traits"].append_child() << ryml::key(kvp.first) << ryml::csubstr(trait.string, strlen(trait.string));
 						break;
 
 				}
 			}
 
-			// TODO: this is super jank. Look into using ryml's stream api
-			auto fp = fdopen(of.get_fd(), "w");
-			ryml::emit(tree, fp);
-			fclose(fp);
+			auto yml_str = ryml::emitrs<std::string>(tree);
+			of.write((void*)yml_str.c_str(), yml_str.length());
 		}
 	}
 
