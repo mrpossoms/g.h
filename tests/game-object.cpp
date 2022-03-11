@@ -7,7 +7,9 @@
  */
 TEST
 {
-    g::game::object foo("data/foo.yaml", {
+    g::asset::store assets;
+
+    g::game::object foo(&assets, "data/foo.yaml", {
         { "hp", 100 }
     });
 
@@ -18,7 +20,7 @@ TEST
     unlink("data/foobar.yaml");
 
     // save a default config object for something that doesn't exist
-    g::game::object foobar("data/foobar.yaml", {
+    g::game::object foobar(&assets, "data/foobar.yaml", {
         { "hp", 100 },
         { "name", "foobar" }
     });    
@@ -26,7 +28,7 @@ TEST
     assert(strcmp(foobar.traits()["name"].string, "foobar") == 0);
 
     // ensure non-default values are loaded
-    g::game::object foobar1("data/foobar.yaml", {
+    g::game::object foobar1(&assets, "data/foobar.yaml", {
         { "hp", 99 },
         { "name", "foodar" }
     });

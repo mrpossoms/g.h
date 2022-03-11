@@ -363,6 +363,48 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	return *this;
 }
 
+texture_factory& texture_factory::to_png(const std::string& path)
+{
+	std::cerr << "writing texture '" <<  path << "'... ";
+
+	LodePNGColorType color_type;
+
+	switch(component_count)
+	{
+		case 1:
+			color_type = LCT_GREY;
+			break;
+		case 2:
+			color_type = LCT_GREY_ALPHA;
+			break;
+		case 3:
+			color_type = LCT_RGB;
+			break;
+		case 4:
+			color_type = LCT_RGBA;
+			break;
+		default:
+			std::cerr << G_TERM_RED << "Invalid component count: '" <<  component_count << G_TERM_COLOR_OFF << std::endl;
+	}
+
+	auto error = lodepng_encode_file(
+		path.c_str(),
+		(const unsigned char*)data,
+		size[0], size[1],
+		color_type,
+		bytes_per_component * 8
+	);
+
+	// If there's an error, display it.
+	if(error != 0)
+	{
+	  std::cout << G_TERM_RED "[lodepng::encode] error " << error << ": " << lodepng_error_text(error) << G_TERM_COLOR_OFF << std::endl;
+	  exit(-1);
+	}
+
+	return *this;
+}
+
 texture_factory& texture_factory::type(GLenum t)
 {
 	storage_type = t;

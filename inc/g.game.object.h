@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include <g.io.h>
+#include <g.assets.h>
 #include <ryml_std.hpp>
 #include <ryml.hpp>
 
@@ -144,7 +145,7 @@ struct object
 	using trait_map = std::unordered_map<std::string, object::trait>;
 
 	// TODO: move to factory method
-	object(const std::string& name, const trait_map traits) : _name(name), _traits(traits)
+	object(g::asset::store* store, const std::string& name, const trait_map traits) : _store(store), _name(name), _traits(traits)
 	{
 		auto f = g::io::file(name);
 
@@ -153,6 +154,7 @@ struct object
 			auto buffer = f.read_all();
 			ryml::Tree tree = ryml::parse_in_place(ryml::substr((char*)buffer.data(), buffer.size()));
 
+			// load traits
 			for (const auto& trait : tree["traits"])
 			{
 				std::string key(trait.key().str, trait.key().len);
@@ -173,6 +175,41 @@ struct object
 				{ // it's a string
 					_traits[key] = object::trait{ std::string{val.str, val.len} };
 				}
+			}
+
+			// load textures
+			for (const auto& item : tree["textures"])
+			{
+				if (!item.has_key() || !item.has_val()) { continue; }
+
+				std::string key_str(item.key().str, item.key().len);
+				std::string path_str(item.val().str, item.val().len);
+
+				_texture_map[key_str] = path_str;
+
+				texture(key_str);
+			}
+
+			// load geometry
+			for (const auto& item : tree["geometry"])
+			{
+				if (!item.has_key() || !item.has_val()) { continue; }
+
+				std::string key_str(item.key().str, item.key().len);
+				std::string path_str(item.val().str, item.val().len);
+
+				_geometry_map[key_str] = path_str;
+			}
+
+			// load sounds
+			for (const auto& item : tree["sounds"])
+			{
+				if (!item.has_key() || !item.has_val()) { continue; }
+
+				std::string key_str(item.key().str, item.key().len);
+				std::string path_str(item.val().str, item.val().len);
+
+				_sound_map[key_str] = path_str;
 			}
 		}
 		else
@@ -203,10 +240,20 @@ struct object
 		}
 	}
 
+	g::gfx::texture& texture(const std::string& partial_path) { return _store->tex(partial_path, /* make_if_missing = */ true); }
+
+	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geometry(const std::string& partial_path) { return _store->geo(partial_path, /* make_if_missing = */ true); }
+
+	g::snd::track& sound(const std::string& partial_path) { return _store->sound(partial_path, /* make_if_missing = */ true); }
+
 	trait_map& traits() { return _traits; }
 private:
+	g::asset::store* _store;
 	std::string _name;
-	trait_map _traits;	
+	trait_map _traits;
+	std::unordered_map<std::string, std::string> _texture_map;
+	std::unordered_map<std::string, std::string> _geometry_map;
+	std::unordered_map<std::string, std::string> _sound_map;
 };
 
 } // namespace game

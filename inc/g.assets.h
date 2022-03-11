@@ -7,7 +7,6 @@
 #include "g.gfx.h"
 #include "g.snd.h"
 #include "g.game.h"
-#include "g.game.object.h"
 
 namespace g
 {
@@ -48,24 +47,22 @@ struct store
 	private: std::unordered_map<std::string, kind<g::gfx::font>> fonts;
 	private: std::unordered_map<std::string, kind<g::gfx::mesh<g::gfx::vertex::pos_uv_norm>>> geos;
 	private: std::unordered_map<std::string, kind<g::snd::track>> sounds;
-	private: std::unordered_map<std::string, kind<g::game::object>> game_objects;
-
 
 	public: store(const std::string& root_path="data", bool do_hot_reload=true) : root(root_path), hot_reload(do_hot_reload) { }
 
 	~store();
 
-	g::gfx::texture& tex(const std::string& partial_path);
+	g::gfx::texture& tex(const std::string& partial_path, bool make_if_missing = false);
 
 	g::gfx::shader& shader(const std::string& program_collection);
 
-	g::gfx::font& font(const std::string& partial_path);
+	g::gfx::font& font(const std::string& partial_path, bool make_if_missing = false);
 
-	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geo(const std::string& partial_path);
+	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geo(const std::string& partial_path, bool make_if_missing = false);
 
-	g::game::voxels_paletted& vox(const std::string& partial_path);
+	g::game::voxels_paletted& vox(const std::string& partial_path, bool make_if_missing = false);
 
-	g::snd::track& sound(const std::string& partial_path);
+	g::snd::track& sound(const std::string& partial_path, bool make_if_missing = false);
 
 	// g::game::object& game_object(const std::string& partial_path);
 };

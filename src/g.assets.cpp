@@ -37,25 +37,44 @@ g::asset::store::~store()
 	}
 }
 
-g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
+g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = textures.find(partial_path);
 	if (itr == textures.end())
 	{
-		auto chain = g::gfx::texture_factory().from_png(root + "/tex/" + partial_path).pixelated();
-		// do spicy chain thing with processors here
-		if (std::string::npos != partial_path.find("repeating"))
+		if (make_if_missing && g::io::file{root + "/tex/" + partial_path}.exists() == false)
 		{
-			chain = chain.repeating();
+			// TODO:
+			auto tex = g::gfx::texture_factory(8, 8)
+			.components(3)
+			.type(GL_UNSIGNED_BYTE)
+			.fill([](int x, int y, int z, unsigned char* pixel){
+				bool on_line = x ^ 0x1 || y ^ 0x1;
+				pixel[0] = on_line * 255;
+				pixel[1] = on_line * 128;
+				pixel[2] = 0;
+			}).to_png(root + "/tex/" + partial_path)
+			.pixelated()
+			.create();
+			textures[partial_path] = { time(nullptr), tex };
 		}
-
-		if (std::string::npos != partial_path.find("smooth"))
+		else
 		{
-			chain = chain.smooth();
-		}
+			auto chain = g::gfx::texture_factory().from_png(root + "/tex/" + partial_path).pixelated();
+			// do spicy chain thing with processors here
+			if (std::string::npos != partial_path.find("repeating"))
+			{
+				chain = chain.repeating();
+			}
 
-		auto tex = chain.create();
-		textures[partial_path] = { time(nullptr), tex };
+			if (std::string::npos != partial_path.find("smooth"))
+			{
+				chain = chain.smooth();
+			}
+
+			auto tex = chain.create();
+			textures[partial_path] = { time(nullptr), tex };
+		}
 	}
 	else if (hot_reload)
 	{
@@ -127,7 +146,7 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 }
 
 
-g::gfx::font& g::asset::store::font(const std::string& partial_path)
+g::gfx::font& g::asset::store::font(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = fonts.find(partial_path);
 	if (itr == fonts.end())
@@ -139,11 +158,16 @@ g::gfx::font& g::asset::store::font(const std::string& partial_path)
 }
 
 
-g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::string& partial_path)
+g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = geos.find(partial_path);
 	if (itr == geos.end())
 	{
+		if (make_if_missing)
+		{
+			// TODO:
+		}
+
 		if (std::string::npos != partial_path.find(".obj"))
 		{
 			geos[partial_path] = { time(nullptr), g::gfx::mesh_factory{}.from_obj(root + "/geo/" + partial_path) };
@@ -165,7 +189,7 @@ g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::strin
 }
 
 
-g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path)
+g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = voxels.find(partial_path);
 	if (itr == voxels.end())
@@ -217,11 +241,16 @@ g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path)
 }
 
 
-g::snd::track& g::asset::store::sound(const std::string& partial_path)
+g::snd::track& g::asset::store::sound(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = sounds.find(partial_path);
 	if (itr == sounds.end())
 	{
+		if (make_if_missing)
+		{
+			// TODO:
+		}
+
 		if (std::string::npos != partial_path.find(".wav"))
 		{
 			sounds[partial_path] = { time(nullptr), g::snd::track_factory::from_wav(root + "/snd/" + partial_path) };
