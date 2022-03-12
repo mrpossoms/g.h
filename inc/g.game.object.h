@@ -21,8 +21,6 @@ struct object
 			none,
 			number,
 			string,
-			texture,
-
 		};
 
 		trait()
@@ -143,9 +141,12 @@ struct object
 	};
 
 	using trait_map = std::unordered_map<std::string, object::trait>;
+	using multi_trait_map = std::unordered_map<std::string, trait_map>;
 
 	// TODO: move to factory method
-	object(g::asset::store* store, const std::string& name, const trait_map traits) : _store(store), _name(name), _traits(traits)
+	object(g::asset::store* store, 
+		   const std::string& name, 
+		   const multi_trait_map traits) : _store(store), _name(name), _traits(traits)
 	{
 		auto f = g::io::file(name);
 
@@ -167,13 +168,13 @@ struct object
 
 					if (end_ptr != val.str)
 					{
-						_traits[key] = object::trait{ float_val };
+						_traits["traits"][key] = object::trait{ float_val };
 						continue;
 					}
 				}
 
 				{ // it's a string
-					_traits[key] = object::trait{ std::string{val.str, val.len} };
+					_traits["traits"][key] = object::trait{ std::string{val.str, val.len} };
 				}
 			}
 
@@ -185,9 +186,11 @@ struct object
 				std::string key_str(item.key().str, item.key().len);
 				std::string path_str(item.val().str, item.val().len);
 
-				_texture_map[key_str] = path_str;
+				_traits["textures"][key_str] = path_str;
 
-				texture(key_str);
+				// if we have a rendering context setup then poke the texture
+				// which will cause it to be created if it doesn't exist
+				if (g::gfx::has_graphics()) { texture(path_str); }
 			}
 
 			// load geometry
@@ -198,7 +201,15 @@ struct object
 				std::string key_str(item.key().str, item.key().len);
 				std::string path_str(item.val().str, item.val().len);
 
-				_geometry_map[key_str] = path_str;
+				_traits["geometry"][key_str] = path_str;
+
+
+				// if we have a rendering context setup then poke the mesh
+				// which will cause it to be created if it doesn't exist
+				if (g::gfx::has_graphics()) 
+				{ 
+					geometry(path_str); 
+				}
 			}
 
 			// load sounds
@@ -209,29 +220,38 @@ struct object
 				std::string key_str(item.key().str, item.key().len);
 				std::string path_str(item.val().str, item.val().len);
 
-				_sound_map[key_str] = path_str;
+				_traits["sounds"][key_str] = path_str;
+
+				sound(path_str);
 			}
 		}
-		else
-		{
-			g::io::file of(name, g::io::file::mode::write_only());
+
+
+		{ // write the object back out
+			g::io::file of(name, g::io::file::mode{true, false, true});
 
 			ryml::Tree tree;
 			ryml::NodeRef root = tree.rootref();
 			root |= ryml::MAP;
-			root["traits"] |= ryml::MAP;
-			for (auto& kvp : _traits)
-			{
-				auto& trait = kvp.second;
-				switch(trait.type)
-				{
-					case trait::value_type::number:
-						root["traits"].append_child() << ryml::key(kvp.first) << trait.number;
-						break;
-					case trait::value_type::string:
-						root["traits"].append_child() << ryml::key(kvp.first) << ryml::csubstr(trait.string, strlen(trait.string));
-						break;
 
+			for (auto& category_kvp : _traits)
+			{
+				auto& cat_key = category_kvp.first;
+				root[ryml::csubstr(cat_key.c_str(), cat_key.length())] |= ryml::MAP;
+
+				for (auto& val_kvp : category_kvp.second)
+				{
+					auto& item = val_kvp.second;
+					switch(item.type)
+					{
+						case trait::value_type::number:
+							root[ryml::csubstr(cat_key.c_str(), cat_key.length())].append_child() << ryml::key(val_kvp.first) << item.number;
+							break;
+						case trait::value_type::string:
+							root[ryml::csubstr(cat_key.c_str(), cat_key.length())].append_child() << ryml::key(val_kvp.first) << ryml::csubstr(item.string, strlen(item.string));
+							break;
+
+					}	
 				}
 			}
 
@@ -246,14 +266,14 @@ struct object
 
 	g::snd::track& sound(const std::string& partial_path) { return _store->sound(partial_path, /* make_if_missing = */ true); }
 
-	trait_map& traits() { return _traits; }
+	trait_map& traits() { return _traits["traits"]; }
 private:
 	g::asset::store* _store;
 	std::string _name;
-	trait_map _traits;
-	std::unordered_map<std::string, std::string> _texture_map;
-	std::unordered_map<std::string, std::string> _geometry_map;
-	std::unordered_map<std::string, std::string> _sound_map;
+	multi_trait_map _traits;
+	// std::unordered_map<std::string, std::string> _texture_map;
+	// std::unordered_map<std::string, std::string> _geometry_map;
+	// std::unordered_map<std::string, std::string> _sound_map;
 };
 
 } // namespace game

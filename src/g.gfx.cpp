@@ -8,6 +8,10 @@
 
 using namespace g::gfx;
 
+bool g::gfx::has_graphics()
+{
+	return nullptr != g::gfx::GLFW_WIN;
+}
 
 size_t g::gfx::width()
 {
@@ -332,8 +336,13 @@ texture_factory& texture_factory::from_png(const std::string& path)
 		data = nullptr;
 	}
 
+	// LodePNGColorType colortype;
+	// unsigned bitdepth;
+
 	// TODO: use a more robust lodepng_decode call which can handle textures of various channels and bit depths
+	// unsigned error = lodepng_decode_file((unsigned char**)&data, size[0], size[1], path.c_str());
 	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
+
 
 	// If there's an error, display it.
 	if(error != 0)
@@ -344,20 +353,27 @@ texture_factory& texture_factory::from_png(const std::string& path)
 
 	// a png is a 2D matrix of pixels
 	texture_type = GL_TEXTURE_2D;
-
-	// TODO: change. this is hacky, I don't love it, but it sure is simple
 	color_type = GL_RGBA;
-/*
-	switch (png_color_type) {
-		case PNG_COLOR_TYPE_RGBA:
-			color_type = GL_RGBA;
-			break;
-		case PNG_COLOR_TYPE_PALETTE:
-		case PNG_COLOR_TYPE_RGB:
-			color_type = GL_RGB;
-			break;
-	}
-*/
+	storage_type = GL_UNSIGNED_BYTE;
+
+	// switch(colortype)
+	// {
+	// 	case LCT_GREY:
+	// 		color_type = GL_R;
+	// 		break;
+	// 	case LCT_GREY_ALPHA:
+	// 		color_type = GL_RG;
+	// 		break;
+	// 	case LCT_RGB:
+	// 		color_type = GL_RGB;
+	// 		break;
+	// 	case LCT_RGBA:
+	// 		color_type = GL_RGBA;
+	// 		break;
+	// 	default:
+	// 		std::cerr << G_TERM_RED << "Invalid component count: '" <<  component_count << G_TERM_COLOR_OFF << std::endl;
+	// }
+
 	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
 
 	return *this;
@@ -401,6 +417,8 @@ texture_factory& texture_factory::to_png(const std::string& path)
 	  std::cout << G_TERM_RED "[lodepng::encode] error " << error << ": " << lodepng_error_text(error) << G_TERM_COLOR_OFF << std::endl;
 	  exit(-1);
 	}
+
+	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
 
 	return *this;
 }

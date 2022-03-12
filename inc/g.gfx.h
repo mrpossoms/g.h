@@ -77,6 +77,8 @@ static bool gl_get_error()
 
 extern GLFWwindow* GLFW_WIN;
 
+bool has_graphics();
+
 size_t width();
 
 size_t height();

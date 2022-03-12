@@ -23,7 +23,6 @@ struct g::io::file::impl
 	static int in_fd; // inotify instance file desc
 	int fd = -1;
 
-
 	impl(const char* path, const mode& mode)
 	{
 		int flags = 0;
@@ -45,6 +44,8 @@ struct g::io::file::impl
 		{
 			flags |= O_CREAT;
 
+			make_path(path);
+
 			if (mode.truncate)
 			{
 				flags |= O_TRUNC;
@@ -53,6 +54,8 @@ struct g::io::file::impl
 			{
 				flags |= O_APPEND;
 			}
+
+
 		}
 
 		fd = open(path, flags, 0666);
@@ -64,6 +67,21 @@ struct g::io::file::impl
 		{
 			close(fd);
 			fd = -1;
+		}
+	}
+
+	static void make_path(const char* path)
+	{
+		char path_str[PATH_MAX];
+
+		for (unsigned i = 0; i < strlen(path); i++)
+		{
+			if (path[i] == '/')
+			{
+				strncpy(path_str, path, i);
+				path_str[i] = '\0';
+				mkdir(path_str, 0777);
+			}
 		}
 	}
 
@@ -93,7 +111,7 @@ struct g::io::file::impl
 		return buf;
 	}
 
-	int write(void* buf, size_t bytes)
+	int write(const void* buf, size_t bytes)
 	{
 		return ::write(fd, buf, bytes);
 	}
@@ -115,6 +133,8 @@ struct g::io::file::impl
 
 #ifdef __linux__
 		return stat_buf.st_mtim.tv_sec;
+#elif __APPLE__
+		return stat_buf.st_mtimespec.tv_sec;
 #elif _WIN32
 		return stat_buf.st_mtime;
 #endif
@@ -176,7 +196,7 @@ std::vector<uint8_t> g::io::file::read_all()
 	return read(bytes);
 }	
 
-int g::io::file::write(void* buf, size_t bytes)
+int g::io::file::write(const void* buf, size_t bytes)
 {
 	return file_impl->write(buf, bytes);
 }
@@ -204,3 +224,5 @@ void g::io::file::on_changed(std::function<void(g::io::file&)> callback)
 bool g::io::file::exists() const { return file_impl->exists(); }
 
 int g::io::file::get_fd() const { return file_impl->get_fd(); }
+
+void g::io::file::make_path(const char* path) { g::io::file::impl::make_path(path); }
