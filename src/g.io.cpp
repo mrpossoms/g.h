@@ -13,8 +13,11 @@
 #include <sys/stat.h>
 #elif _WIN32
 #include <io.h>
+#include <direct.h>
 #define open _open
 #define lseek _lseek
+#define mkdir _mkdir
+#define PATH_MAX _MAX_PATH
 #endif
 
 
@@ -80,7 +83,12 @@ struct g::io::file::impl
 			{
 				strncpy(path_str, path, i);
 				path_str[i] = '\0';
+
+#ifdef _WIN32
+				mkdir(path_str);
+#else
 				mkdir(path_str, 0777);
+#endif
 			}
 		}
 	}
