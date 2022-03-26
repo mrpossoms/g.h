@@ -45,7 +45,6 @@ set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.ui.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/src/g.io.cpp)
 set(G_SOURCE ${G_SOURCE} ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng/lodepng.cpp)
 
-# set(SOURCE ${SOURCE} gitman_sources/png/*.o))
 add_library(${PROJECT_NAME} STATIC ${G_SOURCE})
 
 if (WIN32)
@@ -53,13 +52,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-
-set(OPENAL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/libs/Win64/OpenAL32.lib")
-set(OPENAL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/include")
-endif ()
+endif()
 
 message("CMAKE_BINARY_DIR: ${CMAKE_BINARY_DIR}")
-# set(GLEW_USE_STATIC_LIBS 1)
 set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR}/out)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/out)
 
@@ -82,12 +77,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gi
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENGL_INCLUDE_DIR})
 
+if(EMSCRIPTEN)
+else()
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-
-if(EMSCRIPTEN)
-else()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
 endif()
 
@@ -125,8 +119,20 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 find_package(Ogg REQUIRED CONFIG)
 endif()
 
+# find OpenGL
 find_package(OpenGL REQUIRED)
+
+# find OpenAL
+if(WIN32)
+set(OPENAL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/libs/Win64/OpenAL32.lib")
+set(OPENAL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/include")
+set(OPENAL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/libs/Win64/OpenAL32.lib" PARENT_SCOPE)
+set(OPENAL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/include" PARENT_SCOPE)
+message("OPENAL_LIBRARY: ${OPENAL_LIBRARY}")
+else()
 find_package(OpenAL REQUIRED)
+endif ()
+
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
 
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
@@ -138,14 +144,10 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
 
 if(EMSCRIPTEN)
 else()
-# target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW ${OPENGL_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} glew_s)
 endif()
 
 target_link_libraries(${PROJECT_NAME} freetype)
-# target_link_libraries(${PROJECT_NAME} GL)
-# target_link_libraries(${PROJECT_NAME} OpenGL::GL)
-# target_link_libraries(${PROJECT_NAME} ogg)
 target_link_libraries(${PROJECT_NAME} vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)
 target_link_libraries(${PROJECT_NAME} AudioFile)
