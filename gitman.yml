@@ -2,7 +2,7 @@ location: gitman_sources
 sources:
   - name: xmath.h
     type: git
-    repo: git@github.com:mrpossoms/xmath.h.git
+    repo: https://github.com/mrpossoms/xmath.h.git
     sparse_paths:
       -
     rev: master
@@ -11,7 +11,7 @@ sources:
       -
   - name: opengametools
     type: git
-    repo: git@github.com:jpaver/opengametools.git
+    repo: https://github.com/jpaver/opengametools.git
     sparse_paths:
       -
     rev: master
@@ -20,13 +20,13 @@ sources:
       -
   - name: lodepng
     type: git
-    repo: git@github.com:lvandeve/lodepng.git
+    repo: https://github.com/lvandeve/lodepng.git
     sparse_paths:
       -
     rev: master
   - name: glfw
     type: git
-    repo: git@github.com:glfw/glfw.git
+    repo: https://github.com/glfw/glfw.git
     sparse_paths:
       -
     rev: 3.3.4
@@ -34,7 +34,7 @@ sources:
       -
   - name: glew
     type: git
-    repo: git@github.com:nigels-com/glew.git
+    repo: https://github.com/nigels-com/glew.git
     sparse_paths:
       -
     rev: glew-2.2.0
@@ -43,7 +43,7 @@ sources:
       - ./cmake-testbuild.sh
   - name: sha1
     type: git
-    repo: git@github.com:mrpossoms/sha1.git
+    repo: https://github.com/mrpossoms/sha1.git
     sparse_paths:
       -
     rev: master
@@ -52,7 +52,7 @@ sources:
       - make static
   - name: freetype
     type: git
-    repo: git@github.com:freetype/freetype.git
+    repo: https://github.com/freetype/freetype.git
     sparse_paths:
       -
     rev: 2.6.5
@@ -60,17 +60,17 @@ sources:
       -
   - name: ogg
     type: git
-    repo: git@github.com:xiph/ogg.git
+    repo: https://github.com/xiph/ogg.git
     rev: v1.3.5
   - name: vorbis
     type: git
-    repo: git@github.com:xiph/vorbis.git
+    repo: https://github.com/xiph/vorbis.git
     sparse_paths:
       -
     rev: v1.3.7
   - name: AudioFile
     type: git
-    repo: git@github.com:mrpossoms/AudioFile.git
+    repo: https://github.com/mrpossoms/AudioFile.git
     sparse_paths:
       -
     rev: integer-formats
