@@ -20,6 +20,9 @@ jobs:
       - run:
           name: "Congif g.h"
           command: "mkdir build && cd build && cmake -DG_BUILD_TESTS=1 -DG_BUILD_EXAMPLES=1 .."
+      - run:
+          name: "Build g.h"
+          command: "make -j"
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
