@@ -5,7 +5,7 @@ version: 2.1
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  build:
+  build-linux:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
@@ -23,10 +23,19 @@ jobs:
       - run:
           name: "Build g.h"
           command: "make -j"
-
+  build-mac:
+    mac:
+      xcode: 12.5.1
+    steps:
+      - checkout
+      - run:
+          name: "Build"
+          command: "mkdir build && cd build && cmake -DG_BUILD_TESTS=1 -DG_BUILD_EXAMPLES=1 .."
+	
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
   build-workflow:
     jobs:
-      - build
+      - build-linux
+
