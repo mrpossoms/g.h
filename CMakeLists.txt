@@ -103,7 +103,8 @@ execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/
                   )
 execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
 execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
-  
+
+set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 find_package(GLEW REQUIRED CONFIG)
 
@@ -114,6 +115,8 @@ execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
                   )
 execute_process(COMMAND cmake --build out/build/ogg --target install --config Debug)
 execute_process(COMMAND cmake --build out/build/ogg --target install --config Release)
+
+set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/ogg, ${CMAKE_PREFIX_PATH})
   
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 find_package(Ogg REQUIRED CONFIG)
@@ -138,7 +141,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 # set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
-set(CMAKE_PREFIX_PATH "")
+# set(CMAKE_PREFIX_PATH "")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
 
