@@ -119,6 +119,7 @@ execute_process(COMMAND cmake --build out/build/ogg --target install --config Re
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/ogg, ${CMAKE_PREFIX_PATH})
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out, ${CMAKE_PREFIX_PATH})
+set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/lib/cmake, ${CMAKE_PREFIX_PATH})
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 #find_package(Ogg REQUIRED CONFIG)
@@ -142,6 +143,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${OPENAL_INCLUDE_DIR})
 
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 # set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
+
+# set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
 # set(CMAKE_PREFIX_PATH "")
 
