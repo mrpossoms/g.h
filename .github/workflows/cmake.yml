@@ -25,7 +25,7 @@ jobs:
 
     - name: Install Deps
       # TODO: using libglew-dev is a cheat
-      run: sudo apt update && sudo apt install build-essential libffi-dev libreadline-dev zlib1g-dev libssl-dev libglu1-mesa-dev xorg-dev libglew-dev --fix-missing && gitman install
+      run: sudo apt update && sudo apt install build-essential libffi-dev libreadline-dev zlib1g-dev libssl-dev libglu1-mesa-dev xorg-dev libglew-dev libopenal-dev --fix-missing && gitman install
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
