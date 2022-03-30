@@ -24,7 +24,8 @@ jobs:
       run: pip3 install gitman
 
     - name: Install Deps
-      run: sudo apt update && sudo apt install build-essential libffi-dev libreadline-dev zlib1g-dev libssl-dev libglu1-mesa-dev xorg-dev --fix-missing && gitman install
+      # TODO: using libglew-dev is a cheat
+      run: sudo apt update && sudo apt install build-essential libffi-dev libreadline-dev zlib1g-dev libssl-dev libglu1-mesa-dev xorg-dev libglew-dev --fix-missing && gitman install
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
