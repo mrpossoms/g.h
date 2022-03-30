@@ -116,7 +116,7 @@ execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
 execute_process(COMMAND cmake --build out/build/ogg --target install --config Debug)
 execute_process(COMMAND cmake --build out/build/ogg --target install --config Release)
 set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/libogg.a)
-set(OGG_INCLUDE ${CMAKE_BINARY_DIR}/out/include/ogg)
+set(OGG_INCLUDE_DIR ${CMAKE_BINARY_DIR}/out/include/ogg)
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/ogg, ${CMAKE_PREFIX_PATH})
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out, ${CMAKE_PREFIX_PATH})
