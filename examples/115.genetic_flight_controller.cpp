@@ -248,7 +248,7 @@ struct my_core : public g::core
 
             desc.save_best = [&](const void* genome_buf, size_t genome_size)
             {
-                auto fd = open("best_fc.genome", O_CREAT | O_WRONLY | O_TRUNC);
+                auto fd = open("best_fc.genome", O_CREAT | O_WRONLY | O_TRUNC, 0666);
 
                 if (fd >= 0)
                 {
