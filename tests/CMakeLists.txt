@@ -1,3 +1,5 @@
+enable_testing()
+
 find_package(OpenGL REQUIRED)
 
 link_libraries(g)
@@ -15,3 +17,7 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_executable(voxel-hash voxel-hash.cpp)
 add_executable(ray-plane-intersect ray-plane-intersect.cpp)
 add_executable(thread-pool thread-pool.cpp)
+
+add_test(NAME voxel-hash COMMAND voxel-hash)
+add_test(NAME ray-plane-intersect COMMAND ray-plane-intersect)
+add_test(NAME thread-pool COMMAND thread-pool)
