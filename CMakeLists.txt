@@ -106,7 +106,7 @@ execute_process(COMMAND cmake --build out/build/glew --target install --config R
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
-find_package(GLEW REQUIRED CONFIG)
+# find_package(GLEW REQUIRED CONFIG)
 
 # build and use ogg
 execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
