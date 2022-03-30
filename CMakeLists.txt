@@ -119,7 +119,7 @@ execute_process(COMMAND cmake --build out/build/ogg --target install --config Re
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/ogg, ${CMAKE_PREFIX_PATH})
   
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
-find_package(Ogg REQUIRED CONFIG)
+#find_package(Ogg REQUIRED CONFIG)
 endif()
 
 # find OpenGL
