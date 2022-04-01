@@ -94,6 +94,16 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 # set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 
+# build and use ogg
+execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
+                   -B${CMAKE_BINARY_DIR}/out/build/ogg
+                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
+                  )
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Debug)
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Release)
+set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/libogg.a)
+set(OGG_INCLUDE_DIR ${CMAKE_BINARY_DIR}/out/include)
+
 if(EMSCRIPTEN)
 else()
 # build and use glew
@@ -108,15 +118,6 @@ set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 # find_package(GLEW REQUIRED CONFIG)
 
-# build and use ogg
-execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
-                   -B${CMAKE_BINARY_DIR}/out/build/ogg
-                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
-                  )
-execute_process(COMMAND cmake --build out/build/ogg --target install --config Debug)
-execute_process(COMMAND cmake --build out/build/ogg --target install --config Release)
-set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/libogg.a)
-set(OGG_INCLUDE_DIR ${CMAKE_BINARY_DIR}/out/include/ogg)
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/ogg, ${CMAKE_PREFIX_PATH})
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out, ${CMAKE_PREFIX_PATH})

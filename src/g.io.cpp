@@ -15,6 +15,8 @@
 #include <io.h>
 #define open _open
 #define lseek _lseek
+#elif __EMSCRIPTEN__
+#include <emscripten.h>
 #endif
 
 
