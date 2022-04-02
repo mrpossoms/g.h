@@ -91,6 +91,8 @@ set(WITH_PNG OFF CACHE BOOL "" FORCE)
 set(WITH_HarfBuzz OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/rapidyaml ryml)
+
 # set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 
@@ -161,6 +163,7 @@ target_link_libraries(${PROJECT_NAME} freetype)
 target_link_libraries(${PROJECT_NAME} vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)
 target_link_libraries(${PROJECT_NAME} AudioFile)
+target_link_libraries(${PROJECT_NAME} ryml::ryml)
 
 
 if (G_BUILD_EXAMPLES)

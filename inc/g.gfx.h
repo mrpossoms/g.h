@@ -77,6 +77,8 @@ static bool gl_get_error()
 
 extern GLFWwindow* GLFW_WIN;
 
+bool has_graphics();
+
 size_t width();
 
 size_t height();
@@ -156,6 +158,8 @@ struct texture_factory
 	void abort(std::string message);
 
 	texture_factory& from_png(const std::string& path);
+
+	texture_factory& to_png(const std::string& path);
 
 	texture_factory& type(GLenum t);
 

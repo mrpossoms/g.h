@@ -13,7 +13,7 @@ namespace g
 namespace io
 {
 
-// template
+
 struct file
 {
 	struct impl;
@@ -27,6 +27,7 @@ struct file
 		bool truncate = false;
 
 		static mode read_only() { return mode{}; }
+		static mode write_only() { return mode{true, false, false}; }
 	};
 
 	file(const std::string& path, const mode& mode=mode::read_only());
@@ -40,8 +41,9 @@ struct file
 
 	int read(void* buf, size_t bytes);
 	std::vector<uint8_t> read(size_t bytes);
+	std::vector<uint8_t> read_all();
 
-	int write(void* buf, size_t bytes);
+	int write(const void* buf, size_t bytes);
 	int write(const std::vector<uint8_t>& buf);
 
 	void seek(size_t byte_position);
@@ -50,6 +52,11 @@ struct file
 
 	void on_changed(std::function<void(file&)> callback);
 
+	bool exists() const;
+
+	static void make_path(const char* path);
+
+	int get_fd() const;
 private:
 	std::unique_ptr<impl> file_impl;
 };

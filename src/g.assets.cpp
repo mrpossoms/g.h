@@ -37,25 +37,47 @@ g::asset::store::~store()
 	}
 }
 
-g::gfx::texture& g::asset::store::tex(const std::string& partial_path)
+g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = textures.find(partial_path);
 	if (itr == textures.end())
 	{
-		auto chain = g::gfx::texture_factory().from_png(root + "/tex/" + partial_path).pixelated();
-		// do spicy chain thing with processors here
-		if (std::string::npos != partial_path.find("repeating"))
+		if (make_if_missing && g::io::file{root + "/tex/" + partial_path}.exists() == false)
 		{
-			chain = chain.repeating();
-		}
+			auto path = root + "/tex/" + partial_path;
+			g::io::file::make_path(path.c_str());
 
-		if (std::string::npos != partial_path.find("smooth"))
+			// TODO:
+			auto tex = g::gfx::texture_factory(8, 8)
+			.components(3)
+			.type(GL_UNSIGNED_BYTE)
+			.fill([](int x, int y, int z, unsigned char* pixel){
+				bool on_line = (x + y) & 0x1;
+				pixel[0] = !on_line * 255;
+				pixel[1] = !on_line * 128;
+				pixel[2] = 0;
+			}).to_png(path)
+			.pixelated()
+			.create();
+			textures[partial_path] = { time(nullptr), tex };
+		}
+		else
 		{
-			chain = chain.smooth();
-		}
+			auto chain = g::gfx::texture_factory().from_png(root + "/tex/" + partial_path).pixelated();
+			// do spicy chain thing with processors here
+			if (std::string::npos != partial_path.find("repeating"))
+			{
+				chain = chain.repeating();
+			}
 
-		auto tex = chain.create();
-		textures[partial_path] = { time(nullptr), tex };
+			if (std::string::npos != partial_path.find("smooth"))
+			{
+				chain = chain.smooth();
+			}
+
+			auto tex = chain.create();
+			textures[partial_path] = { time(nullptr), tex };
+		}
 	}
 	else if (hot_reload)
 	{
@@ -127,7 +149,7 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 }
 
 
-g::gfx::font& g::asset::store::font(const std::string& partial_path)
+g::gfx::font& g::asset::store::font(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = fonts.find(partial_path);
 	if (itr == fonts.end())
@@ -139,11 +161,29 @@ g::gfx::font& g::asset::store::font(const std::string& partial_path)
 }
 
 
-g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::string& partial_path)
+g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = geos.find(partial_path);
 	if (itr == geos.end())
 	{
+		if (make_if_missing)
+		{
+			const char* tri_obj =
+			"o Tri\n"
+			"v -1 -1 0\n"
+			"v 1 -1 0\n"
+			"v 0 1 0\n"
+			"vt 1.000000 1.000000\n"
+			"vt 0.968750 0.500000\n"
+			"vt 1.000000 0.500000\n"
+			"vn 0 -1 0\n"
+			"s off\n"
+			"f 2/1/1 3/2/1 1/3/1\n";
+
+			g::io::file out(root + "/geo/" + partial_path, g::io::file::mode::write_only());
+			out.write((void*)tri_obj, strlen(tri_obj));
+		}
+
 		if (std::string::npos != partial_path.find(".obj"))
 		{
 			geos[partial_path] = { time(nullptr), g::gfx::mesh_factory{}.from_obj(root + "/geo/" + partial_path) };
@@ -165,7 +205,7 @@ g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::strin
 }
 
 
-g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path)
+g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = voxels.find(partial_path);
 	if (itr == voxels.end())
@@ -217,11 +257,29 @@ g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path)
 }
 
 
-g::snd::track& g::asset::store::sound(const std::string& partial_path)
+g::snd::track& g::asset::store::sound(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = sounds.find(partial_path);
 	if (itr == sounds.end())
 	{
+		if (make_if_missing && g::io::file{root + "/tex/" + partial_path}.exists() == false)
+		{ // TODO: this isn't exactly right since the extension is ignored and assumed to be wav
+			std::vector<int16_t> channel;
+			g::snd::track::description desc;
+
+			for (unsigned i = 0; i < desc.frequency; i++)
+			{
+				float t = i / (float)desc.frequency;
+				channel.push_back(0x7FFF * sin(400 * t * M_PI));
+			}
+
+			auto tone = std::vector<std::vector<int16_t>>{channel};
+
+			auto path = root + "/snd/" + partial_path;
+			g::io::file::make_path(path.c_str());
+			g::snd::track_factory::to_wav(path, tone, desc);
+		}
+
 		if (std::string::npos != partial_path.find(".wav"))
 		{
 			sounds[partial_path] = { time(nullptr), g::snd::track_factory::from_wav(root + "/snd/" + partial_path) };
@@ -248,3 +306,5 @@ g::snd::track& g::asset::store::sound(const std::string& partial_path)
 
 	return sounds[partial_path].get();
 }
+
+// g::game::object& g::asset::store::game_object(const std::string& partial_path);

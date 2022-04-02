@@ -63,7 +63,7 @@ struct track
         }
     };
 
-    using pcm_generator = std::function<std::vector<uint8_t> (const track::description&, float, float)>;
+    using pcm_generator = std::function<std::vector<uint8_t> (const track::description&, float t_0, float t_1)>;
 
     description desc = {};
     std::vector<ALuint> handles;
@@ -198,6 +198,10 @@ static track from_generator(track::pcm_generator generator, const track::descrip
 static track from_ogg(const std::string& path);
 
 static track from_wav(const std::string& path);
+
+static void to_wav(const std::string& path, 
+                std::vector<std::vector<int16_t>>& pcm_channels,
+                   const track::description& desc={});
 
 };
 

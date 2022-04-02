@@ -8,7 +8,7 @@
 #define EGL_EGLEXT_PROTOTYPES
 #endif
 
-GLFWwindow* g::gfx::GLFW_WIN;
+GLFWwindow* g::gfx::GLFW_WIN = nullptr;
 
 void g::core::tick()
 {
