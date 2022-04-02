@@ -28,7 +28,9 @@ struct my_core : public g::core
             {"textures", {
                 { "color", "plane0/color.png"}}},
             {"geometry", {
-                { "mesh", "plane0/mesh.obj"}}}
+                { "mesh", "plane0/mesh.obj"}}},
+            {"sounds", {
+                { "engine", "plane0/engine.wav"}}}
         }};
 
         cam.position = {0, 30, 0};
