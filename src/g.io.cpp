@@ -18,6 +18,8 @@
 #define lseek _lseek
 #define mkdir _mkdir
 #define PATH_MAX _MAX_PATH
+#elif __EMSCRIPTEN__
+#include <emscripten.h>
 #endif
 
 

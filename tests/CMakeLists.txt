@@ -1,3 +1,5 @@
+enable_testing()
+
 find_package(OpenGL REQUIRED)
 
 link_libraries(g)
@@ -33,3 +35,8 @@ add_custom_command(TARGET game-object PRE_BUILD
                    ${CMAKE_SOURCE_DIR}/tests/data
                    $<TARGET_FILE_DIR:game-object>/data
                   )
+
+add_test(NAME voxel-hash COMMAND voxel-hash)
+add_test(NAME ray-plane-intersect COMMAND ray-plane-intersect)
+add_test(NAME thread-pool COMMAND thread-pool)
+add_test(NAME game-object COMMAND game-object)
