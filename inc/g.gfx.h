@@ -1015,7 +1015,7 @@ struct mesh_factory
 	static mesh<VERT> from_sdf(
 		g::game::sdf sdf,
 		std::function<VERT(const g::game::sdf& sdf, const vec<3>& pos)> generator,
-		vec<3> volume_corners[2] = { {-1,-1,-1}, {1, 1, 1} },
+		vec<3> volume_corners[2],
 		unsigned max_depth=4)
 	{
 		mesh<VERT> m;
