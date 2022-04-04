@@ -135,7 +135,7 @@ set(OPENAL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/libs/Win
 set(OPENAL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/include")
 set(OPENAL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/libs/Win64/OpenAL32.lib" PARENT_SCOPE)
 set(OPENAL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/windows/openal/include" PARENT_SCOPE)
-message("OPENAL_LIBRARY: ${OPENAL_LIBRARY}")
+message("Using static OPENAL_LIBRARY: ${OPENAL_LIBRARY}")
 else()
 find_package(OpenAL REQUIRED)
 endif ()

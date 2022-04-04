@@ -992,9 +992,21 @@ struct mesh_factory
 	}
 
 	template<typename VERT>
-	static mesh<VERT> from_sdf(g::game::sdf sdf, std::function<VERT(const g::game::sdf& sdf, const vec<3>& pos)> generator)
+	static mesh<VERT> from_sdf(
+		g::game::sdf sdf,
+		std::function<VERT(const g::game::sdf& sdf, const vec<3>& pos)> generator,
+		vec<3> volume_corners = { {-1,-1,-1}, {1, 1, 1} },
+		unsigned max_depth=4)
 	{
 		mesh<VERT> m;
+		std::vector<VERT> vertices;
+		std::vector<uint32_t> indices;
+		glGenBuffers(2, &m.vbo);
+
+		from_sdf_r(vertices, indices, sdf, generator, volume_corners, max_depth);
+
+		m.set_indices(indices);
+		m.set_vertices(vertices);
 
 		return m;
 	}
