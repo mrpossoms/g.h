@@ -75,6 +75,7 @@ sources:
     type: git
     repo: git@github.com:biojppm/rapidyaml.git
     rev: master
+    params: --recursive
 
 default_group: ''
 groups:
