@@ -6,7 +6,6 @@ sources:
     sparse_paths:
       -
     rev: master
-    link: deps/xmath.h
     scripts:
       -
   - name: opengametools
@@ -15,7 +14,6 @@ sources:
     sparse_paths:
       -
     rev: master
-    link: deps/opengametools
     scripts:
       -
   - name: lodepng
@@ -47,7 +45,6 @@ sources:
     sparse_paths:
       -
     rev: master
-    link: deps/sha1
     scripts:
       - make static
   - name: freetype
@@ -74,6 +71,10 @@ sources:
     sparse_paths:
       -
     rev: integer-formats
+  - name: rapidyaml
+    type: git
+    repo: git@github.com:biojppm/rapidyaml.git
+    rev: master
 
 default_group: ''
 groups:

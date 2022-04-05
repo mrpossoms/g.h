@@ -178,6 +178,20 @@ track track_factory::from_wav(const std::string& path)
     return from_pcm_buffer(interleaved.data(), interleaved.size(), desc);
 }
 
+void track_factory::to_wav(const std::string& path, 
+                           std::vector<std::vector<int16_t>>& pcm_channels,
+                           const track::description& desc)
+{
+    AudioFile<int16_t> af_out;
+    af_out.setSampleRate(desc.frequency);
+    af_out.setNumChannels(desc.channels);
+    af_out.setBitDepth(desc.depth * 8);
+    af_out.setAudioBuffer(pcm_channels);
+
+    af_out.save(path);
+}
+
+
 } // namespace snd
 
 } // namespace g

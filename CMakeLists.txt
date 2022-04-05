@@ -91,8 +91,20 @@ set(WITH_PNG OFF CACHE BOOL "" FORCE)
 set(WITH_HarfBuzz OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/rapidyaml ryml)
+
 # set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
+
+# build and use ogg
+execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
+                   -B${CMAKE_BINARY_DIR}/out/build/ogg
+                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
+                  )
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Debug)
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Release)
+set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/libogg.a)
+set(OGG_INCLUDE_DIR ${CMAKE_BINARY_DIR}/out/include)
 
 if(EMSCRIPTEN)
 else()
@@ -108,15 +120,6 @@ set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 # find_package(GLEW REQUIRED CONFIG)
 
-# build and use ogg
-execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
-                   -B${CMAKE_BINARY_DIR}/out/build/ogg
-                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
-                  )
-execute_process(COMMAND cmake --build out/build/ogg --target install --config Debug)
-execute_process(COMMAND cmake --build out/build/ogg --target install --config Release)
-set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/libogg.a)
-set(OGG_INCLUDE_DIR ${CMAKE_BINARY_DIR}/out/include/ogg)
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/ogg, ${CMAKE_PREFIX_PATH})
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out, ${CMAKE_PREFIX_PATH})
@@ -160,6 +163,7 @@ target_link_libraries(${PROJECT_NAME} freetype)
 target_link_libraries(${PROJECT_NAME} vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)
 target_link_libraries(${PROJECT_NAME} AudioFile)
+target_link_libraries(${PROJECT_NAME} ryml::ryml)
 
 
 if (G_BUILD_EXAMPLES)
