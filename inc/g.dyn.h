@@ -142,6 +142,11 @@ public:
         _net_t_local += t;
         _net_f_local += f;
     }
+
+    inline mat<4, 4> transform() const
+    {
+        return orientation.to_matrix() * mat<4,4>::translation(position);
+    }
 };
 
 namespace cd //< Collision detection
