@@ -46,6 +46,10 @@ public:
     vec<3> linear_momentum = {};
 	quat<> orientation = {0, 0, 0, 1};
 
+    vec<3> forward() const { return orientation.rotate({0, 0, -1}); }
+    vec<3> up() const { return orientation.rotate({0, 1, 0}); }
+    vec<3> left() const { return orientation.rotate({1, 0, 0}); }
+
     void update_inertia_tensor()
     {
         mat<3, 3> L = {
