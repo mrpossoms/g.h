@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <sys/inotify.h>
 #include <sys/stat.h>
+#include <linux/limits.h>
+#include <string.h>
 #elif _WIN32
 #include <io.h>
 #include <direct.h>
