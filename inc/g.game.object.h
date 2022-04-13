@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include <stdlib.h>
+#include <variant>
 
 #include <g.io.h>
 #include <g.assets.h>
@@ -15,7 +16,7 @@ namespace game
 struct object
 {
 	// TODO: replace with std::variant
-	struct trait
+	/*struct trait
 	{
 		enum class value_type
 		{
@@ -139,9 +140,12 @@ struct object
 			float number;
 			char* string;
 		};
-	};
+	};*/
 
-	using trait_map = std::unordered_map<std::string, object::trait>;
+
+	using trait = std::variant<std::string, float>;
+
+	using trait_map = std::unordered_map<std::string, trait>;
 	using multi_trait_map = std::unordered_map<std::string, trait_map>;
 
 	object() = default;
@@ -173,7 +177,17 @@ struct object
 			for (auto& val_kvp : category_kvp.second)
 			{
 				auto& item = val_kvp.second;
-				switch(item.type)
+				
+				if (std::holds_alternative<std::string>(item))
+				{
+					root[ryml::csubstr(cat_key.c_str(), cat_key.length())].append_child() << ryml::key(val_kvp.first) << std::get<std::string>(item);
+				}
+				else if (std::holds_alternative<float>(item))
+				{
+					root[ryml::csubstr(cat_key.c_str(), cat_key.length())].append_child() << ryml::key(val_kvp.first) << std::get<float>(item);
+				}
+
+				/*switch(item.type)
 				{
 					case trait::value_type::number:
 						root[ryml::csubstr(cat_key.c_str(), cat_key.length())].append_child() << ryml::key(val_kvp.first) << item.number;
@@ -182,7 +196,7 @@ struct object
 						root[ryml::csubstr(cat_key.c_str(), cat_key.length())].append_child() << ryml::key(val_kvp.first) << ryml::csubstr(item.string, strlen(item.string));
 						break;
 
-				}	
+				}*/
 			}
 		}
 
@@ -247,9 +261,9 @@ struct object
 
 			// if we have a rendering context setup then poke the mesh
 			// which will cause it to be created if it doesn't exist
-			if (g::gfx::has_graphics()) 
-			{ 
-				geometry(key_str); 
+			if (g::gfx::has_graphics())
+			{
+				geometry(key_str);
 			}
 		}
 
@@ -271,10 +285,15 @@ struct object
 	{
 		auto f = g::io::file(_name);
 
-		if (f.exists() && f.modified() > _last_modified)
+		if (f.exists())
 		{
-			_last_modified = f.modified();
-			deserialize(f);
+			auto modified = f.modified();
+
+			if (modified > _last_modified)
+			{
+				_last_modified = f.modified();
+				deserialize(f);
+			}
 		}
 	}
 
@@ -282,24 +301,29 @@ struct object
 	{
 		load_if_newer();
 
-		return _store->tex(_traits["textures"][name].string, /* make_if_missing = */ true); 
+		return _store->tex(std::get<std::string>(_traits["textures"][name]), /* make_if_missing = */ true); 
 	}
 
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geometry(const std::string& name)
 	{
 		load_if_newer();
 
-		return _store->geo(_traits["geometry"][name].string, /* make_if_missing = */ true);
+		return _store->geo(std::get<std::string>(_traits["geometry"][name]), /* make_if_missing = */ true);
 	}
 
 	g::snd::track& sound(const std::string& name)
 	{
 		load_if_newer();
 
-		return _store->sound(_traits["sounds"][name].string, /* make_if_missing = */ true);
+		return _store->sound(std::get<std::string>(_traits["sounds"][name]), /* make_if_missing = */ true);
 	}
 
-	trait_map& traits() { return _traits["traits"]; }
+	trait_map& traits()
+	{ 
+		load_if_newer();
+
+		return _traits["traits"]; 
+	}
 private:
 	g::asset::store* _store;
 	std::string _name;

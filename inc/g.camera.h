@@ -58,7 +58,7 @@ struct camera : public pose
 
 	void look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up)
 	{
-		mat<4, 4>::look_at((position = pos), forward, up);
+		_view = mat<4, 4>::look_at((position = pos), forward, up);
 	}
 
 	virtual mat<4, 4> view() const

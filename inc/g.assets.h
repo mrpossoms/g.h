@@ -64,6 +64,7 @@ struct store
 
 	g::snd::track& sound(const std::string& partial_path, bool make_if_missing = false);
 
+	const std::string& get_root_path() const { return root; }
 	// g::game::object& game_object(const std::string& partial_path);
 };
 
