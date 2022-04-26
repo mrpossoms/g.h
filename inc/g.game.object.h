@@ -143,7 +143,7 @@ struct object
 	};*/
 
 
-	using trait = std::variant<std::string, float>;
+	using trait = std::variant<std::string, float, int>;
 
 	using trait_map = std::unordered_map<std::string, trait>;
 	using multi_trait_map = std::unordered_map<std::string, trait_map>;
