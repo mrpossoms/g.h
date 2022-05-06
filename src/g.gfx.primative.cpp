@@ -51,11 +51,10 @@ text::text(g::gfx::font& f) : font(f)
 }
 
 shader::usage text::using_shader(g::gfx::shader& shader,
-	const std::string& str,
-	g::game::camera& cam,
-	const mat<4, 4>& model)
+                                 const std::string& str,
+                                 std::function<void(g::gfx::shader::usage&)> shader_config)
 {
-	auto M = mat<4, 4>::translation({ 0, 0.5, 0 }) * model;
+
 	static std::vector<vertex::pos_uv_norm> verts;
 	static std::vector<uint32_t> inds;
 
@@ -104,12 +103,27 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 	plane.set_indices(inds);
 
 	auto usage = plane.using_shader(shader)
-	.set_camera(cam)
-	["u_model"].mat4(M)
-	["u_font_color"].vec4({1, 1, 1, 1})
-	["u_texture"].texture(font.face);
+	                   ["u_texture"].texture(font.face);
+
+	if (shader_config)
+	{
+		shader_config(usage);
+	}	
 
 	return usage;
+}
+
+shader::usage text::using_shader (g::gfx::shader& shader,
+	const std::string& str,
+	g::game::camera& cam,
+	const mat<4, 4>& model)
+{
+	return using_shader(shader, str, [&](g::gfx::shader::usage& usage) {
+		usage.set_camera(cam)
+		      ["u_model"].mat4(mat<4, 4>::translation({ 0, 0.5, 0 }) * model)
+		      ["u_font_color"].vec4({1, 1, 1, 1})
+	          ["u_texture"].texture(font.face);
+	});
 }
 
 void text::draw(g::gfx::shader& shader,

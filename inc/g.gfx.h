@@ -1448,6 +1448,10 @@ struct text : public renderer<std::string>
 
 	shader::usage using_shader(g::gfx::shader& shader,
 		const std::string& str,
+		std::function<void(g::gfx::shader::usage&)> shader_config);
+
+	shader::usage using_shader(g::gfx::shader& shader,
+		const std::string& str,
 		g::game::camera& cam,
 		const mat<4, 4>& model);
 
