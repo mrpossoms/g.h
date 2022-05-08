@@ -9,6 +9,7 @@
 #include <strings.h>
 #endif
 
+#include <regex>
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
 
@@ -151,10 +152,30 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 
 g::gfx::font& g::asset::store::font(const std::string& partial_path, bool make_if_missing)
 {
+	unsigned point = 16;
+
 	auto itr = fonts.find(partial_path);
 	if (itr == fonts.end())
 	{
-		fonts[partial_path] = {time(nullptr), g::gfx::font_factory{}.from_true_type(root + "/font/" + partial_path, 32)};
+		std::cmatch m;
+		std::regex re("[0-9]+pt[.]");
+		if(std::regex_search (partial_path.c_str(), m, re))
+		{
+			std::cout << "match: " << m[0] << std::endl;
+			auto num_end = m.str(0).find("pt");
+
+			char pt_str[8] = {};
+			strncpy(pt_str, m.str(0).c_str(), num_end);
+			int pt = atoi(pt_str);
+
+			if (pt >= 0) { point = pt; }
+			else
+			{
+				std::cerr << G_TERM_RED << "Could not parse point attribute '" << m.str(0) << "' for font '" << partial_path << "'" << G_TERM_COLOR_OFF << std::endl;
+			}
+		}
+
+		fonts[partial_path] = {time(nullptr), g::gfx::font_factory{}.from_true_type(root + "/font/" + partial_path, point)};
 	}
 
 	return fonts[partial_path].get();

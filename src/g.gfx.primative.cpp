@@ -71,9 +71,9 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 	{
 		auto ctx = *itr;
 		auto& glyph = ctx.glyph;//font.char_map[str[i]];
-		auto p = ctx.pen + ctx.glyph.left_top + itr.kerning() + vec<2>{ctx.glyph.width, 0};
+		auto p = (ctx.pen + ctx.glyph.left_top + itr.kerning() + vec<2>{ctx.glyph.width, 0}) * font.point;
 
-		vec<3> glyph_scale({-glyph.width, glyph.height, 1});
+		vec<3> glyph_scale({-glyph.width * font.point, glyph.height * font.point, 1});
 		vec<3> glyph_pos({p[0], p[1], 0});
 
 		auto ct = verts.size();
