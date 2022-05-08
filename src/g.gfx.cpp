@@ -950,8 +950,8 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 
 	size_t pix_per_glyph = point;
 	if (FT_Set_Pixel_Sizes(face,   /* handle to face object */
-                           0,      /* pixel_width           */
-                           pix_per_glyph ))   /* pixel_height          */
+                           pix_per_glyph,      /* pixel_width           */
+                           0 ))   /* pixel_height          */
 	{
 	/*
 	Usually, an error occurs with a fixed-size font format (like FNT or PCF)
