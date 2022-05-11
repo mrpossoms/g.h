@@ -380,7 +380,7 @@ namespace cr //< Collision resolution
     template<typename T>
     void resolve_linear(T& obj, const std::vector<cd::intersection>& intersections)
     {
-        bool printed = false;
+        // bool printed = false;
 
         for (auto& intersection : intersections)
         {

@@ -1,4 +1,4 @@
-const static int tri_edge_list_case[256][15] = {
+[[maybe_unused]] const static int tri_edge_list_case[256][15] = {
     {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
     { 0, 8, 3,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
     {0, 1, 9,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
@@ -257,7 +257,7 @@ const static int tri_edge_list_case[256][15] = {
     {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
 };
 
-const static int edge_list[][2] = {
+[[maybe_unused]] const static int edge_list[][2] = {
     { 0, 1 },
     { 1, 2 },
     { 2, 3 },

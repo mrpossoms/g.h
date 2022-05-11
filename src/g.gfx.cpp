@@ -152,8 +152,8 @@ float g::gfx::noise::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
 
 float g::gfx::noise::value(const vec<3>& p, const std::vector<int8_t>& entropy)
 {
-	auto ent_data = entropy.data();
-	auto ent_size = entropy.size();
+	// auto ent_data = entropy.data();
+	// auto ent_size = entropy.size();
 
 	const vec<3> bounds[2] = {
 		p.floor(),
@@ -383,7 +383,7 @@ texture_factory& texture_factory::to_png(const std::string& path)
 {
 	std::cerr << "writing texture '" <<  path << "'... ";
 
-	LodePNGColorType color_type;
+	LodePNGColorType color_type = LCT_RGB;
 
 	switch(component_count)
 	{
