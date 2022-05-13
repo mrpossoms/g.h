@@ -5,6 +5,7 @@
 #include <ogt_vox.h>
 
 #include <unordered_set>
+#include <unordered_map>
 #include <vector>
 #include <iostream>
 
@@ -268,6 +269,20 @@ struct voxels
 
 	itr begin() { return itr(v, width, height, depth, false); }
 	itr end() { return itr(v, width, height, depth, true); }
+};
+
+struct vox_scene
+{
+	struct model_instance
+	{
+		mat<4, 4> transform;
+		voxels<uint8_t>* model;
+	};
+
+	ogt_vox_palette palette;
+	ogt_vox_matl_array materials;
+	std::vector<voxels<uint8_t>> models;
+	std::unordered_map<std::string, model_instance> instances;
 };
 
 struct voxels_paletted : public voxels<uint8_t>

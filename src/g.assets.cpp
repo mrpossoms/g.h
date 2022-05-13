@@ -226,7 +226,7 @@ g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::strin
 }
 
 
-g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path, bool make_if_missing)
+g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = voxels.find(partial_path);
 	if (itr == voxels.end())
@@ -254,20 +254,32 @@ g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path, 
 	    // construct the scene from the buffer
 	    const ogt_vox_scene* scene = ogt_vox_read_scene_with_flags(buffer, buffer_size, 0);
 
-	    if (scene->num_models == 0)
+    	voxels[partial_path].get().palette = scene->palette;
+
+	    for (unsigned i = 0; i < scene->num_models; i++)
 	    {
-	    	delete[] buffer;
-	    	ogt_vox_destroy_scene(scene);
-	    	throw std::runtime_error(partial_path + ": vox file contained no models");
+	    	voxels[partial_path].get().models.push_back(g::game::voxels<uint8_t>{
+				scene->models[i]->voxel_data,
+				scene->models[i]->size_x,
+				scene->models[i]->size_y,
+				scene->models[i]->size_z
+	    	});
 	    }
 
-	    voxels[partial_path] = { time(nullptr), g::game::voxels_paletted{
-	    	scene->palette,
-	    	scene->models[0]->voxel_data,
-	    	scene->models[0]->size_x,
-	    	scene->models[0]->size_y,
-	    	scene->models[0]->size_z
-	    } };
+	    // if (scene->num_models == 0)
+	    // {
+	    // 	delete[] buffer;
+	    // 	ogt_vox_destroy_scene(scene);
+	    // 	throw std::runtime_error(partial_path + ": vox file contained no models");
+	    // }
+
+	    // voxels[partial_path] = { time(nullptr), g::game::voxels_paletted{
+	    // 	scene->palette,
+	    // 	scene->models[0]->voxel_data,
+	    // 	scene->models[0]->size_x,
+	    // 	scene->models[0]->size_y,
+	    // 	scene->models[0]->size_z
+	    // } };
 
 	    // the buffer can be safely deleted once the scene is instantiated.
 	    delete[] buffer;
