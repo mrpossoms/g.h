@@ -267,21 +267,35 @@ struct voxels
 		return { v + (idx_w * height * depth), depth };
 	}
 
+	inline DAT& operator[](const vec<3, size_t>& idx)
+	{
+		return idx2(idx[0], idx[1], idx[2]);
+	}
+
 	itr begin() { return itr(v, width, height, depth, false); }
 	itr end() { return itr(v, width, height, depth, true); }
 };
 
 struct vox_scene
 {
+	struct group
+	{
+		group* parent = nullptr;
+		bool hidden = false;
+		// TODO: layer index
+	};
+
 	struct model_instance
 	{
 		mat<4, 4> transform;
 		voxels<uint8_t>* model;
+		group* group = nullptr;
 	};
 
 	ogt_vox_palette palette;
 	ogt_vox_matl_array materials;
 	std::vector<voxels<uint8_t>> models;
+	std::vector<group> groups;
 	std::unordered_map<std::string, model_instance> instances;
 };
 

@@ -226,13 +226,23 @@ g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::strin
 }
 
 
+static mat<4, 4> ogt2xmath(const ogt_vox_transform& m)
+{
+	return {
+		{m.m00, m.m01, m.m02, m.m03 },
+		{m.m10, m.m11, m.m12, m.m13 },
+		{m.m20, m.m21, m.m22, m.m23 },
+		{m.m30, m.m31, m.m32, m.m33 },
+	};
+}
+
 g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = voxels.find(partial_path);
 	if (itr == voxels.end())
 	{
 		std::string filename = root + "/vox/" + partial_path;
-	    // open the file
+	    // open the file TODO: replace with g::io::file
 #if defined(_MSC_VER) && _MSC_VER >= 1400
     	FILE * fp;
     	if (0 != fopen_s(&fp, filename.c_str(), "rb")) { fp = nullptr; }
@@ -252,19 +262,31 @@ g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool m
 	    fclose(fp);
 
 	    // construct the scene from the buffer
-	    const ogt_vox_scene* scene = ogt_vox_read_scene_with_flags(buffer, buffer_size, 0);
+	    const ogt_vox_scene* ogt_scene = ogt_vox_read_scene_with_flags(buffer, buffer_size, 0);
+		auto& scene = voxels[partial_path].get();
 
-    	voxels[partial_path].get().palette = scene->palette;
+    	scene.palette = ogt_scene->palette;
 
-	    for (unsigned i = 0; i < scene->num_models; i++)
+		// copy models
+	    for (unsigned i = 0; i < ogt_scene->num_models; i++)
 	    {
-	    	voxels[partial_path].get().models.push_back(g::game::voxels<uint8_t>{
-				scene->models[i]->voxel_data,
-				scene->models[i]->size_x,
-				scene->models[i]->size_y,
-				scene->models[i]->size_z
+	    	scene.models.push_back(g::game::voxels<uint8_t>{
+				ogt_scene->models[i]->voxel_data,
+				ogt_scene->models[i]->size_x,
+				ogt_scene->models[i]->size_y,
+				ogt_scene->models[i]->size_z
 	    	});
 	    }
+
+		// copy model instances
+		for (unsigned i = 0; i < ogt_scene->num_instances; i++)
+		{
+			auto& inst = ogt_scene->instances[i];
+			scene.instances[std::string(inst.name)] = {
+				ogt2xmath(inst.transform),
+				&scene.models[inst.model_index]
+			};
+		}
 
 	    // if (scene->num_models == 0)
 	    // {
@@ -283,7 +305,7 @@ g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool m
 
 	    // the buffer can be safely deleted once the scene is instantiated.
 	    delete[] buffer;
-	    ogt_vox_destroy_scene(scene);
+	    ogt_vox_destroy_scene(ogt_scene);
 	}
 
     return voxels[partial_path].get();
