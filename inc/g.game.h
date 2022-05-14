@@ -86,9 +86,10 @@ struct voxels
 		struct voxel
 		{
 			size_t x, y, z;
+			vec<3,size_t> size;
 			DAT* vox;
 
-			voxel(DAT* vox, size_t x, size_t y, size_t z)
+			voxel(DAT* vox, size_t x, size_t y, size_t z) : size({x, y, z})
 			{
 				this->vox = vox;
 				this->x = x; this->y = y; this->z = z;
@@ -277,12 +278,28 @@ struct vox_scene
 	{
 		mat<4, 4> transform;
 		voxels<uint8_t>* model;
+
+		std::tuple<vec<3,size_t>, vec<3,size_t>> corners(mat<4, 4>* parent_transform=nullptr)
+		{
+			vec<3> m = {0, 0, 0}, M = model->size.cast<float>();
+
+			if (parent_transform)
+			{
+
+			}
+			
+		}
 	};
 
 	ogt_vox_palette palette;
 	ogt_vox_matl_array materials;
 	std::vector<voxels<uint8_t>> models;
 	std::unordered_map<std::string, model_instance> instances;
+
+	vec<3, size_t> total_size()
+	{
+
+	}
 };
 
 struct voxels_paletted : public voxels<uint8_t>
