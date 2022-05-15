@@ -344,11 +344,11 @@ struct vox_scene
 			auto T = inst.global_transform();
 			auto corners = inst.corners(&T);
 
-			m = m.take_min(corners[0]);
-			m = m.take_min(corners[1]);
+			m = m.take_min(std::get<0>(corners));
+			m = m.take_min(std::get<1>(corners));
 
-			M = M.take_max(corners[0]);
-			M = M.take_max(corners[1]);
+			M = M.take_max(std::get<0>(corners));
+			M = M.take_max(std::get<1>(corners));
 		}
 
 		return { m, M };
