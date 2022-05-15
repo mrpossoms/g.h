@@ -954,6 +954,12 @@ struct mesh_factory
 	}
 
 	template<typename VERT>
+	static mesh<VERT> from_voxels(g::game::voxel_scene& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
+	{
+		
+	}
+
+	template<typename VERT>
 	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, int x, int y)> generator)
 	{
 		mesh<VERT> m;
