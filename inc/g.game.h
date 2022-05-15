@@ -148,12 +148,13 @@ struct voxels
 	};
 
 	size_t width, height, depth;
+	vec<3, size_t> size;
 	std::vector<DAT> v;
 	vec<3> com;
 
 	voxels() = default;
 
-	voxels(size_t w, size_t h, size_t d)
+	voxels(size_t w, size_t h, size_t d) : size({w, h, d})
 	{
 		width = w;
 		height = h;
@@ -161,7 +162,7 @@ struct voxels
 		v.resize(w * h * d);
 	}
 
-	voxels(const DAT* ptr, size_t w, size_t h, size_t d)
+	voxels(const DAT* ptr, size_t w, size_t h, size_t d) : size({ w, h, d })
 	{
 		width = w;
 		height = h;
@@ -175,6 +176,7 @@ struct voxels
 		width = w;
 		height = h;
 		depth = d;
+		size = vec<3, size_t>{ w, h, d };
 		v.resize(w * h * d);
 	}
 
@@ -282,14 +284,32 @@ struct vox_scene
 	struct group
 	{
 		group* parent = nullptr;
+		mat<4, 4> transform;
 		bool hidden = false;
 		// TODO: layer index
+
+
 	};
 
 	struct model_instance
 	{
 		mat<4, 4> transform;
+		group* group = nullptr;
 		voxels<uint8_t>* model;
+
+		mat<4, 4> global_transform()
+		{
+			auto T = transform;
+			vox_scene::group* g = group;
+
+			while (g != nullptr)
+			{
+				T = g->transform * T;
+				g = g->parent;
+			}
+
+			return T;
+		}
 
 		std::tuple<vec<3,size_t>, vec<3,size_t>> corners(mat<4, 4>* parent_transform=nullptr)
 		{
@@ -297,21 +317,41 @@ struct vox_scene
 
 			if (parent_transform)
 			{
+				auto T = ((*parent_transform) * transform);
 
+				return { (T * m).cast<size_t>(), (T * M).cast<size_t>() };
 			}
-			
+			else
+			{
+				return { (transform * m).cast<size_t>(), (transform * M).cast<size_t>() };
+			}
 		}
 	};
 
-	ogt_vox_palette palette;
-	ogt_vox_matl_array materials;
+	ogt_vox_palette palette = {};
+	ogt_vox_matl_array materials = {};
 	std::vector<voxels<uint8_t>> models;
 	std::vector<group> groups;
 	std::unordered_map<std::string, model_instance> instances;
 
-	vec<3, size_t> total_size()
+	std::tuple<vec<3, size_t>, vec<3, size_t>> corners(const group* parent = nullptr)
 	{
+		vec<3, size_t> m = { 0, 0, 0 }, M = { 0, 0, 0 };
 
+		for (auto& kvp : instances)
+		{
+			auto& inst = kvp.second;
+			auto T = inst.global_transform();
+			auto corners = inst.corners(&T);
+
+			m = m.take_min(corners[0]);
+			m = m.take_min(corners[1]);
+
+			M = M.take_max(corners[0]);
+			M = M.take_max(corners[1]);
+		}
+
+		return { m, M };
 	}
 };
 

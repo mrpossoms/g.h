@@ -268,15 +268,26 @@ g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool m
     	scene.palette = ogt_scene->palette;
 
 		// copy models
+		scene.models.resize(ogt_scene->num_models);
 	    for (unsigned i = 0; i < ogt_scene->num_models; i++)
 	    {
-	    	scene.models.push_back(g::game::voxels<uint8_t>{
+			scene.models[i] = g::game::voxels<uint8_t>{
 				ogt_scene->models[i]->voxel_data,
 				ogt_scene->models[i]->size_x,
 				ogt_scene->models[i]->size_y,
 				ogt_scene->models[i]->size_z
-	    	});
+			};
 	    }
+
+		// copy groups
+		scene.groups.resize(ogt_scene->num_groups);
+		for (unsigned i = 0; i < ogt_scene->num_groups; i++)
+		{
+			auto& g = ogt_scene->groups[i];
+			scene.groups[i].parent = g.parent_group_index == 0xffffffff ? nullptr : &scene.groups[g.parent_group_index];
+			scene.groups[i].transform = ogt2xmath(g.transform);
+			scene.groups[i].hidden = g.hidden;
+		}
 
 		// copy model instances
 		for (unsigned i = 0; i < ogt_scene->num_instances; i++)
@@ -284,6 +295,7 @@ g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool m
 			auto& inst = ogt_scene->instances[i];
 			scene.instances[std::string(inst.name)] = {
 				ogt2xmath(inst.transform),
+				inst.group_index == 0xffffffff ? nullptr : &scene.groups[inst.group_index],
 				&scene.models[inst.model_index]
 			};
 		}

@@ -954,9 +954,9 @@ struct mesh_factory
 	}
 
 	template<typename VERT>
-	static mesh<VERT> from_voxels(g::game::voxel_scene& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
+	static mesh<VERT> from_voxels(g::game::vox_scene& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
 	{
-		
+		return {};
 	}
 
 	template<typename VERT>
