@@ -295,14 +295,11 @@ g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool m
 		for (unsigned i = 0; i < ogt_scene->num_instances; i++)
 		{
 			auto& inst = ogt_scene->instances[i];
-			scene.instances[std::string(inst.name)] = {
+			scene.instances[std::string(inst.name == nullptr ? "unnamed" : inst.name)] = {
 				ogt2xmath(inst.transform),
 				&scene.groups[inst.group_index],
 				&scene.models[inst.model_index]
 			};
-
-			std::cerr << inst.name << std::endl;
-			std::cerr << scene.instances[std::string(inst.name)].transform.to_string() << std::endl;
 		}
 
 	    // if (scene->num_models == 0)

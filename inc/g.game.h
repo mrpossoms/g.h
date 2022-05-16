@@ -368,17 +368,9 @@ struct vox_scene
 
 		for (auto& kvp : instances)
 		{
-			std::cerr << kvp.first << std::endl;
 			auto& inst = kvp.second;
 			auto T = inst.global_transform();
-
-			std::cerr << T.to_string() << std::endl;
-
 			std::tuple<vec<3, int>, vec<3, int>> corners = inst.corners(T);
-
-
-			std::cerr << "corners: " << std::get<0>(corners).to_string() << ", " << std::get<1>(corners).to_string() << std::endl;
-			std::cerr << "size: " << (std::get<1>(corners) - std::get<0>(corners)).to_string() << std::endl;
 
 			if (first)
 			{
@@ -389,14 +381,19 @@ struct vox_scene
 			else
 			{
 				m = m.take_min(std::get<0>(corners));
-				//m = m.take_min(std::get<1>(corners));
-
-				//M = M.take_max(std::get<0>(corners));
+				m = m.take_min(std::get<1>(corners));
+				M = M.take_max(std::get<0>(corners));
 				M = M.take_max(std::get<1>(corners));
 			}
 		}
 
 		return { m, M };
+	}
+
+	vec<3, int> center()
+	{
+		auto c = corners();
+		return (std::get<0>(c) + std::get<1>(c)) / 2;
 	}
 
 	void duplicate_instance(const model_instance& inst, const std::string& dup_name)

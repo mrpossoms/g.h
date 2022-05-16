@@ -956,7 +956,50 @@ struct mesh_factory
 	template<typename VERT>
 	static mesh<VERT> from_voxels(g::game::vox_scene& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
 	{
-		return {};
+		ogt_voxel_meshify_context empty_ctx = {};
+		mesh<VERT> m;
+		std::vector<VERT> verts;
+		std::vector<uint32_t> indices;
+
+		glGenBuffers(2, &m.vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, m.vbo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.ibo);
+
+		assert(GL_TRUE == glIsBuffer(m.vbo));
+		assert(GL_TRUE == glIsBuffer(m.ibo));
+
+		for (auto& kvp : vox.instances)
+		{
+			auto& inst = kvp.second;
+			auto T = inst.global_transform();
+			auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, inst.model->v.data(), inst.model->width, inst.model->height, inst.model->depth, (const ogt_mesh_rgba*)vox.palette.color);
+
+			verts.reserve(verts.size() + mesh->vertex_count);
+			auto last_vert_count = verts.size();
+			for (unsigned i = 0; i < mesh->vertex_count; i++)
+			{
+				auto v = T * vec<3>{ mesh->vertices[i].pos.x, mesh->vertices[i].pos.y, mesh->vertices[i].pos.z };
+				mesh->vertices[i].pos.x = v[0];
+				mesh->vertices[i].pos.y = v[1];
+				mesh->vertices[i].pos.z = v[2];
+				verts.push_back(generator(mesh->vertices + i));
+			}
+
+			// reverse index order so backface culling works correctly
+			indices.reserve(indices.size() + mesh->index_count);
+			auto last_ind_count = indices.size();
+			for (unsigned i = 0; i < mesh->index_count; i++)
+			{
+				indices.push_back(mesh->indices[(mesh->index_count - 1) - i] + last_vert_count);
+			}
+
+			ogt_mesh_destroy(&empty_ctx, mesh);
+		}
+
+		m.set_vertices(verts);
+		m.set_indices(indices);
+
+		return m;
 	}
 
 	template<typename VERT>
