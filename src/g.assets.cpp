@@ -228,12 +228,12 @@ g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::strin
 
 static mat<4, 4> ogt2xmath(const ogt_vox_transform& m)
 {
-	return {
+	return mat<4, 4>{
 		{m.m00, m.m01, m.m02, m.m03 },
-		{m.m10, m.m11, m.m12, m.m13 },
-		{m.m20, m.m21, m.m22, m.m23 },
-		{m.m30, m.m31, m.m32, m.m33 },
-	};
+		{ m.m10, m.m11, m.m12, m.m13 },
+		{ m.m20, m.m21, m.m22, m.m23 },
+		{ m.m30, m.m31, m.m32, m.m33 },
+	}.transpose();
 }
 
 g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool make_if_missing)
@@ -287,6 +287,8 @@ g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool m
 			scene.groups[i].parent = g.parent_group_index == 0xffffffff ? nullptr : &scene.groups[g.parent_group_index];
 			scene.groups[i].transform = ogt2xmath(g.transform);
 			scene.groups[i].hidden = g.hidden;
+		
+			
 		}
 
 		// copy model instances
@@ -295,9 +297,12 @@ g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool m
 			auto& inst = ogt_scene->instances[i];
 			scene.instances[std::string(inst.name)] = {
 				ogt2xmath(inst.transform),
-				inst.group_index == 0xffffffff ? nullptr : &scene.groups[inst.group_index],
+				&scene.groups[inst.group_index],
 				&scene.models[inst.model_index]
 			};
+
+			std::cerr << inst.name << std::endl;
+			std::cerr << scene.instances[std::string(inst.name)].transform.to_string() << std::endl;
 		}
 
 	    // if (scene->num_models == 0)

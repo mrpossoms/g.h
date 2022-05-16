@@ -304,27 +304,22 @@ struct vox_scene
 
 			while (g != nullptr)
 			{
-				T = g->transform * T;
+				T *= g->transform;// *T;
 				g = g->parent;
 			}
 
 			return T;
 		}
 
-		std::tuple<vec<3,size_t>, vec<3,size_t>> corners(mat<4, 4>* parent_transform=nullptr)
+		std::tuple<vec<3, int>, vec<3, int>> corners(const mat<4, 4>& transform)
 		{
-			vec<3> m = {0, 0, 0}, M = model->size.cast<float>();
+			auto half = model->size.cast<float>() / 2;
+			vec<3> m = -half, M = half;
 
-			if (parent_transform)
-			{
-				auto T = ((*parent_transform) * transform);
+			m = transform * m;
+			M = transform * M;
 
-				return { (T * m).cast<size_t>(), (T * M).cast<size_t>() };
-			}
-			else
-			{
-				return { (transform * m).cast<size_t>(), (transform * M).cast<size_t>() };
-			}
+			return { m.cast<int>(), M.ceil().cast<int>() };
 		}
 	};
 
@@ -334,21 +329,39 @@ struct vox_scene
 	std::vector<group> groups;
 	std::unordered_map<std::string, model_instance> instances;
 
-	std::tuple<vec<3, size_t>, vec<3, size_t>> corners(const group* parent = nullptr)
+	std::tuple<vec<3, int>, vec<3, int>> corners(const group* parent = nullptr)
 	{
-		vec<3, size_t> m = { 0, 0, 0 }, M = { 0, 0, 0 };
+		vec<3, int> m = { 0, 0, 0 }, M = { 0, 0, 0 };
+		auto first = true;
 
 		for (auto& kvp : instances)
 		{
+			std::cerr << kvp.first << std::endl;
 			auto& inst = kvp.second;
 			auto T = inst.global_transform();
-			auto corners = inst.corners(&T);
 
-			m = m.take_min(std::get<0>(corners));
-			m = m.take_min(std::get<1>(corners));
+			std::cerr << T.to_string() << std::endl;
 
-			M = M.take_max(std::get<0>(corners));
-			M = M.take_max(std::get<1>(corners));
+			std::tuple<vec<3, int>, vec<3, int>> corners = inst.corners(T);
+
+
+			std::cerr << "corners: " << std::get<0>(corners).to_string() << ", " << std::get<1>(corners).to_string() << std::endl;
+			std::cerr << "size: " << (std::get<1>(corners) - std::get<0>(corners)).to_string() << std::endl;
+
+			if (first)
+			{
+				m = std::get<0>(corners);
+				M = std::get<1>(corners);
+				first = false;
+			}
+			else
+			{
+				m = m.take_min(std::get<0>(corners));
+				//m = m.take_min(std::get<1>(corners));
+
+				//M = M.take_max(std::get<0>(corners));
+				M = M.take_max(std::get<1>(corners));
+			}
 		}
 
 		return { m, M };
