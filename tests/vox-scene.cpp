@@ -19,6 +19,16 @@ TEST
 		std::cerr << "size: " << size.to_string() << std::endl;
 
 		assert(size.is_near(vec<3, int>{1, 1, 3}));
+
+        // test mating
+        auto& pink = scene.instances["pink"];
+        auto& black = scene.instances["black"];
+        
+		assert(!pink.position_of({ 0, 0, 0 }, true).is_near(black.position_of({ 0, 0, 0 }, true)));
+
+        pink.mate(black, {0, 0, 0}, {0, 0, 0});
+
+		assert(pink.position_of({ 0, 0, 0 }, true).is_near(black.position_of({ 0, 0, 0 }, true)));
 	}
 
 	{

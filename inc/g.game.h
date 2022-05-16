@@ -297,7 +297,7 @@ struct vox_scene
 		group* group = nullptr;
 		voxels<uint8_t>* model;
 
-		mat<4, 4> global_transform()
+		mat<4, 4> global_transform() const
 		{
 			auto T = transform;
 			vox_scene::group* g = group;
@@ -311,7 +311,7 @@ struct vox_scene
 			return T;
 		}
 
-		std::tuple<vec<3, int>, vec<3, int>> corners(const mat<4, 4>& transform)
+		std::tuple<vec<3, int>, vec<3, int>> corners(const mat<4, 4>& transform) const
 		{
 			auto half = model->size.cast<float>() / 2;
 			vec<3> m = -half, M = half;
@@ -320,6 +320,38 @@ struct vox_scene
 			M = transform * M;
 
 			return { m.cast<int>(), M.ceil().cast<int>() };
+		}
+
+		vec<3> position_of(const vec<3>& voxel, bool global = false) const
+		{
+			auto half = model->size.cast<float>() / 2;
+			auto T = transform;			
+
+			if (global)
+			{
+				T = global_transform() * T;
+			}
+
+			return T * (voxel - half);
+		} 
+
+		struct mating_options
+		{
+			// TODO
+		};
+
+		bool mate(const model_instance& other, const vec<3, int>& my_voxel, const vec<3, int>& other_voxel, const mating_options& opts={})
+		{
+			transform = other.transform;
+			group = other.group;
+
+			auto delta = other.position_of(other_voxel.cast<float>()) - position_of(my_voxel.cast<float>());
+		
+			transform[0][0] += delta[0];
+			transform[1][0] += delta[1];
+			transform[2][0] += delta[2];
+
+			return true;
 		}
 	};
 
@@ -365,6 +397,11 @@ struct vox_scene
 		}
 
 		return { m, M };
+	}
+
+	void duplicate_instance(const model_instance& inst, const std::string& dup_name)
+	{
+		instances[dup_name] = inst;
 	}
 };
 
