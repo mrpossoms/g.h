@@ -57,7 +57,7 @@ struct voxel_world : public g::core
 
 		//assets.vox("temple.vox").center_of_mass(true);
 
-		cam.position = {0, 0, 30};
+		cam.position = assets.vox("temple.vox").center().cast<float>() + vec<3>{2, 0, 0};
 		light.width = 42;
 		light.height = 55;
 
@@ -84,8 +84,7 @@ struct voxel_world : public g::core
 
 		// cam.orientation = quat::from_axis_angle({0, 0, 1}, 0);
 
-
-		auto model = mat4::translation(assets.vox("temple.vox").center().cast<float>() * -1);
+		auto model = mat4::I();
 		light.position = vec<3>{cos(t * 0.1f) * 60, sin(t * 0.1f) * 60, 60};
 		light.look_at(vec<3>{0, 0, 0}, vec<3>{0, 0, 1});
 
@@ -106,6 +105,7 @@ struct voxel_world : public g::core
 
 			glClearColor(1, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			cam.aspect_ratio(g::gfx::aspect());
 
 			auto light_model = mat4::translation(light.position + light_vox.center_of_bounds() * -1);
 			light_mesh.using_shader(assets.shader("basic_color.vs+basic_color.fs"))

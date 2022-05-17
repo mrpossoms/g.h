@@ -331,7 +331,7 @@ g::snd::track& g::asset::store::sound(const std::string& partial_path, bool make
 	auto itr = sounds.find(partial_path);
 	if (itr == sounds.end())
 	{
-		if (make_if_missing && g::io::file{root + "/tex/" + partial_path}.exists() == false)
+		if (make_if_missing && g::io::file{root + "/snd/" + partial_path}.exists() == false)
 		{ // TODO: this isn't exactly right since the extension is ignored and assumed to be wav
 			std::vector<int16_t> channel;
 			g::snd::track::description desc;

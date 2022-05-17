@@ -973,16 +973,18 @@ struct mesh_factory
 			auto& inst = kvp.second;
 			auto T = inst.global_transform();
 			auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, inst.model->v.data(), inst.model->width, inst.model->height, inst.model->depth, (const ogt_mesh_rgba*)vox.palette.color);
+			auto half = (inst.model->size / 2).cast<float>();
 
 			verts.reserve(verts.size() + mesh->vertex_count);
 			auto last_vert_count = verts.size();
 			for (unsigned i = 0; i < mesh->vertex_count; i++)
 			{
-				auto v = T * vec<3>{ mesh->vertices[i].pos.x, mesh->vertices[i].pos.y, mesh->vertices[i].pos.z };
+				auto v = T * vec<3>{ mesh->vertices[i].pos.x, mesh->vertices[i].pos.y, mesh->vertices[i].pos.z } - half;
 				mesh->vertices[i].pos.x = v[0];
 				mesh->vertices[i].pos.y = v[1];
 				mesh->vertices[i].pos.z = v[2];
-				verts.push_back(generator(mesh->vertices + i));
+				auto vert = generator(mesh->vertices + i);
+				verts.push_back(vert);
 			}
 
 			// reverse index order so backface culling works correctly
