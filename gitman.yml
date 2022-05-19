@@ -22,6 +22,12 @@ sources:
     sparse_paths:
       -
     rev: master
+  - name: libtiff
+    type: git
+    repo: https://gitlab.com/libtiff/libtiff.git
+    rev: master
+    sparse_paths:
+      -
   - name: glfw
     type: git
     repo: https://github.com/glfw/glfw.git
