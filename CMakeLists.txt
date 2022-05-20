@@ -131,6 +131,8 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 #find_package(Ogg REQUIRED CONFIG)
 endif()
 
+find_package(Threads REQUIRED)
+
 # find OpenGL
 find_package(OpenGL REQUIRED)
 

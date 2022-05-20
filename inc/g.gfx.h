@@ -159,6 +159,8 @@ struct texture_factory
 
 	texture_factory& from_png(const std::string& path);
 
+	texture_factory& from_tiff(const std::string& path);
+
 	texture_factory& to_png(const std::string& path);
 
 	texture_factory& type(GLenum t);

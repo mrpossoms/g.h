@@ -21,6 +21,9 @@ add_executable(ray-plane-intersect ray-plane-intersect.cpp)
 add_executable(thread-pool thread-pool.cpp)
 add_executable(game-object game-object.cpp)
 
+find_package(Threads REQUIRED)
+target_link_libraries(thread-pool PRIVATE Threads::Threads)
+
 if (WIN32)
 message(STATUS "NOTE: Windows requires elevated permissions to create symlinks. Please run visual studio as an administrator.")
 add_custom_command(TARGET game-object PRE_BUILD

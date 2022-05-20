@@ -379,6 +379,59 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	return *this;
 }
 
+texture_factory& texture_factory::from_tiff(const std::string& path)
+{
+	std::cerr << "loading texture '" <<  path << "'... ";
+
+	if (nullptr != data)
+	{
+		delete data;
+		data = nullptr;
+	}
+
+	// LodePNGColorType colortype;
+	// unsigned bitdepth;
+
+	// TODO: use a more robust lodepng_decode call which can handle textures of various channels and bit depths
+	// unsigned error = lodepng_decode_file((unsigned char**)&data, size[0], size[1], path.c_str());
+	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
+
+
+	// If there's an error, display it.
+	if(error != 0)
+	{
+	  std::cout << G_TERM_RED "[lodepng::decode] error " << error << ": " << lodepng_error_text(error) << G_TERM_COLOR_OFF << std::endl;
+	  exit(-1);
+	}
+
+	// a png is a 2D matrix of pixels
+	texture_type = GL_TEXTURE_2D;
+	color_type = GL_RGBA;
+	storage_type = GL_UNSIGNED_BYTE;
+
+	// switch(colortype)
+	// {
+	// 	case LCT_GREY:
+	// 		color_type = GL_R;
+	// 		break;
+	// 	case LCT_GREY_ALPHA:
+	// 		color_type = GL_RG;
+	// 		break;
+	// 	case LCT_RGB:
+	// 		color_type = GL_RGB;
+	// 		break;
+	// 	case LCT_RGBA:
+	// 		color_type = GL_RGBA;
+	// 		break;
+	// 	default:
+	// 		std::cerr << G_TERM_RED << "Invalid component count: '" <<  component_count << G_TERM_COLOR_OFF << std::endl;
+	// }
+
+	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
+
+	return *this;
+}
+
 texture_factory& texture_factory::to_png(const std::string& path)
 {
 	std::cerr << "writing texture '" <<  path << "'... ";
