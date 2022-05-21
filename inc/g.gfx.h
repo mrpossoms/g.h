@@ -917,7 +917,7 @@ struct mesh_factory
 	static mesh<vertex::pos_uv_norm> from_obj(const std::string& path);
 
 	template<typename VERT>
-	static mesh<VERT> from_voxels(g::game::voxels_paletted& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
+	static mesh<VERT> from_voxels(g::game::voxels<uint8_t>& vox, ogt_vox_palette& palette, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
 	{
 		ogt_voxel_meshify_context empty_ctx = {};
 		mesh<VERT> m;
@@ -928,7 +928,7 @@ struct mesh_factory
 		assert(GL_TRUE == glIsBuffer(m.vbo));
 		assert(GL_TRUE == glIsBuffer(m.ibo));
 
-		auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, vox.v.data(), vox.width, vox.height, vox.depth, (const ogt_mesh_rgba*)vox.palette.color);
+		auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, vox.v.data(), vox.width, vox.height, vox.depth, (const ogt_mesh_rgba*)palette.color);
 
 		VERT* verts = new VERT[mesh->vertex_count];
 		uint32_t* inds = new uint32_t[mesh->index_count];
@@ -951,6 +951,12 @@ struct mesh_factory
 		delete[] inds;
 
 		return m;
+	}
+
+	template<typename VERT>
+	static mesh<VERT> from_voxels(g::game::voxels_paletted& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
+	{
+		return from_voxels<VERT>(vox, vox.palette, generator);
 	}
 
 	template<typename VERT>

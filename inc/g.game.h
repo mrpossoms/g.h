@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <ogt_vox.h>
+#include <assert.h>
 
 #include <unordered_set>
 #include <unordered_map>
@@ -153,6 +154,14 @@ struct voxels
 	vec<3> com;
 
 	voxels() = default;
+
+	voxels(vec<3, int> s) : size(s.cast<size_t>())
+	{
+		width = s[0];
+		height = s[1];
+		depth = s[2];
+		v.resize(width * height * depth);
+	}
 
 	voxels(size_t w, size_t h, size_t d) : size({w, h, d})
 	{
@@ -361,7 +370,7 @@ struct vox_scene
 	std::vector<group> groups;
 	std::unordered_map<std::string, model_instance> instances;
 
-	std::tuple<vec<3, int>, vec<3, int>> corners(const group* parent = nullptr)
+	std::tuple<vec<3, int>, vec<3, int>> corners(const group* parent = nullptr) const
 	{
 		vec<3, int> m = { 0, 0, 0 }, M = { 0, 0, 0 };
 		auto first = true;
@@ -400,6 +409,51 @@ struct vox_scene
 	{
 		instances[dup_name] = inst;
 	}
+
+	voxels<uint8_t> flatten()
+	{
+		auto c = corners();
+		auto min = std::get<0>(c);
+		auto min_f = min.cast<float>();
+		vec<3, int> size = std::get<1>(c) - min;
+
+		voxels<uint8_t> out(size);
+
+		for (auto& kvp : instances)
+		{
+			auto& inst = kvp.second;
+			auto T = inst.global_transform();
+
+			std::cout << kvp.first << ": " << inst.model->size.to_string() << std::endl;
+
+			auto half = (inst.model->size.cast<float>() / 2) - 0.5f;
+
+			for (int z = 0; z < inst.model->depth; z++)
+			for (int y = 0; y < inst.model->height; y++)
+			for (int x = 0; x < inst.model->width; x++)
+			{
+				auto v = inst.model->idx2(x, y, z);
+
+				if (0 == v) { continue; }
+
+				assert(x < inst.model->width);
+				assert(y < inst.model->height);
+				assert(z < inst.model->depth);
+				auto coord = ((T * (vec<3>{(float)x, (float)y, (float)z} - half)) - min_f);
+
+				assert(coord[0] < size[0]);
+				assert(coord[1] < size[1]);
+				assert(coord[2] < size[2]);
+
+				out[coord.cast<size_t>()] = v;
+			
+			}
+
+		}
+
+		return out;
+	}
+
 };
 
 struct voxels_paletted : public voxels<uint8_t>

@@ -60,5 +60,14 @@ TEST
 
 		assert(size.is_near(vec<3, int>{40, 39, 17}));
 	}
+
+	{
+		auto& scene = assets.vox("farm.vox");
+
+		auto flat = scene.flatten();
+		
+		std::cout << flat.size.to_string() << std::endl;
+		assert(flat.size.is_near(vec<3, size_t>{40, 39, 17}));
+	}
 	return 0;
 }

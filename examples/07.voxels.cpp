@@ -46,7 +46,7 @@ struct voxel_world : public g::core
 			};
 		});
 
-		temple = g::gfx::mesh_factory::from_voxels<g::gfx::vertex::pos_norm_color>(assets.vox("temple.vox"),
+		temple = g::gfx::mesh_factory::from_voxels<g::gfx::vertex::pos_norm_color>(assets.vox("farm.vox").flatten(), assets.vox("farm.vox").palette,
 		[](ogt_mesh_vertex* v) -> g::gfx::vertex::pos_norm_color {
 			return {
 				{ v->pos.x, v->pos.y, v->pos.z },
@@ -57,7 +57,7 @@ struct voxel_world : public g::core
 
 		//assets.vox("temple.vox").center_of_mass(true);
 
-		cam.position = assets.vox("temple.vox").center().cast<float>() + vec<3>{2, 0, 0};
+		cam.position = assets.vox("farm.vox").center().cast<float>() + vec<3>{2, 0, 0};
 		light.width = 42;
 		light.height = 55;
 
