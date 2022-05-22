@@ -399,6 +399,13 @@ struct vox_scene
 		return { m, M };
 	}
 
+	vec<3, size_t> size() const
+	{
+		auto c = corners();
+
+		return (std::get<1>(c) - std::get<0>(c)).cast<size_t>();
+	}
+
 	vec<3, int> center()
 	{
 		auto c = corners();

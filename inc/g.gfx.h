@@ -917,7 +917,7 @@ struct mesh_factory
 	static mesh<vertex::pos_uv_norm> from_obj(const std::string& path);
 
 	template<typename VERT>
-	static mesh<VERT> from_voxels(g::game::voxels<uint8_t>& vox, ogt_vox_palette& palette, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
+	static mesh<VERT> from_voxels(const g::game::voxels<uint8_t>& vox, ogt_vox_palette& palette, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
 	{
 		ogt_voxel_meshify_context empty_ctx = {};
 		mesh<VERT> m;
@@ -995,7 +995,6 @@ struct mesh_factory
 
 			// reverse index order so backface culling works correctly
 			indices.reserve(indices.size() + mesh->index_count);
-			auto last_ind_count = indices.size();
 			for (unsigned i = 0; i < mesh->index_count; i++)
 			{
 				indices.push_back(mesh->indices[(mesh->index_count - 1) - i] + last_vert_count);
@@ -1198,7 +1197,7 @@ struct density_volume
         this->sdf = sdf;
         this->generator = generator;
 
-        for (auto offset : offsets)
+        for (auto& offset : offsets)
         {
             density_volume::block block;
             block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
@@ -1261,7 +1260,7 @@ struct density_volume
 
             generator_pool.run(
             // generation task
-            [this, oi, pidx, offset, block_ptr](){
+            [this, oi, pidx, block_ptr](){
             	block_ptr->start = std::chrono::system_clock::now();
 
                 auto pipo = pidx + offsets[oi].template cast<int>();
@@ -1275,7 +1274,7 @@ struct density_volume
                 block_ptr->regenerating = false;
             },
             // on finish
-            [this, block_ptr](){
+            [block_ptr](){
                 block_ptr->mesh.set_vertices(block_ptr->vertices);
                 block_ptr->mesh.set_indices(block_ptr->indices);
 

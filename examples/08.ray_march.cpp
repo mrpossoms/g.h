@@ -67,7 +67,8 @@ struct volumetric : public g::core
 
 		auto vox = assets.vox("probe.vox");
 
-		std::cout << "vox: " << vox.width << ", " << vox.height << ", " << vox.depth << std::endl;
+		auto s = vox.size();
+		std::cout << "vox: " << s.to_string() << std::endl;
 
 		glGenTextures(1, &cube);
 		glBindTexture(GL_TEXTURE_3D, cube);
@@ -76,20 +77,16 @@ struct volumetric : public g::core
 			GL_TEXTURE_3D,
 			0,
 			GL_RED,
-			vox.width, vox.height, vox.depth,
+			s[0], s[1], s[2],
 			0,
 			GL_RED,
 			GL_UNSIGNED_BYTE,
-			vox.v.data()
+			vox.flatten().v.data()
 		);
 
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		// glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

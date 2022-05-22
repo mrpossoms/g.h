@@ -46,7 +46,7 @@ struct voxel_world : public g::core
 			};
 		});
 
-		temple = g::gfx::mesh_factory::from_voxels<g::gfx::vertex::pos_norm_color>(assets.vox("farm.vox").flatten(), assets.vox("farm.vox").palette,
+		temple = g::gfx::mesh_factory::from_voxels<g::gfx::vertex::pos_norm_color>((g::game::voxels<uint8_t>)assets.vox("farm.vox").flatten(), assets.vox("farm.vox").palette,
 		[](ogt_mesh_vertex* v) -> g::gfx::vertex::pos_norm_color {
 			return {
 				{ v->pos.x, v->pos.y, v->pos.z },
