@@ -288,24 +288,37 @@ struct voxels
 	itr end() { return itr(v, width, height, depth, true); }
 };
 
+/**
+ * @brief      Represents a scene tree stored in a vox files.
+ */
 struct vox_scene
 {
+	/**
+	 * @brief      Vox group object (partial impl)
+	 */
 	struct group
 	{
 		group* parent = nullptr;
 		mat<4, 4> transform;
 		bool hidden = false;
 		// TODO: layer index
-
-
 	};
 
+	/**
+	 * @brief      Specific scene instance of a model stored
+	 * in the vox file.
+	 */
 	struct model_instance
 	{
 		mat<4, 4> transform;
 		group* group = nullptr;
 		voxels<uint8_t>* model;
 
+		/**
+		 * @brief      Computes the transform relative to the global reference frame.
+		 *
+		 * @return     Transformation matrix
+		 */
 		mat<4, 4> global_transform() const
 		{
 			auto T = transform;
@@ -320,6 +333,15 @@ struct vox_scene
 			return T;
 		}
 
+		/**
+		 * @brief      Returns the extants (corners) of the model volume in the scene
+		 * relative to the origin of the root reference frame.
+		 *
+		 * @param[in]  transform  The global transform of this model instance relative
+		 * to the origin reference frame.
+		 *
+		 * @return     Tuple of min and max corner values. Post transformation.
+		 */
 		std::tuple<vec<3, int>, vec<3, int>> corners(const mat<4, 4>& transform) const
 		{
 			auto half = model->size.cast<float>() / 2;
@@ -331,6 +353,15 @@ struct vox_scene
 			return { m.cast<int>(), M.ceil().cast<int>() };
 		}
 
+
+		/**
+		 * @brief      { function_description }
+		 *
+		 * @param[in]  voxel   The voxel
+		 * @param[in]  global  The global
+		 *
+		 * @return     { description_of_the_return_value }
+		 */
 		vec<3> position_of(const vec<3>& voxel, bool global = false) const
 		{
 			auto half = model->size.cast<float>() / 2;
@@ -349,6 +380,18 @@ struct vox_scene
 			// TODO
 		};
 
+		/**
+		 * @brief      Position one model instance adjacent to another by placing two
+		 * specific voxels coincident to one another via a translation transformation
+		 * only. The two models should share a parent space to make the mating valid.
+		 *
+		 * @param[in]  other        The other model to mate against.
+		 * @param[in]  my_voxel     The voxel from this model to make `other_voxel` coincident to.
+		 * @param[in]  other_voxel  The voxel from `other` which should be made coincident to `my_voxel`.
+		 * @param[in]  opts         The mating options.
+		 *
+		 * @return     True if the mating was sucessful, false if constraints were violated.
+		 */
 		bool mate(const model_instance& other, const vec<3, int>& my_voxel, const vec<3, int>& other_voxel, const mating_options& opts={})
 		{
 			transform = other.transform;
@@ -370,6 +413,15 @@ struct vox_scene
 	std::vector<group> groups;
 	std::unordered_map<std::string, model_instance> instances;
 
+	/**
+	 * @brief      The extents of this voxel scene. In other words, the min
+	 * and max corners considering all model instances.
+	 *
+	 * @param[in]  parent  The parent group
+	 *
+	 * @return     Tuple containing the min position and max position in the tuple 
+	 * respectively.
+	 */
 	std::tuple<vec<3, int>, vec<3, int>> corners(const group* parent = nullptr) const
 	{
 		vec<3, int> m = { 0, 0, 0 }, M = { 0, 0, 0 };
@@ -399,6 +451,11 @@ struct vox_scene
 		return { m, M };
 	}
 
+	/**
+	 * @brief      Dimentions of the entire scene.
+	 *
+	 * @return     3-dimensional integer vector describing the dimensions of the scene 
+	 */
 	vec<3, size_t> size() const
 	{
 		auto c = corners();
@@ -406,17 +463,34 @@ struct vox_scene
 		return (std::get<1>(c) - std::get<0>(c)).cast<size_t>();
 	}
 
+	/**
+	 * @brief      Center point between the corners computed by the `corners()` method
+	 *
+	 * @return     3-dimensional integer vector describing the central point.
+	 */
 	vec<3, int> center()
 	{
 		auto c = corners();
 		return (std::get<0>(c) + std::get<1>(c)) / 2;
 	}
 
+	/**
+	 * @brief      Copies a model instance into the scene
+	 *
+	 * @param[in]  inst      The instance
+	 * @param[in]  dup_name  The duplicate name
+	 */
 	void duplicate_instance(const model_instance& inst, const std::string& dup_name)
 	{
 		instances[dup_name] = inst;
 	}
 
+	/**
+	 * @brief      Transform and copy each model instance into a single voxel model
+	 * sized appropriately to fit the extents of each model post global transformation
+	 *
+	 * @return     Resulting model
+	 */
 	voxels<uint8_t> flatten()
 	{
 		auto c = corners();
@@ -430,8 +504,6 @@ struct vox_scene
 		{
 			auto& inst = kvp.second;
 			auto T = inst.global_transform();
-
-			std::cout << kvp.first << ": " << inst.model->size.to_string() << std::endl;
 
 			auto half = (inst.model->size.cast<float>() / 2) - 0.5f;
 
