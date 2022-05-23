@@ -917,7 +917,7 @@ struct mesh_factory
 	static mesh<vertex::pos_uv_norm> from_obj(const std::string& path);
 
 	template<typename VERT>
-	static mesh<VERT> from_voxels(g::game::voxels_paletted& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
+	static mesh<VERT> from_voxels(const g::game::voxels<uint8_t>& vox, ogt_vox_palette& palette, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
 	{
 		ogt_voxel_meshify_context empty_ctx = {};
 		mesh<VERT> m;
@@ -928,7 +928,7 @@ struct mesh_factory
 		assert(GL_TRUE == glIsBuffer(m.vbo));
 		assert(GL_TRUE == glIsBuffer(m.ibo));
 
-		auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, vox.v.data(), vox.width, vox.height, vox.depth, (const ogt_mesh_rgba*)vox.palette.color);
+		auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, vox.v.data(), vox.width, vox.height, vox.depth, (const ogt_mesh_rgba*)palette.color);
 
 		VERT* verts = new VERT[mesh->vertex_count];
 		uint32_t* inds = new uint32_t[mesh->index_count];
@@ -949,6 +949,62 @@ struct mesh_factory
 		ogt_mesh_destroy(&empty_ctx, mesh);
 		delete[] verts;
 		delete[] inds;
+
+		return m;
+	}
+
+	template<typename VERT>
+	static mesh<VERT> from_voxels(g::game::voxels_paletted& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
+	{
+		return from_voxels<VERT>(vox, vox.palette, generator);
+	}
+
+	template<typename VERT>
+	static mesh<VERT> from_voxels(g::game::vox_scene& vox, std::function<VERT(ogt_mesh_vertex* vert_in)> generator)
+	{
+		ogt_voxel_meshify_context empty_ctx = {};
+		mesh<VERT> m;
+		std::vector<VERT> verts;
+		std::vector<uint32_t> indices;
+
+		glGenBuffers(2, &m.vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, m.vbo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.ibo);
+
+		assert(GL_TRUE == glIsBuffer(m.vbo));
+		assert(GL_TRUE == glIsBuffer(m.ibo));
+
+		for (auto& kvp : vox.instances)
+		{
+			auto& inst = kvp.second;
+			auto T = inst.global_transform();
+			auto mesh = ogt_mesh_from_paletted_voxels_simple(&empty_ctx, inst.model->v.data(), inst.model->width, inst.model->height, inst.model->depth, (const ogt_mesh_rgba*)vox.palette.color);
+			auto half = (inst.model->size / 2).cast<float>();
+
+			verts.reserve(verts.size() + mesh->vertex_count);
+			auto last_vert_count = verts.size();
+			for (unsigned i = 0; i < mesh->vertex_count; i++)
+			{
+				auto v = T * vec<3>{ mesh->vertices[i].pos.x, mesh->vertices[i].pos.y, mesh->vertices[i].pos.z } - half;
+				mesh->vertices[i].pos.x = v[0];
+				mesh->vertices[i].pos.y = v[1];
+				mesh->vertices[i].pos.z = v[2];
+				auto vert = generator(mesh->vertices + i);
+				verts.push_back(vert);
+			}
+
+			// reverse index order so backface culling works correctly
+			indices.reserve(indices.size() + mesh->index_count);
+			for (unsigned i = 0; i < mesh->index_count; i++)
+			{
+				indices.push_back(mesh->indices[(mesh->index_count - 1) - i] + last_vert_count);
+			}
+
+			ogt_mesh_destroy(&empty_ctx, mesh);
+		}
+
+		m.set_vertices(verts);
+		m.set_indices(indices);
 
 		return m;
 	}
@@ -1141,7 +1197,7 @@ struct density_volume
         this->sdf = sdf;
         this->generator = generator;
 
-        for (auto offset : offsets)
+        for (auto& offset : offsets)
         {
             density_volume::block block;
             block.mesh = g::gfx::mesh_factory{}.empty_mesh<V>();
@@ -1204,7 +1260,7 @@ struct density_volume
 
             generator_pool.run(
             // generation task
-            [this, oi, pidx, offset, block_ptr](){
+            [this, oi, pidx, block_ptr](){
             	block_ptr->start = std::chrono::system_clock::now();
 
                 auto pipo = pidx + offsets[oi].template cast<int>();
@@ -1218,7 +1274,7 @@ struct density_volume
                 block_ptr->regenerating = false;
             },
             // on finish
-            [this, block_ptr](){
+            [block_ptr](){
                 block_ptr->mesh.set_vertices(block_ptr->vertices);
                 block_ptr->mesh.set_indices(block_ptr->indices);
 

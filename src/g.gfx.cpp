@@ -950,7 +950,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 
 	size_t pix_per_glyph = point;
 	if (FT_Set_Pixel_Sizes(face,   /* handle to face object */
-                           pix_per_glyph,      /* pixel_width           */
+                           0,      /* pixel_width           */
 						   pix_per_glyph))   /* pixel_height          */
 	{
 	/*
