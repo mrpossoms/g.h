@@ -1,4 +1,4 @@
-#ifdef GL_ES
+    #ifdef GL_ES
 precision mediump float;
 #endif
 
@@ -17,6 +17,6 @@ void main (void)
     vec4 proj_pos = u_proj * u_view * u_model * vec4(a_position, 1.0);
     gl_Position = proj_pos;
 
-    proj_pos /= proj_pos.w;
-    v_frame_space_pos = (proj_pos + 1.0) / 2.0;
+    //proj_pos /= proj_pos.w;
+    v_frame_space_pos = (proj_pos);// + 1.0) / 2.0;
 }

@@ -21,8 +21,7 @@ const std::string fs_dbg_src =
 "color = u_color;"
 "}";
 
-
-debug::print::print(g::game::camera* cam)
+void debug::print::init(g::game::camera* cam)
 {
 	if (!debug_shader.is_initialized())
 	{
@@ -38,8 +37,12 @@ debug::print::print(g::game::camera* cam)
 		debug_mesh = mesh_factory::empty_mesh<vertex::pos>();
 	}
 
-	cur_cam = cam;
+	cur_cam = cam;	
 }
+
+debug::print::print(g::game::camera* cam) { init(cam); }
+
+debug::print::print(g::game::camera& cam) { init(&cam);  }
 
 debug::print& debug::print::color(const vec<4>& c)
 {
