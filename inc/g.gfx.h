@@ -1069,13 +1069,18 @@ namespace debug
 	{
 		vec<4> cur_color;
 		g::game::camera* cur_cam;
+		g::gfx::texture* cur_tex;
 		mat<4, 4> cur_model = mat<4, 4>::I();
 
 		print(g::game::camera* cam);
+		print(g::game::camera& cam);
 
 		print& color(const vec<4>& c);
 
 		print& model(const mat<4, 4>& m);
+
+		// TODO
+		// print& texture(const g::gfx::texture& t);
 
 		void ray(const vec<2>& o, const vec<2>& d);
 
@@ -1086,6 +1091,9 @@ namespace debug
 		void point(const vec<3>& o);
 
 		void box(const vec<3> corners[2]);
+
+	private:
+		void init(g::game::camera* cam);
 	};
 }
 
