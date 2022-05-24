@@ -44,6 +44,7 @@ add_executable(09.gui 09.gui.cpp)
 add_executable(10.text 10.text.cpp)
 add_executable(11.genetic_agent 11.genetic_agent.cpp)
 add_executable(115.genetic_flight_controller 115.genetic_flight_controller.cpp)
+add_executable(12.game_objects 12.game_objects.cpp)
 
 if (WIN32)
 message(STATUS "NOTE: Windows requires elevated permissions to create symlinks. Please run visual studio as an administrator.")

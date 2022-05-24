@@ -196,7 +196,6 @@ pointer pointer_from_mouse(g::game::camera* cam)
     int width, height;
     glfwGetWindowSize(GLFW_WIN, &width, &height);
 
-    auto eps = 0.000001f;
     auto proj = cam->projection();
 
     const int buttons[] = {
@@ -217,7 +216,7 @@ pointer pointer_from_mouse(g::game::camera* cam)
     }
 
 
-    auto view = cam->view();
+    // auto view = cam->view();
     auto view_rot = cam->orientation.to_matrix();
 
     // TODO: figure out where to position ray origins for orthographic

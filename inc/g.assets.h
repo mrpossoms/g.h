@@ -52,17 +52,20 @@ struct store
 
 	~store();
 
-	g::gfx::texture& tex(const std::string& partial_path);
+	g::gfx::texture& tex(const std::string& partial_path, bool make_if_missing = false);
 
 	g::gfx::shader& shader(const std::string& program_collection);
 
-	g::gfx::font& font(const std::string& partial_path);
+	g::gfx::font& font(const std::string& partial_path, bool make_if_missing = false);
 
-	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geo(const std::string& partial_path);
+	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geo(const std::string& partial_path, bool make_if_missing = false);
 
-	g::game::voxels_paletted& vox(const std::string& partial_path);
+	g::game::voxels_paletted& vox(const std::string& partial_path, bool make_if_missing = false);
 
-	g::snd::track& sound(const std::string& partial_path);
+	g::snd::track& sound(const std::string& partial_path, bool make_if_missing = false);
+
+	const std::string& get_root_path() const { return root; }
+	// g::game::object& game_object(const std::string& partial_path);
 };
 
 }

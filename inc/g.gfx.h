@@ -77,6 +77,8 @@ static bool gl_get_error()
 
 extern GLFWwindow* GLFW_WIN;
 
+bool has_graphics();
+
 size_t width();
 
 size_t height();
@@ -156,6 +158,8 @@ struct texture_factory
 	void abort(std::string message);
 
 	texture_factory& from_png(const std::string& path);
+
+	texture_factory& to_png(const std::string& path);
 
 	texture_factory& type(GLenum t);
 
@@ -422,6 +426,26 @@ namespace vertex
 
 			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv), (void*)0);
 			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv), (void*)p_size);
+		}
+	};
+
+	struct pos_norm
+	{
+		vec<3> position;
+		vec<3> normal;
+
+		static void attributes(GLuint prog)
+		{
+			auto pos_loc = glGetAttribLocation(prog, "a_position");
+			auto norm_loc = glGetAttribLocation(prog, "a_normal");
+
+			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
+
+			auto p_size = sizeof(position);
+
+			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)0);
+			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)(p_size));
 		}
 	};
 
@@ -992,9 +1016,16 @@ struct mesh_factory
 	}
 
 	template<typename VERT>
-	static mesh<VERT> from_sdf(g::game::sdf sdf, std::function<VERT(const g::game::sdf& sdf, const vec<3>& pos)> generator)
+	static mesh<VERT> from_sdf(
+		g::game::sdf sdf,
+		std::function<VERT(const g::game::sdf& sdf, const vec<3>& pos)> generator,
+		vec<3> volume_corners[2],
+		unsigned max_depth=4)
 	{
 		mesh<VERT> m;
+		glGenBuffers(2, &m.vbo);
+
+		m.from_sdf_r(sdf, generator, volume_corners, max_depth);
 
 		return m;
 	}
@@ -1416,6 +1447,10 @@ struct text : public renderer<std::string>
 	};
 
 	text(g::gfx::font& f);
+
+	shader::usage using_shader(g::gfx::shader& shader,
+		const std::string& str,
+		std::function<void(g::gfx::shader::usage&)> shader_config);
 
 	shader::usage using_shader(g::gfx::shader& shader,
 		const std::string& str,
