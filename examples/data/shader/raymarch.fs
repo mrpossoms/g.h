@@ -1,5 +1,3 @@
-#version 410
-
 #define DIST_EPS (0.01)
 #define MAX_DIST (1000.0)
 #define MAX_STEPS (200)
@@ -137,8 +135,8 @@ float cast_ray( in vec3 ro, in vec3 rd, out vec3 oVos, out vec3 oDir )
 
 void main(void)
 {
-	vec4 ray = inverse(u_proj) * vec4(v_screen_pos.xy, 1.0, 1.0);
-	ray /= ray.w;
+	vec4 ray = (u_proj) * vec4(-v_screen_pos.xy, 1.0, 1.0);
+	//ray /= ray.w;
 
 	vec3 d = v_view_rotation * normalize(ray.xyz);
 	vec3 ds = sign(d);

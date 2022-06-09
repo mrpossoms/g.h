@@ -141,7 +141,7 @@ void g::core::start(const core::opts& opts)
 	emscripten_set_main_loop_arg(EMSCRIPTEN_MAIN_LOOP, this, 0, 1);
 #else
 	while (running)
-	{ // TODO: refactor this such that a 'main loop' function can be implemented and called by emscripten_set_main_loop
+	{
 		tick();
 	}
 #endif
