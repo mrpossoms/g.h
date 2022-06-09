@@ -1,4 +1,3 @@
-#version 410
 in vec3 a_position;
 in vec2 a_uv;
 in vec3 a_normal;
@@ -22,7 +21,7 @@ void main(void)
 		normalize(u_view[2].xyz)
 	));
 
-	v_view_pos = u_view_pos;//-u_view[3].xyz;
+	v_view_pos = vec3(u_view[3][0], u_view[3][1], u_view[3][2]);
 
 	gl_Position = v_screen_pos = vec4(-a_position, 1.0);
 }

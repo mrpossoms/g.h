@@ -54,44 +54,58 @@ void effect::blit(const framebuffer& fb)
 }
 
 
-void effect::shadow(const framebuffer& shadow_map, const framebuffer& camera_fb, game::camera& light, game::camera& cam)
+void effect::shadow(const framebuffer& light_depth, const framebuffer& camera_depth, game::camera& light, game::camera& cam)
 {
     static shader shadow_shader;
-    static std::string shadow_map_fs_src =
+    static std::string light_depth_fs_src =
     "in vec2 v_uv;"
     "in vec4 v_light_proj_pos;"
-    "uniform mat4 u_camera_unproject;"
-    "uniform sampler2D u_shadow_map;"
+    // "uniform mat4 u_camera_unproject;"
+    // "uniform mat4 u_view_inv;"
+    "uniform vec3 u_cam_pos;"
+    "uniform mat4 u_view;"
+    "uniform mat4 u_proj;"
+    // "uniform mat4 u_light_view_inv;"
+    "uniform vec3 u_light_pos;"
+    "uniform mat4 u_light_view;"
+    "uniform mat4 u_light_proj;"
+    "uniform sampler2D u_light_depth;"
     "uniform sampler2D u_camera_depth;"
     "out vec4 color;"
+    "vec3 unproject(vec4 p, mat4 P)"
+    "{"
+    "   float z = -1.0 / ((p[2] * P[3][2]) - P[2][2]);"
+    "   return "
+    "}"
+    ""
     "void main (void)"
     "{"
     "   float bias = 0.00006;"
-    "   float depth = texture(u_camera_depth, v_uv).r;"
-    "   float shadowing = 0.0;"
-    "   for(float y = -2.0; y <= 2.0; y++)"
-    "   for(float x = -2.0; x <= 2.0; x++)"
-    "   {"
-    "       float sampled_depth = texture(u_shadow_map, v_uv + (vec2(x, y) * 0.0005)).r;"
-    "       if (depth <= sampled_depth)"
-    "       {"
-    "           shadowing += 1.0 / 25.0;"
-    "       }"
-    "   }"
-    "   color = vec4(vec3(depth), 1.0);"
-    "}";
+    "   vec3 light_pos = (u_light_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;"
+    "   vec3 cam_pos = (u_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;"
+    "   vec3 cam_to_light = light_pos - cam_pos;"
+    // TODO: recover the view position from the camera's view to
+    // query the light depth map
+    "   "
+    "}\n";
 
     if (!shadow_shader.is_initialized())
     {
         shadow_shader = shader_factory{}
             .add_src<GL_VERTEX_SHADER>(post_proc_vs_src)
-            .add_src<GL_FRAGMENT_SHADER>(shadow_map_fs_src)
+            .add_src<GL_FRAGMENT_SHADER>(light_depth_fs_src)
             .create();
     }
 
 
     fullscreen_quad().using_shader(shadow_shader)
-    ["u_shadow_map"].texture(shadow_map.depth)
-    ["u_camera_depth"].texture(camera_fb.depth)
+    .set_camera(cam)
+    // ["u_view_inv"].mat4(cam.view().invert())
+    ["u_light_pos"].vec3(light.position)
+    ["u_light_view"].mat4(light.view())
+    ["u_light_proj"].mat4(light.projection())
+    ["u_cam_pos"].vec3(cam.position)
+    ["u_light_depth"].texture(light_depth.depth)
+    ["u_camera_depth"].texture(camera_depth.depth)
     .draw<GL_TRIANGLE_FAN>();
 }

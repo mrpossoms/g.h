@@ -14,7 +14,7 @@ struct voxel_world : public g::core
 
 	g::gfx::mesh<g::gfx::vertex::pos_norm_color> temple;
 	g::gfx::mesh<g::gfx::vertex::pos_norm_color> light_mesh;
-	g::gfx::framebuffer shadow_map, render_target;
+	g::gfx::framebuffer light_depth_map, camera_depth_map, render_target;
 
 	g::game::voxels_paletted light_vox;
 	g::game::camera_perspective cam;
@@ -24,8 +24,9 @@ struct voxel_world : public g::core
 	virtual bool initialize()
 	{
 		{ // graphics init
-			shadow_map = g::gfx::framebuffer_factory{1024, 1024}.color().depth().create();
-			render_target = g::gfx::framebuffer_factory{(unsigned)g::gfx::width(), (unsigned)g::gfx::height()}.color().depth().create();
+			light_depth_map = g::gfx::framebuffer_factory{1024, 1024}.color().depth().create();
+			light_depth_map = g::gfx::framebuffer_factory{1024, 1024}.color().depth().create();
+			camera_depth_map = g::gfx::framebuffer_factory{(unsigned)g::gfx::width(), (unsigned)g::gfx::height()}.color().depth().create();
 		}
 
 
@@ -81,6 +82,7 @@ struct voxel_world : public g::core
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 		if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_SPACE) == GLFW_PRESS) return;
+		// std::cout << cam.view().invert().to_string() << std::endl;
 
 		// cam.orientation = quat::from_axis_angle({0, 0, 1}, 0);
 
@@ -91,7 +93,7 @@ struct voxel_world : public g::core
 		light.look_at(vec<3>{0, 0, 0}, vec<3>{0, 0, 1});
 
 		{ // draw shadow map
-			g::gfx::framebuffer::scoped_draw sd(shadow_map);
+			g::gfx::framebuffer::scoped_draw sd(light_depth_map);
 			glClearColor(0, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			temple.using_shader(assets.shader("depth_only.vs+depth_only.fs"))
@@ -101,6 +103,15 @@ struct voxel_world : public g::core
 
 		}
 		
+		{ // draw depth map
+			g::gfx::framebuffer::scoped_draw sd(camera_depth_map);
+			glClearColor(0, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			temple.using_shader(assets.shader("depth_only.vs+depth_only.fs"))
+				.set_camera(cam)
+				["u_model"].mat4(model)
+				.draw<GL_TRIANGLES>();
+		}
 
 		// {
 		// 	g::gfx::framebuffer::scoped_draw sd(render_target);
@@ -125,23 +136,25 @@ struct voxel_world : public g::core
 		// }
 
 		// {
-		// 	g::gfx::effect::shadow_0<g::gfx::vertex::pos_norm_color>(temple, shadow_map, light, cam, [&](g::gfx::shader::usage& chain) {
+		// 	glClearColor(1, 1, 1, 1);
+		// 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// 	g::gfx::effect::shadow_0<g::gfx::vertex::pos_norm_color>(temple, light_depth_map, light, cam, [&](g::gfx::shader::usage& chain) {
 		// 		chain["u_model"].mat4(model);
 		// 	});
 		// }
 
-		// {
-		// 	// g::gfx::framebuffer::scoped_draw sd(render_target);
-		// 	glClearColor(1, 0, 0, 1);
-		// 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		// 	g::gfx::effect::shadow(shadow_map, render_target, light, cam);
-		// }
-
 		{
+			// g::gfx::framebuffer::scoped_draw sd(render_target);
 			glClearColor(1, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			g::gfx::effect::blit(shadow_map);
+			g::gfx::effect::shadow(light_depth_map, render_target, light, cam);
 		}
+
+		// { // SHOW SHADOWMAP
+		// 	glClearColor(1, 0, 0, 1);
+		// 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		// 	g::gfx::effect::blit(light_depth_map);
+		// }
 
 		t += dt;
 	}
