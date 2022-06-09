@@ -145,10 +145,21 @@ struct voxel_world : public g::core
 
 		{
 			// g::gfx::framebuffer::scoped_draw sd(render_target);
-			glClearColor(1, 0, 0, 1);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			g::gfx::effect::shadow(light_depth_map, render_target, light, cam);
+			//glClearColor(1, 0, 0, 1);
+			//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			//g::gfx::effect::shadow(light_depth_map, camera_depth_map, light, cam);
 		}
+
+					glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		 	temple.using_shader(assets.shader("basic_color.vs+basic_color.fs"))
+		 	.set_camera(cam)
+		 	["u_model"].mat4(model)
+		 	["u_light_view"].mat4(light.view())
+		 	["u_light_proj"].mat4(light.projection())
+		 	["u_light_diffuse"].vec3({1, 1, 1})
+		 	["u_light_ambient"].vec3({13.5f/255.f, 20.6f/255.f, 23.5f/255.f})
+		 	.draw<GL_TRIANGLES>();
+
 
 		// { // SHOW SHADOWMAP
 		// 	glClearColor(1, 0, 0, 1);
