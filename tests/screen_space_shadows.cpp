@@ -6,6 +6,8 @@ using namespace xmath;
 vec<3> world_to_screen(const mat<4,4>& proj, const mat<4, 4>& view, const vec<3>& p)
 {
     std::cerr << __func__ << std::endl;
+    auto p_w = vec<4>{ p[0], p[1], p[2], 1 };
+    std::cerr << p_w.to_string() << std::endl;
     auto p_view = view.transpose() * vec<4>{ p[0], p[1], p[2], 1 };
     std::cerr << "view " << p_view.to_string() << std::endl; 
     auto p_proj = proj * p_view;
@@ -44,7 +46,7 @@ bool is_in_shadow(
     const mat<4,4>& light_view,
     const mat<4,4>& light_proj)
 {
-
+    return false;
 }
 
 /**
@@ -62,11 +64,11 @@ TEST
 
         // sanity check sanity check
         auto q = V * p;
-        assert((V.invert() * q).is_near(p, 0.00001));
+        assert((V.invert() * q).is_near(p, 0.0001));
 
         auto p0 = screen_to_world(P, V, p_prime);
 
-        assert(p0.is_near(p, 0.000001));
+        assert(p0.is_near(p, 0.0001));
     }
 
     { // simple case with light behind viewer
