@@ -81,7 +81,7 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 		}
 		else if (partial_path.find(".tiff") == partial_path.length() - 5)
 		{
-			auto chain = g::gfx::texture_factory().from_png(root + "/tex/" + partial_path).pixelated();
+			auto chain = g::gfx::texture_factory().from_tiff(root + "/tex/" + partial_path).pixelated();
 			// do spicy chain thing with processors here
 			if (std::string::npos != partial_path.find("repeating"))
 			{

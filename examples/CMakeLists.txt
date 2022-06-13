@@ -19,6 +19,7 @@ link_libraries(glfw)
 link_libraries(${OPENAL_LIBRARY})
 link_libraries(ogg)
 link_libraries(vorbis)
+link_libraries(tiff)
 
 # include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../gitman_sources/xmath.h/inc)
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../inc ${OPENAL_INCLUDE_DIR})

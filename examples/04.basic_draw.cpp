@@ -49,11 +49,11 @@ struct my_core : public g::core
 		srand(time(NULL));
 
 		std::vector<int8_t> v;
-        std::default_random_engine generator;
-        std::uniform_int_distribution<int> distribution(-127,128);
-        for (unsigned i = 1024; i--;)
-        {
-                v.push_back(distribution(generator));
+		std::default_random_engine generator;
+		std::uniform_int_distribution<int> distribution(-127,128);
+		for (unsigned i = 1024; i--;)
+		{
+			v.push_back(distribution(generator));
 		}
 
 		//auto noise = g::gfx::noise::perlin({ 0.5, 0.5, 0 }, v);
@@ -62,23 +62,25 @@ struct my_core : public g::core
 		float pmin = 100, pmax = -100;
 
 		glDisable(GL_CULL_FACE);
-		grid_tex = g::gfx::texture_factory{256, 256}
-		.type(GL_UNSIGNED_BYTE)
-		.components(4)
-		.fill([&](int x, int y, int z, unsigned char* pixel) {
-			vec<3> p = { x / 8.f, y / 8.f, 0 };
-			auto noise = g::gfx::noise::value(p, v);
-			pmin = std::min<float>(noise, pmin);
-			pmax = std::max<float>(noise, pmax);
-			auto n = std::max<float>(std::min<float>(noise, 1), -1);
-			pixel[0] = (unsigned char)((n + 1) * 127);
-			pixel[1] = 0;
-			pixel[2] = 0;
-			pixel[3] = 255;
-		})
-		.pixelated().clamped()
-		.create();
+		grid_tex = 
+		// g::gfx::texture_factory{256, 256}
+		// .type(GL_UNSIGNED_BYTE)
+		// .components(4)
+		// .fill([&](int x, int y, int z, unsigned char* pixel) {
+		// 	vec<3> p = { x / 8.f, y / 8.f, 0 };
+		// 	auto noise = g::gfx::noise::value(p, v);
+		// 	pmin = std::min<float>(noise, pmin);
+		// 	pmax = std::max<float>(noise, pmax);
+		// 	auto n = std::max<float>(std::min<float>(noise, 1), -1);
+		// 	pixel[0] = (unsigned char)((n + 1) * 127);
+		// 	pixel[1] = 0;
+		// 	pixel[2] = 0;
+		// 	pixel[3] = 255;
+		// })
+		// .pixelated().clamped()
+		// .create();
 		//.from_png("data/tex/brick.color.png").create();
+		g::gfx::texture_factory{}.from_tiff("data/tex/NNSS.tif").create();
 
 		std::cerr << "min: " << pmin << std::endl;
 		std::cerr << "max: " << pmax << std::endl;

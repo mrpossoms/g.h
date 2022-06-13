@@ -395,15 +395,62 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 	if (tiff == NULL)
 	{
 		std::cout << G_TERM_RED "[libtiff::TIFFOpen] '" << path << "' could not be opened" << G_TERM_COLOR_OFF << std::endl;
+		TIFFClose(tiff);
 		exit(-1);
 	}
 
-	// a png is a 2D matrix of pixels
+	uint32_t width = 0, height = 0, depth = 0;
+	uint32_t bits = 0, tiles = 0;
+	TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
+	TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);	
+	TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &depth);
+	TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bits);
+
+	size[0] = width; size[1] = height; size[2] = depth;
+
+	std::cerr << "TIFF: (" << width << ", " << height << ", " << depth << ")" << std::endl;
+	std::cerr << "TIFF: bits per channel: " << bits << std::endl;
+	std::cerr << "TIFF: num tiles: " << TIFFNumberOfTiles(tiff) << std::endl;
+
+	auto bytes_per_textel = (bits >> 3) * depth;
+	// data = new unsigned char[width * height * bytes_per_textel];
+	// data = (unsigned char*) new uint32_t[width * height];
+	uint32_t* raster = (uint32_t*)_TIFFmalloc(width * height * sizeof(uint32_t));
+
+	if (TIFFReadTile(tiff, raster, 0, 0, 0, {}) == -1)
+	{
+		std::cout << G_TERM_RED "[libtiff::TIFFReadRGBAImage] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
+		TIFFClose(tiff);
+		exit(-1);
+	}
+
+	// if (TIFFReadRGBAImage(tiff, width, height, (uint32_t*)data, 0))
+	// {
+	// 	std::cout << G_TERM_RED "[libtiff::TIFFReadRGBAImage] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
+	// 	TIFFClose(tiff);
+	// 	exit(-1);
+	// }
+
 	texture_type = GL_TEXTURE_2D;
+
+	switch(bits)
+	{
+		case 8:
+			storage_type = GL_UNSIGNED_BYTE;			
+			break;
+		case 16:
+			storage_type = GL_UNSIGNED_SHORT;
+			break;
+		case 32:
+			storage_type = GL_UNSIGNED_INT;
+			break;
+	}
+
 	color_type = GL_RGBA;
-	storage_type = GL_UNSIGNED_BYTE;
 
 	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
+
+	TIFFClose(tiff);
 
 	return *this;
 }
