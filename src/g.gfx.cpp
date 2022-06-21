@@ -400,29 +400,59 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 	}
 
 	uint32_t width = 0, height = 0, depth = 0;
+	uint32_t tile_width = 0, tile_height = 0;
 	uint32_t bits = 0, tiles = 0;
 	TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
 	TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);	
 	TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &depth);
 	TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bits);
+  	TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tile_width);
+  	TIFFGetField(tif, TIFFTAG_TILELENGTH, &tile_height);
 
 	size[0] = width; size[1] = height; size[2] = depth;
 
 	std::cerr << "TIFF: (" << width << ", " << height << ", " << depth << ")" << std::endl;
 	std::cerr << "TIFF: bits per channel: " << bits << std::endl;
-	std::cerr << "TIFF: num tiles: " << TIFFNumberOfTiles(tiff) << std::endl;
+	std::cerr << "TIFF: num tiles: " << TIFFNumberOfTiles(tiff) << " size: (" << tile_width << "," << tile_height << ")" << std::endl;
+
 
 	auto bytes_per_textel = (bits >> 3) * depth;
 	// data = new unsigned char[width * height * bytes_per_textel];
 	// data = (unsigned char*) new uint32_t[width * height];
+	auto tile_size_bytes = TIFFTileSize(tiff);
+	auto tile_row_bytes = TIFFTileRowSize(tiff);
 	uint32_t* raster = (uint32_t*)_TIFFmalloc(width * height * sizeof(uint32_t));
+	uint32_t* tile = (uint32_t*)_TIFFmalloc(tile_size_bytes);
 
-	if (TIFFReadTile(tiff, raster, 0, 0, 0, {}) == -1)
+	for (unsigned i = 0; i < TIFFNumberOfTiles(tiff); i++)
 	{
-		std::cout << G_TERM_RED "[libtiff::TIFFReadRGBAImage] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
-		TIFFClose(tiff);
-		exit(-1);
+		if (TIFFReadEncodedTile(tiff, i, tile, tile_size_bytes) == -1)
+		{
+			std::cout << G_TERM_RED "[libtiff::TIFFReadRGBAImage] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
+			TIFFClose(tiff);
+			exit(-1);
+		}
+
+		for (unsigned r = 0; r < tile_height; r++)
+		{
+			uint8_t* write_ptr = 
+		}
 	}
+
+	for (unsigned r = 0; r < height; r++)
+	{
+		for (unsigned c = 0; c < width; c++)
+		{
+			auto this_tile = TIFFComputeTile(tiff, c, r, 0, {});
+
+			if (this_tile != last_tile)
+			{ // TODO: this will likely cause extra reading after c passes the boundary of the tile
+			}
+
+			
+		}
+	}
+
 
 	// if (TIFFReadRGBAImage(tiff, width, height, (uint32_t*)data, 0))
 	// {
