@@ -116,5 +116,81 @@ TEST
          ) == true);
     }
 
+    { // less trivial setup, point in shadow
+
+        auto light_pos = vec<3>{ 10, 0, 10 };
+        auto p_world = vec<3>{0, 1, 0};
+        auto o_world = (light_pos + p_world) / 2;
+        
+        auto P = mat<4,4>::perspective(1, 100, M_PI / 2, 1.f);
+        auto cam_V = mat<4, 4>::look_at({0, 0, 10}, {0, 0, -1}, {0, 1, 0});
+        auto light_V = mat<4, 4>::look_at(light_pos, { 0, 0, -1 }, { 0, 1, 0 });
+
+        auto p_light_screen = world_to_screen(P, light_V, o_world);
+        auto p_cam_screen = world_to_screen(P, cam_V, p_world);
+
+         assert(is_in_shadow(
+             p_cam_screen,
+             p_light_screen,
+             cam_V, P,
+             light_V, P
+         ) == true);
+    }
+
+    { // less trivial setup, point in light
+
+        auto light_pos = vec<3>{ 10, 0, 10 };
+        auto p_world = vec<3>{0, 1, 0};
+
+        auto P = mat<4,4>::perspective(1, 100, M_PI / 2, 1.f);
+        auto cam_V = mat<4, 4>::look_at({0, 0, 10}, {0, 0, -1}, {0, 1, 0});
+        auto light_V = mat<4, 4>::look_at(light_pos, { 0, 0, -1 }, { 0, 1, 0 });
+
+        auto p_light_screen = world_to_screen(P, light_V, p_world);
+        auto p_cam_screen = world_to_screen(P, cam_V, p_world);
+
+         assert(is_in_shadow(
+             p_cam_screen,
+             p_light_screen,
+             cam_V, P,
+             light_V, P
+         ) == false);
+    }
+
+    { // fuzzing test where light and camera are randomly positioned about the unit sphere
+      // and randomly occluded or not
+        auto P = mat<4,4>::perspective(0.1f, 10, M_PI / 2, 1.f);
+
+        for (unsigned i = 0; i < 100; i++)
+        {
+            auto cam_pos = vec<3>{ RAND_F, RAND_F, RAND_F }.unit();
+            auto light_pos = vec<3>{ RAND_F, RAND_F, RAND_F }.unit();
+  
+            auto cam_point = vec<3>{};
+            auto light_point = vec<3>{};
+
+            auto point_in_shadow = (RAND_F < 0.5);
+
+            if (point_in_shadow)
+            {
+                light_point = (light_point + light_pos) * std::max<float>(0.11f, RAND_F);
+            }
+
+            auto cam_view = mat<4, 4>::look_at(cam_pos, (cam_pos - cam_point).unit(), { 0, 1, 0 });
+            auto light_view = mat<4, 4>::look_at(light_pos, (light_pos - light_point).unit(), { 0, 1, 0 });
+
+            auto p_light_screen = world_to_screen(P, light_view, light_point);
+            auto p_cam_screen = world_to_screen(P, cam_view, cam_point);
+
+            assert(is_in_shadow(
+                p_cam_screen,
+                p_light_screen,
+                cam_view, P,
+                light_view, P
+            ) == point_in_shadow);
+        }
+
+    }
+
 	return 0;
 }
