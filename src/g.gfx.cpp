@@ -406,8 +406,8 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 	TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);	
 	TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &depth);
 	TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bits);
-  	TIFFGetField(tif, TIFFTAG_TILEWIDTH, &tile_width);
-  	TIFFGetField(tif, TIFFTAG_TILELENGTH, &tile_height);
+  	TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tile_width);
+  	TIFFGetField(tiff, TIFFTAG_TILELENGTH, &tile_height);
 
 	size[0] = width; size[1] = height; size[2] = depth;
 
@@ -415,41 +415,23 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 	std::cerr << "TIFF: bits per channel: " << bits << std::endl;
 	std::cerr << "TIFF: num tiles: " << TIFFNumberOfTiles(tiff) << " size: (" << tile_width << "," << tile_height << ")" << std::endl;
 
+	auto is_tiled = TIFFNumberOfTiles(tiff) > 0;
 
 	auto bytes_per_textel = (bits >> 3) * depth;
 	// data = new unsigned char[width * height * bytes_per_textel];
 	// data = (unsigned char*) new uint32_t[width * height];
 	auto tile_size_bytes = TIFFTileSize(tiff);
 	auto tile_row_bytes = TIFFTileRowSize(tiff);
-	uint32_t* raster = (uint32_t*)_TIFFmalloc(width * height * sizeof(uint32_t));
-	uint32_t* tile = (uint32_t*)_TIFFmalloc(tile_size_bytes);
-
-	for (unsigned i = 0; i < TIFFNumberOfTiles(tiff); i++)
-	{
-		if (TIFFReadEncodedTile(tiff, i, tile, tile_size_bytes) == -1)
-		{
-			std::cout << G_TERM_RED "[libtiff::TIFFReadRGBAImage] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
-			TIFFClose(tiff);
-			exit(-1);
-		}
-
-		for (unsigned r = 0; r < tile_height; r++)
-		{
-			uint8_t* write_ptr = 
-		}
-	}
-
+	auto line_bytes = TIFFScanlineSize(tiff);
+	uint32_t* raster = (uint32_t*)_TIFFmalloc(height * line_bytes);
+	
 	for (unsigned r = 0; r < height; r++)
 	{
-		for (unsigned c = 0; c < width; c++)
+		if (TIFFReadScanline(tiff, raster + (r * line_bytes), r, {}) == -1)
 		{
-			auto this_tile = TIFFComputeTile(tiff, c, r, 0, {});
-
-			if (this_tile != last_tile)
-			{ // TODO: this will likely cause extra reading after c passes the boundary of the tile
-			}
-
-			
+			std::cout << G_TERM_RED "[libtiff::TIFFReadScanline] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
+			TIFFClose(tiff);
+			exit(-1);
 		}
 	}
 
@@ -476,7 +458,26 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 			break;
 	}
 
-	color_type = GL_RGBA;
+	switch(depth)
+	{
+		case 1:
+			color_type = GL_R;
+			break;
+		case 2:
+			color_type = GL_RG;
+			break;
+		case 3:
+			color_type = GL_RGB;
+			break;
+		case 4:
+			color_type = GL_RGBA;
+			break;
+		default:
+			std::cout << G_TERM_RED "Creating texture '" << path << "' failed. Unsupported depth: " << depth << G_TERM_COLOR_OFF << std::endl;
+			exit(-1);
+	}
+
+	data = (uint8_t*)raster;
 
 	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
 
