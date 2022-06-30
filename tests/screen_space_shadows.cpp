@@ -3,6 +3,47 @@
 
 using namespace xmath;
 
+template <size_t R, size_t C>
+void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>& view)
+{
+    auto sdf = [&](const vec<3>& p) -> float  {
+        auto plane = p.y;
+        auto sphere = (p - vec<3>{0, 1, 0}).magnitude() - 1;
+        return std::min<float>(plane, sphere);
+    };
+
+    auto v_view_rotation = mat<3,3>(
+        view[0].slice<3>().unit(),
+        view[1].slice<3>().unit(),
+        view[2].slice<3>().unit()
+    ).invert();
+
+    for (unsigned r = 0; r < R; r++)
+    for (unsigned c = 0; c < C; c++)
+    {
+        auto u = (c / 64.f) - 1.f;
+        auto v = (r / 64.f) - 1.f; 
+        vec3 ray = proj * vec<3>(-u, -v, 1.0);
+        //ray /= ray.w;
+
+        vec3 d = v_view_rotation * ray.unit();
+        float z = 0;
+        vec3 o = view * vec<3>{};
+
+        for (unsigned t = 10; t--;)
+        {
+            auto dist = sdf(o + d * z);
+
+            if (dist > 0.01f) { z += d; }
+            else if(t)
+            else
+            {
+
+            }
+        }
+    }
+}
+
 vec<3> world_to_screen(const mat<4,4>& proj, const mat<4, 4>& view, const vec<3>& p)
 {
     std::cerr << __func__ << std::endl;
