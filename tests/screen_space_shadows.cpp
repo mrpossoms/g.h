@@ -7,38 +7,51 @@ template <size_t R, size_t C>
 void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>& view)
 {
     auto sdf = [&](const vec<3>& p) -> float  {
-        auto plane = p.y;
-        auto sphere = (p - vec<3>{0, 1, 0}).magnitude() - 1;
+        auto plane = p[1];
+        auto sphere = (p - vec<3>{0, 1, 0}).magnitude() - 1.f;
         return std::min<float>(plane, sphere);
     };
 
-    auto v_view_rotation = mat<3,3>(
+    auto v_view_rotation = mat<3, 3>{
         view[0].slice<3>().unit(),
         view[1].slice<3>().unit(),
         view[2].slice<3>().unit()
-    ).invert();
+    };// .invert();
 
     for (unsigned r = 0; r < R; r++)
     for (unsigned c = 0; c < C; c++)
     {
-        auto u = (c / 64.f) - 1.f;
-        auto v = (r / 64.f) - 1.f; 
-        vec3 ray = proj * vec<3>(-u, -v, 1.0);
+        auto u = 2.f * (c / (float)C) - 1.f;
+        auto v = 2.f * (r / (float)R) - 1.f;
+        vec<3> ray = proj.invert() * vec<3>{-u, -v, 0.1f};
         //ray /= ray.w;
 
-        vec3 d = v_view_rotation * ray.unit();
+        //vec<3> d = vec<3>{ u, v, 1 }.unit();
+        vec<3> d = v_view_rotation * -ray.unit();
         float z = 0;
-        vec3 o = view * vec<3>{};
+        vec<3> o = view.transpose() * vec<3>{};
 
-        for (unsigned t = 10; t--;)
+        if (r == R >> 1 && c == C >> 1)
+        {
+            std::cout << "center\n";
+        }
+
+        for (unsigned t = 100; t--;)
         {
             auto dist = sdf(o + d * z);
 
-            if (dist > 0.01f) { z += d; }
-            else if(t)
+            if (dist > 0.1f)
+            { 
+                z += dist; 
+            }
+            else if (t == 0)
+            {
+                dst[r][c] = 10;
+            }
             else
             {
-
+                dst[r][c] = z;
+                break;
             }
         }
     }
@@ -143,7 +156,7 @@ TEST
     { // simple case with light behind viewer, and the viewer occludes
 
         auto P = mat<4,4>::perspective(1, 100, M_PI / 2, 1.f);
-        auto V = mat<4, 4>::look_at({0, 0, 10}, {0, 0, -1}, {0, 1, 0});
+        auto V = mat<4, 4>::look({0, 0, 10}, {0, 0, -1}, {0, 1, 0});
 
         auto p_world = vec<3>{0, 0, -10};
         auto p_light_screen = world_to_screen(P, V, { 0, 0, 0 });
@@ -164,8 +177,8 @@ TEST
         auto o_world = (light_pos + p_world) / 2;
         
         auto P = mat<4,4>::perspective(1, 100, M_PI / 2, 1.f);
-        auto cam_V = mat<4, 4>::look_at({0, 0, 10}, {0, 0, -1}, {0, 1, 0});
-        auto light_V = mat<4, 4>::look_at(light_pos, { 0, 0, -1 }, { 0, 1, 0 });
+        auto cam_V = mat<4, 4>::look({0, 0, 10}, {0, 0, -1}, {0, 1, 0});
+        auto light_V = mat<4, 4>::look(light_pos, { 0, 0, -1 }, { 0, 1, 0 });
 
         auto p_light_screen = world_to_screen(P, light_V, o_world);
         auto p_cam_screen = world_to_screen(P, cam_V, p_world);
@@ -217,8 +230,8 @@ TEST
                 light_point = (light_point + light_pos) * std::max<float>(0.11f, RAND_F);
             }
 
-            auto cam_view = mat<4, 4>::look_at(cam_pos, (cam_pos - cam_point).unit(), { 0, 1, 0 });
-            auto light_view = mat<4, 4>::look_at(light_pos, (light_pos - light_point).unit(), { 0, 1, 0 });
+            auto cam_view = mat<4, 4>::look_at(cam_pos, cam_point, { 0, 1, 0 });
+            auto light_view = mat<4, 4>::look_at(light_pos, light_point, { 0, 1, 0 });
 
             auto p_light_screen = world_to_screen(P, light_view, light_point);
             auto p_cam_screen = world_to_screen(P, cam_view, cam_point);
@@ -231,6 +244,29 @@ TEST
             ) == point_in_shadow);
         }
 
+    }
+
+    { // ray march a sphere plane scene
+        mat<32, 64> I;
+        auto P = mat<4, 4>::perspective(0.1, 10, M_PI / 2, 1.f);
+        raymarch_sphere_scene<>(I, P, mat<4, 4>::look_at({ 0, 1, -10 }, { 0, 1, 0 }, { 0, 1, 0 }));
+
+        auto m = I.min_value();
+        auto M = I.max_value();
+        auto range = M - m;
+        I -= m;
+        I /= range;
+
+        const std::string spectrum = "8X*+{[|;:',.  ";
+        for (auto r = 0; r < 32; r++)
+        {
+            for (auto c = 0; c < 64; c++)
+            {
+                unsigned i = spectrum.length() * I[r][c];
+                putc(spectrum[i], stdout);
+            }
+            putc('\n', stdout);
+        }
     }
 
 	return 0;

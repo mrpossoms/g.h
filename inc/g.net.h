@@ -472,7 +472,7 @@ struct net
 				int sock = pair.first;
 
 				FD_SET(sock, &rfds);
-				max_sock = std::max(sock, max_sock);
+				max_sock = std::max<int>(sock, max_sock);
 			}
 
 			switch (select(max_sock + 1, &rfds, NULL, NULL, NULL))
