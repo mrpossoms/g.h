@@ -46,7 +46,7 @@ void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>
             }
             else if (t == 0)
             {
-                dst[r][c] = 10;
+                dst[r][c] = 100;
             }
             else
             {
@@ -112,6 +112,29 @@ bool is_in_shadow(
     auto light_w = screen_to_world(light_proj, light_view, light_p);
 
     return (cam_w - light_w).magnitude() > 0.001f;
+}
+
+template<size_t R, size_t C>
+void to_ppm(const std::string& path, const mat<R, C>& I)
+{
+    auto fp = fopen(path.c_str(), "wb");
+    (void)fprintf(fp, "P6\n%d %d\n255\n", C, R);
+    
+    auto _min = I.min_value();
+    auto _max = I.max_value();
+    auto range = _max - _min;
+
+    for (unsigned r = 0; r < R; r++)
+    {
+        for (unsigned c = 0; c < C; c++)
+        {
+            uint8_t l = 255 * (I[r][c] - _min) / range;
+            uint8_t color[3] = { l, l, l };
+            fwrite(color, 1, 3, fp);
+        }
+    }
+
+    fclose(fp);
 }
 
 /**
@@ -247,7 +270,8 @@ TEST
     }
 
     { // ray march a sphere plane scene
-        mat<32, 64> I;
+        auto constexpr R = 256, C = 256;
+        mat<R, C> I;
         auto P = mat<4, 4>::perspective(0.1, 10, M_PI / 2, 1.f);
         raymarch_sphere_scene<>(I, P, mat<4, 4>::look_at({ 0, 1, -10 }, { 0, 1, 0 }, { 0, 1, 0 }));
 
@@ -257,16 +281,17 @@ TEST
         I -= m;
         I /= range;
 
-        const std::string spectrum = "8X*+{[|;:',.  ";
-        for (auto r = 0; r < 32; r++)
-        {
-            for (auto c = 0; c < 64; c++)
-            {
-                unsigned i = spectrum.length() * I[r][c];
-                putc(spectrum[i], stdout);
-            }
-            putc('\n', stdout);
-        }
+        to_ppm<>("test.ppm", I);
+        //const std::string spectrum = "8X*+{[|;:',.  ";
+        //for (auto r = 0; r < R; r++)
+        //{
+        //    for (auto c = 0; c < C; c++)
+        //    {
+        //        unsigned i = spectrum.length() * I[r][c];
+        //        putc(spectrum[i], stdout);
+        //    }
+        //    putc('\n', stdout);
+        //}
     }
 
 	return 0;
