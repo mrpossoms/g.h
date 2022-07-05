@@ -9,7 +9,7 @@ void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>
     auto sdf = [&](const vec<3>& p) -> float  {
         auto plane = p[1];
         auto sphere = (p - vec<3>{0, 1, 0}).magnitude() - 1.f;
-        return std::min<float>(plane, sphere);
+        return sphere; //std::min<float>(plane, sphere);
     };
 
     auto v_view_rotation = mat<3, 3>{
@@ -46,7 +46,7 @@ void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>
             }
             else if (t == 0)
             {
-                dst[r][c] = 100;
+                dst[r][c] = NAN;
             }
             else
             {
@@ -238,7 +238,7 @@ TEST
       // and randomly occluded or not
         auto P = mat<4,4>::perspective(0.1f, 10, M_PI / 2, 1.f);
 
-        for (unsigned i = 0; i < 100; i++)
+        for (unsigned i = 0; i < 10; i++)
         {
             auto cam_pos = vec<3>{ RAND_F, RAND_F, RAND_F }.unit();
             auto light_pos = vec<3>{ RAND_F, RAND_F, RAND_F }.unit();
@@ -271,17 +271,14 @@ TEST
 
     { // ray march a sphere plane scene
         auto constexpr R = 256, C = 256;
-        mat<R, C> I;
+        mat<R, C> I_cam, I_light;
         auto P = mat<4, 4>::perspective(0.1, 10, M_PI / 2, 1.f);
-        raymarch_sphere_scene<>(I, P, mat<4, 4>::look_at({ 0, 1, -10 }, { 0, 1, 0 }, { 0, 1, 0 }));
+        raymarch_sphere_scene<>(I_cam, P, mat<4, 4>::look_at({ 1, 1, -10 }, { 0, 1, 0 }, { 0, 1, 0 }));
+        raymarch_sphere_scene<>(I_light, P, mat<4, 4>::look_at({ 0, 1, 10 }, { 0, 1, 0 }, { 0, 1, 0 }));
 
-        auto m = I.min_value();
-        auto M = I.max_value();
-        auto range = M - m;
-        I -= m;
-        I /= range;
+        to_ppm<>("cam.ppm", I_cam);
+        to_ppm<>("light.ppm", I_light);
 
-        to_ppm<>("test.ppm", I);
         //const std::string spectrum = "8X*+{[|;:',.  ";
         //for (auto r = 0; r < R; r++)
         //{
