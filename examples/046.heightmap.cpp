@@ -9,7 +9,6 @@
 using mat4 = xmath::mat<4,4>;
 
 const std::string vs_src =
-"#version 410\n"
 "in vec3 a_position;"
 "in vec2 a_uv;"
 "in vec3 a_normal;"
@@ -25,7 +24,6 @@ const std::string vs_src =
 "}";
 
 const std::string fs_src =
-"#version 410\n"
 "in vec2 v_uv;"
 "in vec3 v_normal;"
 "uniform sampler2D u_tex;"
@@ -95,7 +93,7 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
-        auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, -1, -2});
+        auto model = mat4::translation({ 0, -1, -2 }) * mat4::rotation({0, 1, 0}, t + M_PI);
 
         terrain.using_shader(assets.shader("basic_gui.vs+debug_normal.fs"))
             ["u_model"].mat4(model)

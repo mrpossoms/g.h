@@ -67,7 +67,7 @@ struct camera : public pose
 		{ 
 			return _view; 
 		}
-		return mat<4, 4>::translation(position * -1) * orientation.to_matrix();
+		return orientation.to_matrix() * mat<4, 4>::translation(position * -1);
 	}
 
 	virtual mat<4, 4> projection() const = 0;

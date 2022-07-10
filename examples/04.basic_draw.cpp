@@ -93,11 +93,11 @@ struct my_core : public g::core
 
 		t += dt;
 
-		auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, 0, -1});
+		auto model = mat4::translation({ 0, 0, -1 }) * mat4::rotation({0, 1, 0}, t + M_PI);
 		auto proj = mat4::perspective(0.1, 10, M_PI / 2, g::gfx::aspect());
 
 		plane.using_shader(basic_shader)
-		["u_model"].mat4(model)
+		["u_model"].mat4(model.transpose())
 		["u_proj"].mat4(proj)
 		["u_tex"].texture(grid_tex)
 		// ["u_tex"].texture(assets.tex("brick.color.png"))
