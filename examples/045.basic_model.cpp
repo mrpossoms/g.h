@@ -61,7 +61,8 @@ struct my_core : public g::core
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         const auto speed = 4.0f;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) 
+            cam.position += cam.forward() * dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
@@ -72,7 +73,7 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
-        auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, -1, -2});
+        auto model = mat4::translation({ 0, -1, -2 }) * mat4::rotation({0, 1, 0}, t + M_PI);
         auto proj = mat4::perspective(0.1, 10, M_PI / 2, g::gfx::aspect());
 
         assets.geo("car.obj").using_shader(basic_shader)

@@ -702,7 +702,7 @@ shader::usage shader::usage::set_camera(g::game::camera& cam)
 {
 	//assert(gl_get_error());
 	this->set_uniform("u_view").mat4(cam.view());
-	this->set_uniform("u_proj").mat4(cam.projection());
+	this->set_uniform("u_proj").mat4(cam.projection().transpose());
 	//assert(gl_get_error());
 	return *this;
 }
@@ -743,7 +743,7 @@ shader::uniform_usage::uniform_usage(shader::usage& parent, GLuint loc) : parent
 
 shader::usage shader::uniform_usage::mat4 (const mat<4, 4>& m)
 {
-	glUniformMatrix4fv(uni_loc, 1, false, m.ptr());
+	glUniformMatrix4fv(uni_loc, 1, true, m.ptr());
 
 	return parent_usage;
 }
