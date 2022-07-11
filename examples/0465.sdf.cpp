@@ -119,8 +119,8 @@ struct my_core : public g::core
             {
                 auto dx = xpos - xlast;
                 auto dy = ypos - ylast;
-                cam.pitch += (-dy * dt * sensitivity);
-                cam.yaw += (dx * dt * sensitivity);
+                cam.pitch += (dy * dt * sensitivity);
+                cam.yaw += (-dx * dt * sensitivity);
             }
 
             xlast = xpos; ylast = ypos;

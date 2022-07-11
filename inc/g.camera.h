@@ -160,7 +160,7 @@ struct fps_camera : public camera_perspective, updateable, ray_collider
 
 	vec<3> body_left() const
 	{
-		return (yaw_q * q).rotate({ 1, 0, 0 });
+		return (yaw_q * q).rotate({ -1, 0, 0 });
 	}
 
 	vec<3> body_up() const
