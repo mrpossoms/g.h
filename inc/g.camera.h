@@ -16,13 +16,13 @@ struct camera : public pose
 
 	quat<float>& d_yaw(float delta)
 	{
-		auto dq = quat<float>::from_axis_angle({0, 1, 0}, delta);
+		auto dq = quat<float>::from_axis_angle({0, 1, 0}, -delta);
 		return orientation *= dq;
 	}
 
 	quat<float>& d_roll(float delta)
 	{
-		auto dq = quat<float>::from_axis_angle({0, 0, 1}, delta);
+		auto dq = quat<float>::from_axis_angle({0, 0, 1}, -delta);
 		return orientation *= dq;
 	}
 
@@ -67,7 +67,7 @@ struct camera : public pose
 		{ 
 			return _view; 
 		}
-		return orientation.to_matrix() * mat<4, 4>::translation(position * -1);
+		return orientation.inverse().to_matrix() * mat<4, 4>::translation(position * -1);
 	}
 
 	virtual mat<4, 4> projection() const = 0;
