@@ -750,7 +750,7 @@ shader::usage shader::uniform_usage::mat4 (const mat<4, 4>& m)
 
 shader::usage shader::uniform_usage::mat3 (const mat<3, 3>& m)
 {
-	glUniformMatrix3fv(uni_loc, 1, false, m.ptr());
+	glUniformMatrix3fv(uni_loc, 1, true, m.ptr());
 
 	return parent_usage;
 }
