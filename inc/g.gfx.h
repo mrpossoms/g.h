@@ -745,11 +745,11 @@ struct mesh
 				if (voxel_case == 0 || voxel_case == 255) { return verts_generated; }
 
 				float w[12];
-				for (int i = 0; i < 12; ++i)
+				for (int i = 12; i--;)
 				{
 					int e_i = tri_edge_list_case[voxel_case][i];
 
-					if (e_i == -1) break;
+					if (e_i == -1) continue;
 
 					// v0 * w + v1 * (1 - w)
 					// w = 0.5
@@ -1032,13 +1032,14 @@ struct mesh_factory
 		{
 			unsigned i = x + y * (tex.size[0]);
 			unsigned j = x + (y + 1) * (tex.size[0]);
-			indices.push_back(j);
-			indices.push_back(i + 1);
+			
 			indices.push_back(i);
-
 			indices.push_back(i + 1);
 			indices.push_back(j);
+
 			indices.push_back(j + 1);
+			indices.push_back(j);
+			indices.push_back(i + 1);
 		}
 
 		mesh<VERT>::compute_normals(vertices, indices);

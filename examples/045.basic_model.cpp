@@ -50,7 +50,7 @@ struct my_core : public g::core
         // car = assets.geo("car.obj");
 
         cam.position = {0, 2, 4};
-        glDisable(GL_CULL_FACE);
+        // glDisable(GL_CULL_FACE);
 
         return true;
     }
