@@ -56,7 +56,7 @@ struct my_core : public g::core
 	{
 		t += dt;
 
-		auto model = mat4::rotation({0, 0, 1}, t) * mat4::translation({0, 0, -1});
+		auto model = mat4::translation({0, 0, -1}) * mat4::rotation({0, 0, 1}, t);
 
 		{ // by using the scoped_draw object, everything drawn within this
 		  // block will be written to the framebuffer fb
@@ -71,7 +71,7 @@ struct my_core : public g::core
 				.draw<GL_TRIANGLE_FAN>();
 		}
 		
-		model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, 0, -2});
+		model = mat4::translation({0, 0, -2}) * mat4::rotation({0, 1, 0}, t + M_PI);
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		plane.using_shader(basic_shader)

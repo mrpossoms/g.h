@@ -288,6 +288,44 @@ void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLen
 	}
 }
 
+size_t texture::bytes() const
+{
+	auto pixels = size[0] * size[1] * size[2];
+	return pixels * bytes_per_component * component_count;
+}
+
+
+void texture::get_pixels(unsigned char** data_out, size_t& data_out_size) const
+{
+	data_out_size = size[0] * size[1] * size[2];
+	*data_out = new unsigned char[data_out_size];
+
+	GLenum storage_map[] = {
+		GL_FALSE,
+		GL_UNSIGNED_BYTE,
+		GL_UNSIGNED_BYTE,
+		GL_FALSE,
+		GL_UNSIGNED_BYTE
+	};
+
+	GLenum color_map[] = {
+		GL_FALSE,
+		GL_RED,
+		GL_RG,
+		GL_RGB,
+		GL_RGBA
+	};
+
+	this->bind();
+
+}
+
+
+void texture::to_disk(const std::string& path) const
+{
+
+}
+
 void texture::bind() const { glBindTexture(type, hnd); }
 
 void texture::unbind() const { glBindTexture(type, 0); }

@@ -119,11 +119,11 @@ layer& layer::set_shaders(const std::string& program_collection)
 
 layer layer::child(const vec<2>& dimensions, const vec<3>& position)
 {
-    auto trans = mat<4, 4>::translation(position) * mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f });
+    auto trans = mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f }) * mat<4, 4>::translation(position);
 
     layer c(*this, trans);
 
-    c.transform = mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f }) * transform * mat<4, 4>::translation(position);
+    c.transform = mat<4, 4>::translation(position) * transform * mat<4, 4>::scale({ dimensions[0], dimensions[1], 0.1f });
 
     return c;
 }
@@ -141,7 +141,7 @@ shader::usage layer::text(const std::string& str, g::game::camera& cam)
     // offset *= scl;
     offset[1] = 0;
     auto trans = (dims * -0.5);// +offset;// - offset * 0.5;
-    auto model = mat<4, 4>::translation({ trans[0], trans[1], 0}) * mat<4, 4>::scale({ scl[0], scl[1], 0 });
+    auto model = mat<4, 4>::scale({ scl[0], scl[1], 0 }) * mat<4, 4>::translation({ trans[0], trans[1], 0});
 
     return text.using_shader(assets->shader(desc.program_collection), str, cam, model * transform);
     // assets->font(desc.font).face.unbind();

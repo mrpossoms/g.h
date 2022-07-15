@@ -128,6 +128,12 @@ struct texture
 	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
 	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
 
+	void to_disk(const std::string& path) const;
+
+	size_t bytes() const;
+
+	void get_pixels(unsigned char** data_out, size_t& data_out_size) const;
+
 	void bind() const;
 
 	void unbind() const;
