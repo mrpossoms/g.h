@@ -62,7 +62,7 @@ vec<3> world_to_screen(const mat<4,4>& proj, const mat<4, 4>& view, const vec<3>
     std::cerr << __func__ << std::endl;
     auto p_w = vec<4>{ p[0], p[1], p[2], 1 };
     std::cerr << p_w.to_string() << std::endl;
-    auto p_view = view.transpose() * vec<4>{ p[0], p[1], p[2], 1 };
+    auto p_view = view * vec<4>{ p[0], p[1], p[2], 1 };
     std::cerr << "view " << p_view.to_string() << std::endl; 
     auto p_proj = proj * p_view;
     std::cerr << "screen " << p_proj.to_string() << std::endl;
@@ -90,7 +90,7 @@ vec<3> screen_to_world(const mat<4,4>& proj, const mat<4,4>& view, const vec<3>&
     std::cerr << "screen " << p.to_string() << std::endl;
 
     std::cerr << "view " << p_view.to_string() << std::endl;
-    auto p_world = view.transpose().invert() * p_view;
+    auto p_world = view.invert() * p_view;
     std::cerr << "world " << p_view.to_string() << std::endl;
 
     // "   float z = -1.0 / ((p[2] * P[3][2]) - P[2][2]);"

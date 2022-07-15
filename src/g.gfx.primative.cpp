@@ -88,7 +88,7 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 		{
 			auto vert = tri_quad[i];
 			vert.position = (vert.position * glyph_scale) + glyph_pos;
-			vert.uv = (vec<2>{1.0, 1.0} - vert.uv) * (glyph.uv_bottom_right - glyph.uv_top_left) + glyph.uv_top_left;
+			// vert.uv = (vec<2>{1.0, 1.0} - vert.uv) * (glyph.uv_bottom_right - glyph.uv_top_left) + glyph.uv_top_left;
 
 			verts.push_back(vert);
 		}
