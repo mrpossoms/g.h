@@ -399,41 +399,107 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 		exit(-1);
 	}
 
-	uint32_t width = 0, height = 0, depth = 0;
-	uint32_t tile_width = 0, tile_height = 0;
-	uint32_t bits = 0, tiles = 0;
+	uint32_t width = 0, height = 0, depth = 0, bits = 0;
+
 	TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
 	TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);	
 	TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &depth);
 	TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bits);
-  	TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tile_width);
-  	TIFFGetField(tiff, TIFFTAG_TILELENGTH, &tile_height);
-
+  	
 	size[0] = width; size[1] = height; size[2] = depth;
+	auto sample_bytes = depth * (bits / 8);
+	auto row_bytes = width * sample_bytes;
+
+	data = new uint8_t[row_bytes * height];
 
 	std::cerr << "TIFF: (" << width << ", " << height << ", " << depth << ")" << std::endl;
 	std::cerr << "TIFF: bits per channel: " << bits << std::endl;
-	std::cerr << "TIFF: num tiles: " << TIFFNumberOfTiles(tiff) << " size: (" << tile_width << "," << tile_height << ")" << std::endl;
 
-	auto is_tiled = TIFFNumberOfTiles(tiff) > 0;
-
-	auto bytes_per_textel = (bits >> 3) * depth;
-	// data = new unsigned char[width * height * bytes_per_textel];
-	// data = (unsigned char*) new uint32_t[width * height];
-	auto tile_size_bytes = TIFFTileSize(tiff);
-	auto tile_row_bytes = TIFFTileRowSize(tiff);
-	auto line_bytes = TIFFScanlineSize(tiff);
-	uint32_t* raster = (uint32_t*)_TIFFmalloc(height * line_bytes);
-	
-	for (unsigned r = 0; r < height; r++)
+	if (TIFFIsTiled(tiff))
 	{
-		if (TIFFReadScanline(tiff, raster + (r * line_bytes), r, {}) == -1)
+		std::unordered_map<uint32_t, uint32_t*> tiles;
+		std::unordered_map<uint32_t, std::tuple<vec<2, unsigned>, vec<2, unsigned>>> tile_bounds;
+
+		uint32_t tile_width = 0, tile_height = 0;
+		uint32_t tile_count = TIFFNumberOfTiles(tiff);
+		auto tile_row_bytes = TIFFTileRowSize(tiff);
+
+		TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tile_width);
+		TIFFGetField(tiff, TIFFTAG_TILELENGTH, &tile_height);
+		std::cerr << "TIFF: num tiles: " << TIFFNumberOfTiles(tiff) << " size: (" << tile_width << "," << tile_height << ")" << std::endl;
+
+		auto tile_rows = height / (float)tile_height;
+		auto tile_cols = width / (float)tile_width;
+
+		assert(fabs(floorf(tile_rows) - tile_rows) < 0.0001f);
+
+		for (unsigned r = 0; r < height; r += 1)
+		for (unsigned c = 0; c < width; c += 1)
 		{
-			std::cout << G_TERM_RED "[libtiff::TIFFReadScanline] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
-			TIFFClose(tiff);
-			exit(-1);
+			auto tile_idx = TIFFComputeTile(tiff, c, r, 0, {});
+			auto itr = tile_bounds[tile_idx];
+
+			if (itr == tile_bounds.end())
+			{
+				tile_bounds[tile_idx] = {{r, c}, {r, c}};
+			}
+			else
+			{
+				auto min = std::get<0>(*itr);
+				auto max = std::get<1>(*itr);
+				tile_bounds[tile_idx] = make_tuple(min.take_min({r, c}), max.take_max({r, c}));
+			}
+		}
+
+		for (auto tile : tile_bounds)
+		{
+			auto& bounds = tile_bounds[tile]; 
+			std::cerr << tile << ": (" << std::get<0>(bounds).to_string() << ", " << std::get<1>(bounds).to_string() << ")" << std::endl;
+		}
+
+		for (unsigned r = 0; r < height; r += 1)
+		for (unsigned c = 0; c < width; c += 1)
+		{
+			auto tile_idx = TIFFComputeTile(tiff, c, r, 0, {});
+			auto tile_itr = tiles.find(tile_idx);
+			auto row_ptr = &data[r * row_bytes + c * sample_bytes];
+
+			if (tile_itr == tiles.end())
+			{
+				auto tile_raster = (uint32_t*)_TIFFmalloc(height * tile_row_bytes);
+				if(TIFFReadTile(tiff, tile_raster, c, r, 0, {}) != tile_row_bytes)
+				{
+					std::cerr << "TIFF: reading tile " << tile_idx << " failed" << std::endl;
+				}
+				tiles.insert({tile_idx, tile_raster});
+			}
+			else
+			{
+				auto tile_ptr = *tile_itr;
+
+
+			}
 		}
 	}
+	else
+	{
+		auto tile_size_bytes = TIFFTileSize(tiff);
+		auto tile_row_bytes = TIFFTileRowSize(tiff);
+		auto line_bytes = TIFFScanlineSize(tiff);
+		uint32_t* raster = (uint32_t*)_TIFFmalloc(height * line_bytes);
+		
+		for (unsigned r = 0; r < height; r++)
+		{
+			if (TIFFReadScanline(tiff, raster + (r * line_bytes), r, {}) == -1)
+			{
+				std::cout << G_TERM_RED "[libtiff::TIFFReadScanline] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
+				TIFFClose(tiff);
+				exit(-1);
+			}
+		}		
+	}
+
+
 
 
 	// if (TIFFReadRGBAImage(tiff, width, height, (uint32_t*)data, 0))
@@ -476,8 +542,6 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 			std::cout << G_TERM_RED "Creating texture '" << path << "' failed. Unsupported depth: " << depth << G_TERM_COLOR_OFF << std::endl;
 			exit(-1);
 	}
-
-	data = (uint8_t*)raster;
 
 	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
 
