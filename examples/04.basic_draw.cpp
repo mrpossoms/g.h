@@ -79,8 +79,8 @@ struct my_core : public g::core
 		// })
 		// .pixelated().clamped()
 		// .create();
-		//.from_png("data/tex/brick.color.png").create();
-		g::gfx::texture_factory{}.from_tiff("data/tex/NNSS.tif").create();
+		// g::gfx::texture_factory{}.from_png("data/tex/brick.color.png").create();
+		g::gfx::texture_factory{}.from_tiff("data/tex/NNSS.tif").clamped().create();
 
 		std::cerr << "min: " << pmin << std::endl;
 		std::cerr << "max: " << pmax << std::endl;

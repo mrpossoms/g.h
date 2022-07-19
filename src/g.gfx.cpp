@@ -360,7 +360,7 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	// switch(colortype)
 	// {
 	// 	case LCT_GREY:
-	// 		color_type = GL_R;
+	// 		color_type = GL_RED;
 	// 		break;
 	// 	case LCT_GREY_ALPHA:
 	// 		color_type = GL_RG;
@@ -411,6 +411,11 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 	auto row_bytes = width * sample_bytes;
 
 	data = new uint8_t[row_bytes * height];
+	{
+		int fd_r = open("/dev/random", O_RDONLY);
+		read(fd_r, data, row_bytes * height);
+		close(fd_r);
+	}
 
 	std::cerr << "TIFF: (" << width << ", " << height << ", " << depth << ")" << std::endl;
 	std::cerr << "TIFF: bits per channel: " << bits << std::endl;
@@ -424,20 +429,20 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 		uint32_t tile_count = TIFFNumberOfTiles(tiff);
 		auto tile_row_bytes = TIFFTileRowSize(tiff);
 
+
 		TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tile_width);
 		TIFFGetField(tiff, TIFFTAG_TILELENGTH, &tile_height);
 		std::cerr << "TIFF: num tiles: " << TIFFNumberOfTiles(tiff) << " size: (" << tile_width << "," << tile_height << ")" << std::endl;
 
-		auto tile_rows = height / (float)tile_height;
-		auto tile_cols = width / (float)tile_width;
+		auto pixel_bytes = tile_row_bytes / tile_width;
 
-		assert(fabs(floorf(tile_rows) - tile_rows) < 0.0001f);
-
+		// determine bounding boxes for each tile by exhaustively querying
+		// TIFFComputeTile.
 		for (unsigned r = 0; r < height; r += 1)
 		for (unsigned c = 0; c < width; c += 1)
 		{
 			auto tile_idx = TIFFComputeTile(tiff, c, r, 0, {});
-			auto itr = tile_bounds[tile_idx];
+			auto itr = tile_bounds.find(tile_idx);
 
 			if (itr == tile_bounds.end())
 			{
@@ -445,40 +450,82 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 			}
 			else
 			{
-				auto min = std::get<0>(*itr);
-				auto max = std::get<1>(*itr);
-				tile_bounds[tile_idx] = make_tuple(min.take_min({r, c}), max.take_max({r, c}));
+				auto& bounds = itr->second;
+				auto ul = std::get<0>(bounds);
+				auto lr = std::get<1>(bounds);
+				tile_bounds[tile_idx] = std::make_tuple(ul.take_min({r, c}), lr.take_max({r, c}));
 			}
 		}
 
-		for (auto tile : tile_bounds)
+		// TODO: remove
+		for (auto& kvp : tile_bounds)
 		{
-			auto& bounds = tile_bounds[tile]; 
-			std::cerr << tile << ": (" << std::get<0>(bounds).to_string() << ", " << std::get<1>(bounds).to_string() << ")" << std::endl;
+			auto tile = kvp.first;
+			auto& bounds = kvp.second; 
+			auto ul = std::get<0>(bounds);
+			auto lr = std::get<1>(bounds);
+			std::cerr << tile << ": (" << ul.to_string() << ", " << lr.to_string() << ")" << "dims: " << (lr - ul).to_string() << std::endl;
 		}
 
-		for (unsigned r = 0; r < height; r += 1)
-		for (unsigned c = 0; c < width; c += 1)
+		auto dst_row_ptr = [&](unsigned r, unsigned c) -> uint8_t*
 		{
-			auto tile_idx = TIFFComputeTile(tiff, c, r, 0, {});
-			auto tile_itr = tiles.find(tile_idx);
-			auto row_ptr = &data[r * row_bytes + c * sample_bytes];
+			return &data[r * row_bytes + c * sample_bytes];
+		};
 
+		for (auto& kvp : tile_bounds)
+		{
+			auto tile_idx = kvp.first;
+			auto& tile_bounds = kvp.second;
+			auto ul = std::get<0>(tile_bounds);
+			auto lr = std::get<1>(tile_bounds);
+			auto tile_itr = tiles.find(tile_idx);
+
+			auto tile_bytes = [&]() -> unsigned
+			{
+				return (tile_width * tile_height) * pixel_bytes;
+			};
+
+			auto tile_row_bytes = [&]() -> unsigned
+			{
+				return (lr[1] - ul[1]) * pixel_bytes;
+			};
+
+			auto tile_row_ptr = [&](unsigned r, unsigned c) -> uint32_t*
+			{
+				auto tile_cols = lr[1] - ul[1];
+				r -= ul[0]; c -= ul[1];
+
+				return &tile_itr->second[r * tile_cols + c];
+			};
+
+			auto row_bytes = tile_row_bytes();
 			if (tile_itr == tiles.end())
 			{
-				auto tile_raster = (uint32_t*)_TIFFmalloc(height * tile_row_bytes);
-				if(TIFFReadTile(tiff, tile_raster, c, r, 0, {}) != tile_row_bytes)
+				auto tile_raster = (uint32_t*)_TIFFmalloc(tile_bytes());
+				auto bytes_read = TIFFReadTile(tiff, tile_raster, ul[1], ul[0], 0, {});
+				if(bytes_read != tile_bytes())
 				{
-					std::cerr << "TIFF: reading tile " << tile_idx << " failed" << std::endl;
+					std::cerr << "TIFF: reading tile " << tile_idx << " failed. Read " << bytes_read << "bytes , expected " << tile_bytes() << std::endl;
 				}
 				tiles.insert({tile_idx, tile_raster});
+				tile_itr = tiles.find(tile_idx);
 			}
-			else
+
 			{
-				auto tile_ptr = *tile_itr;
-
-
+				for (unsigned tr = ul[0]; tr <= lr[0]; tr++)
+				{
+					memcpy(dst_row_ptr(tr, ul[1]), tile_row_ptr(tr, ul[1]), row_bytes);
+					// memset(dst_row_ptr(tr, ul[1]), 255, row_bytes);
+				}
 			}
+
+			// break;
+		}
+
+		// free tiles
+		for (auto& kvp : tiles)
+		{
+			delete[] kvp.second;
 		}
 	}
 	else
@@ -514,7 +561,7 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 	switch(bits)
 	{
 		case 8:
-			storage_type = GL_UNSIGNED_BYTE;			
+			storage_type = GL_UNSIGNED_BYTE;		
 			break;
 		case 16:
 			storage_type = GL_UNSIGNED_SHORT;
@@ -527,7 +574,7 @@ texture_factory& texture_factory::from_tiff(const std::string& path)
 	switch(depth)
 	{
 		case 1:
-			color_type = GL_R;
+			color_type = GL_RED;
 			break;
 		case 2:
 			color_type = GL_RG;
@@ -632,7 +679,7 @@ texture_factory& texture_factory::components(unsigned count)
 	switch(component_count = count)
 	{
 		case 1:
-			color_type = GL_R;
+			color_type = GL_RED;
 			break;
 		case 2:
 			color_type = GL_RG;
