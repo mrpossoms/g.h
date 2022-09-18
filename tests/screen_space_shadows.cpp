@@ -13,10 +13,13 @@ void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>
     };
 
     auto v_view_rotation = mat<3, 3>{
-        view[0].slice<3>().unit(),
-        view[1].slice<3>().unit(),
-        view[2].slice<3>().unit()
+        view[0].slice<3>(),
+        view[1].slice<3>(),
+        view[2].slice<3>()
     };// .invert();
+
+    vec<3> o = -(view * vec<3>{});
+    std::cout << "origin: " << o.to_string() << std::endl;
 
     for (unsigned r = 0; r < R; r++)
     for (unsigned c = 0; c < C; c++)
@@ -27,9 +30,8 @@ void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>
         //ray /= ray.w;
 
         //vec<3> d = vec<3>{ u, v, 1 }.unit();
-        vec<3> d = v_view_rotation * -ray.unit();
+        vec<3> d = (v_view_rotation * -ray).unit();
         float z = 0;
-        vec<3> o = view.transpose() * vec<3>{};
 
         if (r == R >> 1 && c == C >> 1)
         {
@@ -272,13 +274,18 @@ TEST
     { // ray march a sphere plane scene
         auto constexpr R = 256, C = 256;
         mat<R, C> I_cam, I_light;
-        auto P = mat<4, 4>::perspective(0.1, 10, M_PI / 2, 1.f);
-        raymarch_sphere_scene<>(I_cam, P, mat<4, 4>::look_at({ 1, 1, -10 }, { 0, 1, 0 }, { 0, 1, 0 }));
-        raymarch_sphere_scene<>(I_light, P, mat<4, 4>::look_at({ 0, 1, 10 }, { 0, 1, 0 }, { 0, 1, 0 }));
+        auto P = mat<4, 4>::perspective(0.1, 20, M_PI / 2, 1.f);
+        raymarch_sphere_scene<>(I_cam, P, mat<4, 4>::look_at({ 0, 1, -10 }, { 0, 1, 0 }, { 0, 1, 0 }));
+
 
         to_ppm<>("cam.ppm", I_cam);
-        to_ppm<>("light.ppm", I_light);
 
+
+        for (int z = -10; z < 10; z++)
+        {
+            to_ppm<>("light" + std::to_string(z) + ".ppm", I_light);
+            raymarch_sphere_scene<>(I_light, P, mat<4, 4>::look_at({ 0, 1, z }, { 0, 1, 0 }, { 0, 1, 0 }));
+        }
         //const std::string spectrum = "8X*+{[|;:',.  ";
         //for (auto r = 0; r < R; r++)
         //{
