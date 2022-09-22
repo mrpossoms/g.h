@@ -4,7 +4,7 @@
 using namespace xmath;
 
 template <size_t R, size_t C>
-void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>& view)
+void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>& view, const vec<3>& o)
 {
     auto sdf = [&](const vec<3>& p) -> float  {
         auto plane = p[1];
@@ -16,20 +16,28 @@ void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>
         view[0].slice<3>(),
         view[1].slice<3>(),
         view[2].slice<3>()
-    };// .invert();
+    };
 
     dst *= 0;
 
-    vec<3> o = -(view * vec<3>{});
+    // vec<3> o = -(view * vec<3>{});
     std::cout << "origin: " << o.to_string() << std::endl;
     std::cout << "view:\n" << view.to_string() << std::endl;
+
+    auto proj_inv = proj.invert();
+
+    std::cout << "proj_inv:\n" << proj_inv.to_string() << std::endl;
 
     for (unsigned r = 0; r < R; r++)
     for (unsigned c = 0; c < C; c++)
     {
         auto u = 2.f * (c / (float)C) - 1.f;
         auto v = 2.f * (r / (float)R) - 1.f;
-        vec<3> ray = proj.invert() * vec<3>{-u, -v, 0.1f};
+
+        assert(u <= 1 && u >= -1);
+        assert(v <= 1 && v >= -1);
+
+        vec<3> ray = (proj.invert() * vec<4>{u, v, 1.0f, 1.0f}).slice<3>();
         //ray /= ray.w;
 
         //vec<3> d = vec<3>{ u, v, 1 }.unit();
@@ -38,7 +46,7 @@ void raymarch_sphere_scene(mat<R, C>& dst, const mat<4,4>& proj, const mat<4, 4>
 
         if (r == R >> 1 && c == C >> 1)
         {
-            std::cout << "center\n";
+            std::cout << "center: " << ray.to_string() << std::endl;
         }
 
         for (unsigned t = 100; t--;)
@@ -67,19 +75,16 @@ vec<3> world_to_screen(const mat<4,4>& proj, const mat<4, 4>& view, const vec<3>
     std::cerr << __func__ << std::endl;
     auto p_w = vec<4>{ p[0], p[1], p[2], 1 };
     std::cerr << p_w.to_string() << std::endl;
-    auto p_view = view * vec<4>{ p[0], p[1], p[2], 1 };
-    std::cerr << "view " << p_view.to_string() << std::endl; 
+    auto p_view = view * vec<4>{ p[0], p[1], p[2], 1 }; 
     auto p_proj = proj * p_view;
-    std::cerr << "screen " << p_proj.to_string() << std::endl;
     auto persp_divide = (p_proj / p_proj[3]).slice<3>();
-    std::cerr << "persp div " << persp_divide.to_string() << std::endl;
     return persp_divide;
 }
 
 vec<3> screen_to_world(const mat<4,4>& proj, const mat<4,4>& view, const vec<3>& p)
 {
     std::cerr << __func__ << std::endl;
-    std::cerr << "persp div " << p.to_string() << std::endl;
+    // std::cerr << "persp div " << p.to_string() << std::endl;
 
     auto a = proj[3][2];
     auto b = proj[2][2];
@@ -92,11 +97,11 @@ vec<3> screen_to_world(const mat<4,4>& proj, const mat<4,4>& view, const vec<3>&
         _z,
         1//{_z * a}
     };
-    std::cerr << "screen " << p.to_string() << std::endl;
+    // std::cerr << "screen " << p.to_string() << std::endl;
 
-    std::cerr << "view " << p_view.to_string() << std::endl;
+    // std::cerr << "view " << p_view.to_string() << std::endl;
     auto p_world = view.invert() * p_view;
-    std::cerr << "world " << p_view.to_string() << std::endl;
+    // std::cerr << "world " << p_view.to_string() << std::endl;
 
     // "   float z = -1.0 / ((p[2] * P[3][2]) - P[2][2]);"
     // "   float w = z * P[3][2];"
@@ -280,17 +285,18 @@ TEST
         auto constexpr R = 128, C = 128;
         mat<R, C> I_cam, I_light;
         auto P = mat<4, 4>::perspective(0.1, 20, M_PI / 2, 1.f);
-        raymarch_sphere_scene<>(I_cam, P, mat<4, 4>::look_at({ 0, 1, -10 }, { 0, 1, 0 }, { 0, 1, 0 }));
+        raymarch_sphere_scene<>(I_cam, P, mat<4, 4>::look_at({ 0, 1, -10 }, { 0, 1, 0 }, { 0, 1, 0 }), { 0, 1, -10 });
         to_ppm<>("cam.ppm", I_cam);
-        raymarch_sphere_scene<>(I_light, P, mat<4, 4>::look_at({ -8, 0, -8 }, { 0, 1, 0 }, { 0, 1, 0 }));
+        raymarch_sphere_scene<>(I_light, P, mat<4, 4>::look_at({ 0, 2, -8 }, { 0, 1, 0 }, { 0, 1, 0 }), { 0, 2, -8 });
         to_ppm<>("light.ppm", I_light);
 
 
-        for (int y = 0; y < 8; y++)
-        {
-            to_ppm<>("light" + std::to_string(y) + ".ppm", I_light);
-            raymarch_sphere_scene<>(I_light, P, mat<4, 4>::look_at({ -8, y-4, -8 }, { 0, 1, 0 }, { 0, 1, 0 }));
-        }
+        // for (int y = 0; y < 32; y++)
+        // {
+        //     to_ppm<>("light" + std::to_string(y) + ".ppm", I_light);
+        //     raymarch_sphere_scene<>(I_light, P, mat<4, 4>::look_at({ -8, (y/4.f)-4, -8 }, { 0, 1, 0 }, { 0, 1, 0 }), { -8, (y/4.f)-4, -8 });
+        // }
+
         //const std::string spectrum = "8X*+{[|;:',.  ";
         //for (auto r = 0; r < R; r++)
         //{
