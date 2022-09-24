@@ -1,11 +1,13 @@
 enable_testing()
 
 find_package(OpenGL REQUIRED)
+find_package(Ogg REQUIRED)
+find_package(glew REQUIRED)
 
 link_libraries(g)
 link_libraries(glfw)
 link_libraries(${OPENAL_LIBRARY})
-link_libraries(ogg)
+# link_libraries(ogg)
 link_libraries(vorbis)
 
 # include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../gitman_sources/xmath.h/inc)
