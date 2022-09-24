@@ -1,5 +1,6 @@
-# find_package(OpenGL REQUIRED)
-# find_package(OpenAL REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(Ogg REQUIRED)
+find_package(glew REQUIRED)
 
 if (WIN32)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
@@ -15,9 +16,7 @@ endif ()
 
 link_libraries(g)
 link_libraries(glfw)
-# link_libraries(OpenGL::GL)
 link_libraries(${OPENAL_LIBRARY})
-link_libraries(ogg)
 link_libraries(vorbis)
 
 # include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../gitman_sources/xmath.h/inc)

@@ -128,9 +128,9 @@ execute_process(COMMAND cmake --build out/build/glew --target install --config D
 execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
 
 set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
-# find_package(GLEW REQUIRED CONFIG)
-# target_link_libraries(${PROJECT_NAME} glew_s)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
+find_package(GLEW REQUIRED CONFIG)
+target_link_libraries(${PROJECT_NAME} glew_s)
 endif()
 
 message(INFO "   ___ _    _____      __")
