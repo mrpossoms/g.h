@@ -117,10 +117,11 @@ execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/
 execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
 execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
 
-set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
+# set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
+# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
+set(CMAKE_MODULE_PATH "${CMAKE_BINARY_DIR}/out/lib/cmake;${CMAKE_MODULE_PATH}")
 find_package(GLEW REQUIRED CONFIG)
-target_link_libraries(${PROJECT_NAME} glew_s)
+target_link_libraries(${PROJECT_NAME} GLEW::glew_s)
 endif()
 
 
@@ -134,6 +135,7 @@ else()
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
 target_link_libraries(${PROJECT_NAME} glfw)
 endif()
