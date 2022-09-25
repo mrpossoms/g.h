@@ -120,6 +120,7 @@ execute_process(COMMAND cmake --build out/build/glew --target install --config R
 # set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
 set(CMAKE_MODULE_PATH "${CMAKE_BINARY_DIR}/out/lib/cmake;${CMAKE_MODULE_PATH}")
+set(GLEW_DIR "${CMAKE_BINARY_DIR}/out/lib/cmake/glew")
 find_package(GLEW REQUIRED CONFIG)
 target_link_libraries(${PROJECT_NAME} GLEW::glew_s)
 endif()
