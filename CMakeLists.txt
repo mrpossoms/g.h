@@ -114,8 +114,8 @@ execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/
                    -B${CMAKE_BINARY_DIR}/out/build/glew
                    -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
                   )
-execute_process(COMMAND cmake --build out/build/glew --target install --config Debug)
-execute_process(COMMAND cmake --build out/build/glew --target install --config Release)
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/glew --target install --config Debug)
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/glew --target install --config Release)
 
 # set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
