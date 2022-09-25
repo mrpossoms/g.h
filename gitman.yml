@@ -79,7 +79,7 @@ sources:
     rev: integer-formats
   - name: rapidyaml
     type: git
-    repo: git@github.com:biojppm/rapidyaml.git
+    repo: https://github.com/biojppm/rapidyaml.git
     rev: master
     params: --recurse-submodules
 
