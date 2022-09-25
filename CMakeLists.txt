@@ -64,16 +64,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gi
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
 
 
-# if(EMSCRIPTEN)
-# else()
-# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw/include)
-# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/include)
-# endif()
-
-# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype/include)
-# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis/include)
-# target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/include)
-
 # find OpenGL
 find_package(OpenGL REQUIRED)
 
@@ -133,6 +123,7 @@ find_package(GLEW REQUIRED CONFIG)
 target_link_libraries(${PROJECT_NAME} glew_s)
 endif()
 
+
 message(INFO "   ___ _    _____      __")
 message(INFO "  / __| |  | __\\ \\    / /")
 message(INFO " | (_ | |__| _| \\ \\/\\/ / ")
@@ -146,6 +137,7 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glfw)
 target_link_libraries(${PROJECT_NAME} glfw)
 endif()
+
 
 message(INFO "  ___            _                  ")
 message(INFO " | __| _ ___ ___| |_ _  _ _ __  ___ ")
@@ -162,6 +154,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/freetype/include)
 target_link_libraries(${PROJECT_NAME} freetype)
 
+
 message(INFO "  ___           _    _                 _ ")
 message(INFO " | _ \\__ _ _ __(_)__| |_  _ __ _ _ __ | |")
 message(INFO " |   / _` | '_ \\ / _` | || / _` | '  \\| |")
@@ -170,22 +163,6 @@ message(INFO "          |_|          |__/              ")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/rapidyaml ryml)
 target_link_libraries(${PROJECT_NAME} ryml::ryml)
 
-# set(GLEW_DIR /home/kirk/code/g.h/gitman_sources/glew/build/cmake/install/lib/cmake/glew)
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
-
-# build and use ogg
-# execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
-#                    -B${CMAKE_BINARY_DIR}/out/build/ogg
-#                    -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
-#                   )
-# execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Debug)
-# execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Release)
-# set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/libogg.a)
-# set(OGG_INCLUDE_DIR ${CMAKE_BINARY_DIR}/out/include)
-
-
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
-# set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
 
 message(INFO "   ___            ")
 message(INFO "  / _ \\ __ _ __ _ ")
@@ -201,8 +178,6 @@ set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/lib/cmake, ${CMAKE_PREFIX_
 set(INSTALL_DOCS OFF CACHE BOOL "" FORCE)
 set(INSTALL_PKG_CONFIG_MODULE OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg)
-#find_package(Ogg REQUIRED CONFIG)
 
 execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
                    -B${CMAKE_BINARY_DIR}/out/build/ogg
@@ -210,9 +185,9 @@ execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
                   )
 execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Debug)
 execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Release)
-set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/libogg.a)
-set(OGG_INCLUDE_DIR ${CMAKE_BINARY_DIR}/out/include)
+set(CMAKE_MODULE_PATH "${CMAKE_BINARY_DIR}/out/lib/cmake;${CMAKE_MODULE_PATH}")
 endif()
+
 
 message(INFO " __   __       _    _    ")
 message(INFO " \\ \\ / /__ _ _| |__(_)___")
@@ -220,11 +195,11 @@ message(INFO "  \\ V / _ \\ '_| '_ \\ (_-<")
 message(INFO "   \\_/\\___/_| |_.__/_/__/")
                          
 # set(OGG_LIBRARY ${CMAKE_BINARY_DIR}/out/lib/)
+find_package(Ogg)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/vorbis)
 target_link_libraries(${PROJECT_NAME} vorbisfile)
 target_link_libraries(${PROJECT_NAME} vorbis)
 
-# set(CMAKE_PREFIX_PATH "")
 
 message(INFO "    _          _ _     ___ _ _     ")
 message(INFO "   /_\\ _  _ __| (_)___| __(_) |___ ")
@@ -234,6 +209,7 @@ message(INFO " /_/ \\_\\_,_\\__,_|_\\___/_| |_|_\\___|")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
 target_link_libraries(${PROJECT_NAME} AudioFile)
 
+
 message(INFO "   ___   ___                     _        ")
 message(INFO "  / __| | __|_ ____ _ _ __  _ __| |___ ___")
 message(INFO " | (_ | | _|\\ \\ / _` | '  \\| '_ \\ / -_|_-<")
@@ -242,6 +218,7 @@ message(INFO "                           |_|            ")
 if (G_BUILD_EXAMPLES)
 add_subdirectory(examples)
 endif()
+
 
 message(INFO "   ___   _____       _      ")
 message(INFO "  / __| |_   _|__ __| |_ ___")

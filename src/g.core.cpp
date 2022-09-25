@@ -101,12 +101,9 @@ void g::core::start(const core::opts& opts)
 			std::cerr << "Couldn't identify glsl version" << std::endl;	
 		}
 
-
-	}
-
-	// rendering api standard config post context creation
-	switch (opts.gfx.api)
-	{
+		// rendering api standard config post context creation
+		switch (opts.gfx.api)
+		{
 		case g::core::opts::render_api::OPEN_GL:
 		{
 			GLuint vao;
@@ -127,7 +124,8 @@ void g::core::start(const core::opts& opts)
 			glCullFace(GL_BACK);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
-			break;
+		break;
+		}
 	}
 
 	if (!initialize()) { throw std::runtime_error("User initialize() call failed"); }
