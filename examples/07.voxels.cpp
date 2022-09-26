@@ -88,7 +88,7 @@ struct voxel_world : public g::core
 
 		cam.aspect_ratio(g::gfx::aspect());
 
-		auto model = mat4::translation(assets.vox("temple.vox").center_of_bounds() * -1);
+		auto model = mat4::translation(assets.vox("temple.vox").center().cast<float>() * -1);
 		light.position = vec<3>{cos(t * 0.1f) * 60, sin(t * 0.1f) * 60, 60};
 		light.look_at(vec<3>{0, 0, 0}, vec<3>{0, 0, 1});
 
