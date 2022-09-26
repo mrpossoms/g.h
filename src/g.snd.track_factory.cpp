@@ -1,42 +1,18 @@
 #include "g.snd.h"
 
-static ALCdevice* dev;
-static ALCcontext* ctx;
-
-constexpr static ALenum formats[2][g::snd::bit_depth::count] = {
-    {AL_FORMAT_MONO8, AL_FORMAT_MONO16},
-    {AL_FORMAT_STEREO8, AL_FORMAT_STEREO16},
-};
-
-
-static void init_openal()
-{
-    // ensure that the audio api has been initialized
-    if (nullptr == ctx)
-    {
-        dev = alcOpenDevice(nullptr);
-
-        if (!dev)
-        {
-            std::cerr << G_TERM_RED << "Could not open audio device" << std::endl;
-            throw std::runtime_error("alcOpenDevice() returned NULL");
-        }
-
-        ctx = alcCreateContext(dev, nullptr);
-        alcMakeContextCurrent(ctx);
-    }
-}
-
 
 namespace g
 {
 namespace snd
 {
 
+constexpr static ALenum formats[2][g::snd::bit_depth::count] = {
+    {AL_FORMAT_MONO8, AL_FORMAT_MONO16},
+    {AL_FORMAT_STEREO8, AL_FORMAT_STEREO16},
+};
+
 track track_factory::from_pcm_buffer(void* buf, size_t size, const track::description& desc)
 {
-    init_openal();
-
     ALuint al_buf;
 
     {
@@ -71,8 +47,6 @@ track track_factory::from_pcm_buffer(void* buf, size_t size, const track::descri
 
 track track_factory::from_generator(track::pcm_generator generator, const track::description& desc)
 {
-    init_openal();
-
     std::vector<ALuint> bufs;
 
     {

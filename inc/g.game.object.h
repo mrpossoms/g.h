@@ -148,7 +148,10 @@ struct object
 
 			_traits["sounds"][key_str] = path_str;
 
-			sound(key_str);
+			if (g::snd::has_sound())
+			{
+				sound(key_str);
+			}
 		}
 	}
 

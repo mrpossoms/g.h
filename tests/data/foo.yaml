@@ -5,5 +5,5 @@ traits:
 sounds:
   step: foot.wav
 textures:
-  skin: foo.png
   normal: foo.normal.png
+  skin: foo.png

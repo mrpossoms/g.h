@@ -128,6 +128,11 @@ void g::core::start(const core::opts& opts)
 		}
 	}
 
+	if (opts.snd.enabled)
+	{
+		g::snd::initialize();
+	}
+
 	if (!initialize()) { throw std::runtime_error("User initialize() call failed"); }
 
 

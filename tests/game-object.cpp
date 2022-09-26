@@ -33,6 +33,9 @@ TEST
         .gfx = {
             .display = false,
         },
+        .snd = {
+            .enabled = false,
+        }
     });
 
     g::game::object foo(&assets, "data/foo.yaml", {
