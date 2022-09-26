@@ -68,7 +68,14 @@ my_core core;
 
 int main (int argc, const char* argv[])
 {
-    core.start({ "12.game_objects", true, 512, 512 });
+    core.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 
     return 0;
 }

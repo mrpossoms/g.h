@@ -173,7 +173,14 @@ int main (int argc, const char* argv[])
 {
 	volumetric game;
 
-	game.start({ "volume", true, 1024, 768 });
+	game.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 
 	return 0;
 }

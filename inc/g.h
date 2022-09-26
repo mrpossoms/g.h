@@ -66,15 +66,15 @@ struct core
 			render_api_version api_version = { 4, 1 };
 		} gfx;
 
-		opts() = default;
+		// opts() = default;
 
-		opts(const char* name, bool display, size_t width, size_t height)
-		{
-			this->name = name;
-			gfx.display = display;
-			gfx.width = width;
-			gfx.height = height;
-		}
+		// opts(const char* name, bool display, size_t width, size_t height)
+		// {
+		// 	this->name = name;
+		// 	gfx.display = display;
+		// 	gfx.width = width;
+		// 	gfx.height = height;
+		// }
 	};
 
 	/**

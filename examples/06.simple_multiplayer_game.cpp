@@ -421,7 +421,14 @@ int main (int argc, const char* argv[])
 {
 	zappers game;
 
-	game.start({ "zappers", true, 512, 512 });
+	game.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 
 	return 0;
 }

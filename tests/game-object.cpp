@@ -13,10 +13,10 @@ struct my_core : public g::core
 
     virtual void update(float dt)
     {
-	if ((t += dt) > 1)
-	{
+    	if ((t += dt) > 1)
+    	{
             running = false;
-	}
+    	}
     }
 };
 
@@ -29,41 +29,45 @@ TEST
     g::asset::store assets;
     my_core core;
 
-    core.start({});
+    core.start({
+        .gfx = {
+            .display = false,
+        },
+    });
 
-    // g::game::object foo(&assets, "data/foo.yaml", {
-    //     { "traits", {
-    //             { "hp", 99 },
-    //             { "name", "foo" },
-    //             { "speed", 1} }
-    //     }
-    // });
+    g::game::object foo(&assets, "data/foo.yaml", {
+        { "traits", {
+                { "hp", 99 },
+                { "name", "foo" },
+                { "speed", 1} }
+        }
+    });
 
-    // assert(strncmp(foo.traits()["name"].string, "foo", 3) == 0);
-    // assert(foo.traits()["hp"].number == 99);
-    // assert(foo.traits()["speed"].number == 1);
+    assert(strncmp(std::get<std::string>(foo.traits()["name"]).c_str(), "foo", 3) == 0);
+    assert(std::get<float>(foo.traits()["hp"]) == 99);
+    assert(std::get<float>(foo.traits()["speed"]) == 1);
 
-    // unlink("data/foobar.yaml");
+    unlink("data/foobar.yaml");
 
-    // // save a default config object for something that doesn't exist
-    // g::game::object foobar(&assets, "data/foobar.yaml", {
-    //     { "traits", {
-    //             { "hp", 100 },
-    //             { "name", "foobar" }}
-    //     }
-    // });    
-    // assert(foobar.traits()["hp"].number == 100);
-    // assert(strcmp(foobar.traits()["name"].string, "foobar") == 0);
+    // save a default config object for something that doesn't exist
+    g::game::object foobar(&assets, "data/foobar.yaml", {
+        { "traits", {
+                { "hp", 100 },
+                { "name", "foobar" }}
+        }
+    });    
+    assert(std::get<float>(foobar.traits()["hp"]) == 100);
+    assert(strcmp(std::get<std::string>(foobar.traits()["name"]).c_str(), "foobar") == 0);
 
-    // // ensure non-default values are loaded
-    // g::game::object foobar1(&assets, "data/foobar.yaml", {
-    //     { "traits", {
-    //             { "hp", 99 },
-    //             { "name", "foodar" }}
-    //     }
-    // });
-    // assert(foobar1.traits()["hp"].number == 100);
-    // assert(strcmp(foobar1.traits()["name"].string, "foobar") == 0);
+    // ensure non-default values are loaded
+    g::game::object foobar1(&assets, "data/foobar.yaml", {
+        { "traits", {
+                { "hp", 99 },
+                { "name", "foodar" }}
+        }
+    });
+    assert(std::get<float>(foobar1.traits()["hp"]) == 100);
+    assert(strcmp(std::get<std::string>(foobar1.traits()["name"]).c_str(), "foobar") == 0);
 
     // make sure a texture resources can be created
     g::game::object car(&assets, "data/car.yaml", {

@@ -34,26 +34,26 @@ struct g::io::file::impl
 	{
 		int flags = 0;
 
-		if (mode.write && mode.read)
+		if (mode._write && mode._read)
 		{
 			flags |= O_RDWR;	
 		}
-		else if (mode.read)
+		else if (mode._read)
 		{
 			flags |= O_RDONLY;
 		}
-		else if (mode.write)
+		else if (mode._write)
 		{
 			flags |= O_WRONLY;
 		}
 
-		if (mode.write)
+		if (mode._write)
 		{
 			flags |= O_CREAT;
 
 			make_path(path);
 
-			if (mode.truncate)
+			if (mode._truncate)
 			{
 				flags |= O_TRUNC;
 			}

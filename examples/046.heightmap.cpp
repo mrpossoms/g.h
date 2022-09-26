@@ -118,7 +118,14 @@ int main (int argc, const char* argv[])
 //  core.start({ "04.basic_draw", true, 512, 512 });
 //  emscripten_set_main_loop(main_loop, 144, 1);
 // #else
-    core.start({ "046.heightmap", true, 512, 512 });
+    core.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 // #endif
 
     return 0;

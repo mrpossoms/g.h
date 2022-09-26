@@ -138,9 +138,14 @@ int main (int argc, const char* argv[])
 {
 	voxel_world game;
 
-	game.start({
-		"voxels", true, 1024, 768
-	});
+	game.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 1024,
+            .height = 768 
+        }
+    });
 
 	return 0;
 }
