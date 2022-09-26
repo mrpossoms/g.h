@@ -48,7 +48,7 @@ jobs:
     runs-on: windows-2019
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: msys2/setup-msys2@v2
     
     - name: Setup Gitman
       run: pip3 install gitman
