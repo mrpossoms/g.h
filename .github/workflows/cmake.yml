@@ -55,7 +55,9 @@ jobs:
 
     - name: Install Deps
       # TODO: using libglew-dev is a cheat
-      run: gitman install
+      run: |
+        gitman install;
+        C:\msys64\msys2.exe -c "pacman -S git python make gcc";
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
