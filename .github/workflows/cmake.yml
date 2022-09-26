@@ -52,8 +52,7 @@ jobs:
     
     - name: MSYS2 path
       run: |
-        Add-Content $env:GITHUB_PATH "C:\msys64";
-        ls C:\msys64;
+        echo "C:\msys64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append;
         msys2_shell.cmd -mingw64 -c "bash --version && sleep 1"
 
     - name: Setup Gitman
