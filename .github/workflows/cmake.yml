@@ -50,11 +50,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     
-    - name: MSYS2 path
-      run: |
-        echo "C:\msys64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append;
-        msys2_shell.cmd -mingw64 -c "bash --version && sleep 1"
-
     - name: Setup Gitman
       run: pip3 install gitman
 
@@ -65,7 +60,7 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DG_BUILD_EXAMPLES=1 -DG_BUILD_TESTS=1
+      run: cmake -B ${{github.workspace}}/build -DGITHUB_ACTION=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DG_BUILD_EXAMPLES=1 -DG_BUILD_TESTS=1
 
     - name: Build
       # Build your program with the given configuration

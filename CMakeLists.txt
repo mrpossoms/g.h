@@ -104,7 +104,13 @@ else()
 
 if (WIN32)
 message(STATUS "Trying to build glew for windows using mingw64")
+
+if (GITHUB_ACTION)
+execute_process(COMMAND "C:\\msys64\\msys2_shell.cmd" -mingw64 -c "make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto")
+else()
 execute_process(COMMAND msys2_shell.cmd -mingw64 -c "make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto")
+endif()
+
 else()
 execute_process(COMMAND make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto)
 endif()
