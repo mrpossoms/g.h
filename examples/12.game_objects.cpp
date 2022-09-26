@@ -21,10 +21,10 @@ struct my_core : public g::core
     {
         plane0 = g::game::object{&assets, "data/plane0.yaml", {
             {"traits", {
-                { "thrust", 100},
-                { "roll_power", 1},
-                { "yaw_power", 1},
-                { "pitch_power", 1}}},
+                { "thrust", 100.f},
+                { "roll_power", 1.f},
+                { "yaw_power", 1.f},
+                { "pitch_power", 1.f}}},
             {"textures", {
                 { "color", "plane0/color.png"}}},
             {"geometry", {
