@@ -4,6 +4,8 @@
 
 struct my_core : public g::core
 {
+    float t = 0;
+
     virtual bool initialize()
     {
         return true;
@@ -11,6 +13,10 @@ struct my_core : public g::core
 
     virtual void update(float dt)
     {
+	if ((t += dt) > 1)
+	{
+            running = false;
+	}
     }
 };
 

@@ -22,7 +22,7 @@ void g::core::tick()
 	{
 		glfwSwapBuffers(g::gfx::GLFW_WIN);
 		glfwPollEvents();
-		running = !glfwWindowShouldClose(g::gfx::GLFW_WIN);
+		running &= !glfwWindowShouldClose(g::gfx::GLFW_WIN);
 	}
 }
 
