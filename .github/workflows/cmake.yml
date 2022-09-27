@@ -77,7 +77,7 @@ jobs:
         gitman install;
 
     - name: GLEW build step
-      run: msys2 -c "make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto"
+      run: msys2 -c "make -C ${{github.workspace}}/gitman_sources/glew/auto"
 
     - name: Configure CMake
       shell: powershell
