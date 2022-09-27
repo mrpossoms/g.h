@@ -62,7 +62,9 @@ jobs:
     
     - name: What is here
       shell: powershell
-      run: dir ${{github.workspace}}
+      run: |
+        dir ${{github.workspace}}
+        cat ${{github.workspace}}\gitman.yml
 
     - name: Check MSYS2 tooling versions
       run: |
