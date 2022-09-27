@@ -51,8 +51,24 @@ jobs:
     runs-on: windows-2019
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: msys2/setup-msys2@v2 
+      with:
+        update: true
+        install: >-
+          git
+          python
+          make
+          gcc
     
+    - name: Check MSYS2 tooling versions
+      run: |
+        echo "[msys2 make version]"
+        msys2 -c 'make --version'
+        echo "[msys2 GCC version]"
+        msys2 -c 'gcc --version'
+        echo "[windows CMake version]"
+        cmake --version
+
     - name: Setup Gitman
       run: pip3 install gitman
 
@@ -60,7 +76,6 @@ jobs:
       # TODO: using libglew-dev is a cheat
       run: |
         gitman install;
-        C:\msys64\msys2.exe -c "pacman -S git python make gcc";
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
