@@ -70,23 +70,27 @@ jobs:
         cmake --version
 
     - name: Setup Gitman
+      shell: powershell
       run: pip3 install gitman
 
     - name: Install Deps
-      # TODO: using libglew-dev is a cheat
+      shell: powershell
       run: |
         gitman install;
 
     - name: Configure CMake
+      shell: powershell
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: cmake -B ${{github.workspace}}/build -DGITHUB_ACTION=1 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DG_BUILD_EXAMPLES=1 -DG_BUILD_TESTS=1
 
     - name: Build
+      shell: powershell
       # Build your program with the given configuration
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
     - name: Test
+      shell: powershell
       working-directory: ${{github.workspace}}/build
       # Execute tests defined by the CMake configuration.  
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
