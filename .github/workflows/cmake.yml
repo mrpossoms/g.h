@@ -60,6 +60,10 @@ jobs:
           make
           gcc
     
+    - name: What is here
+      shell: powershell
+      run: ls .
+
     - name: Check MSYS2 tooling versions
       run: |
         echo "[msys2 make version]"
@@ -76,8 +80,6 @@ jobs:
     - name: Install Deps
       shell: powershell
       run: |
-        echo "What is here?";
-        ls;
         gitman install;
 
     - name: Configure CMake
