@@ -62,7 +62,7 @@ jobs:
     
     - name: What is here
       shell: powershell
-      run: ls .
+      run: dir ${{github.workspace}}
 
     - name: Check MSYS2 tooling versions
       run: |
