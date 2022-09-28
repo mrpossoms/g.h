@@ -2,23 +2,6 @@
 #include "g.h"
 #include "g.game.object.h"
 
-struct my_core : public g::core
-{
-    float t = 0;
-
-    virtual bool initialize()
-    {
-        return true;
-    }
-
-    virtual void update(float dt)
-    {
-    	if ((t += dt) > 1)
-    	{
-            running = false;
-    	}
-    }
-};
 
 /**
  * A test is nothing more than a stripped down C program
@@ -27,16 +10,6 @@ struct my_core : public g::core
 TEST
 {
     g::asset::store assets;
-    my_core core;
-
-    core.start({
-        .gfx = {
-            .display = false,
-        },
-        .snd = {
-            .enabled = false,
-        }
-    });
 
     g::game::object foo(&assets, "data/foo.yaml", {
         { "traits", {

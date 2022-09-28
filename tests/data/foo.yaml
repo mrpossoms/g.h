@@ -1,7 +1,7 @@
 traits:
-  speed: 1
-  name: foo
   hp: 99
+  name: foo
+  speed: 1
 sounds:
   step: foot.wav
 textures:
