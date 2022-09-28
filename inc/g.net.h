@@ -10,7 +10,8 @@
 #include <netdb.h>
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_WIN32)
+#include <Windows.h>
 #include <winsock.h>
 #endif
 
@@ -535,7 +536,11 @@ struct net
 					if (FD_ISSET(listen_socket, &rfds))
 					{
 						struct sockaddr_in client_name = {};
+#ifdef _WIN32
+						int client_name_len = 0;
+#else
 						socklen_t client_name_len = 0;
+#endif
 						auto sock = accept(
 							listen_socket,
 							(struct sockaddr*)&client_name,

@@ -54,7 +54,7 @@ struct my_core : public g::core
 		chat_msg out;
 		fgets(out.buf, sizeof(out.buf), stdin);
 		out.to_network();
-		send(client.socket, &out, sizeof(out), 0);
+		send(client.socket, (const char*)&out, sizeof(out), 0);
 	}
 };
 

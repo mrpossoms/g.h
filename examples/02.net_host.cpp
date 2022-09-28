@@ -1,5 +1,6 @@
 #include <g.h>
 
+
 struct player
 {
 	player() = default;
@@ -50,7 +51,7 @@ struct my_core : public g::core
 				// don't send the message back to the sender
 				// if (pair.first == sock) { continue; }
 
-				send(pair.first, &msg, bytes, 0);
+				send(pair.first, (const char*)&msg, bytes, 0);
 			}
 
 			return 0;
@@ -64,7 +65,7 @@ struct my_core : public g::core
 		// host.update();
 
 		std::cout << "server time: " << time(NULL) << " dt:"<< dt <<"\n";
-		sleep(1);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 };
 

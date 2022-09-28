@@ -214,6 +214,11 @@ message(INFO " /_/ \\_\\_,_\\__,_|_\\___/_| |_|_\\___|")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/AudioFile)
 target_link_libraries(${PROJECT_NAME} AudioFile)
 
+# Windows specific linking
+if (WIN32)
+target_link_libraries(${PROJECT_NAME} wsock32 ws2_32)
+endif()
+
 
 message(INFO "   ___   ___                     _        ")
 message(INFO "  / __| | __|_ ____ _ _ __  _ __| |___ ___")
