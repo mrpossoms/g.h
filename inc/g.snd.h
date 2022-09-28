@@ -41,6 +41,10 @@ enum bit_depth
     count,
 };
 
+void initialize();
+
+bool has_sound();
+
 /**
  * @brief
  */

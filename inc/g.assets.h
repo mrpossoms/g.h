@@ -42,7 +42,7 @@ struct store
 	private: std::string root;
 	private: bool hot_reload;
 	private: std::unordered_map<std::string, kind<g::gfx::texture>> textures;
-	private: std::unordered_map<std::string, kind<g::game::voxels_paletted>> voxels;
+	private: std::unordered_map<std::string, kind<g::game::vox_scene>> voxels;
 	private: std::unordered_map<std::string, kind<g::gfx::shader>> shaders;
 	private: std::unordered_map<std::string, kind<g::gfx::font>> fonts;
 	private: std::unordered_map<std::string, kind<g::gfx::mesh<g::gfx::vertex::pos_uv_norm>>> geos;
@@ -60,7 +60,7 @@ struct store
 
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geo(const std::string& partial_path, bool make_if_missing = false);
 
-	g::game::voxels_paletted& vox(const std::string& partial_path, bool make_if_missing = false);
+	g::game::vox_scene& vox(const std::string& partial_path, bool make_if_missing = false);
 
 	g::snd::track& sound(const std::string& partial_path, bool make_if_missing = false);
 

@@ -226,13 +226,23 @@ g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& g::asset::store::geo(const std::strin
 }
 
 
-g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path, bool make_if_missing)
+static mat<4, 4> ogt2xmath(const ogt_vox_transform& m)
+{
+	return mat<4, 4>{
+		{m.m00, m.m01, m.m02, m.m03 },
+		{ m.m10, m.m11, m.m12, m.m13 },
+		{ m.m20, m.m21, m.m22, m.m23 },
+		{ m.m30, m.m31, m.m32, m.m33 },
+	}.transpose();
+}
+
+g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = voxels.find(partial_path);
 	if (itr == voxels.end())
 	{
 		std::string filename = root + "/vox/" + partial_path;
-	    // open the file
+	    // open the file TODO: replace with g::io::file
 #if defined(_MSC_VER) && _MSC_VER >= 1400
     	FILE * fp;
     	if (0 != fopen_s(&fp, filename.c_str(), "rb")) { fp = nullptr; }
@@ -252,26 +262,64 @@ g::game::voxels_paletted& g::asset::store::vox(const std::string& partial_path, 
 	    fclose(fp);
 
 	    // construct the scene from the buffer
-	    const ogt_vox_scene* scene = ogt_vox_read_scene_with_flags(buffer, buffer_size, 0);
+	    const ogt_vox_scene* ogt_scene = ogt_vox_read_scene_with_flags(buffer, buffer_size, 0);
+		auto& scene = voxels[partial_path].get();
 
-	    if (scene->num_models == 0)
+    	scene.palette = ogt_scene->palette;
+
+		// copy models
+		scene.models.resize(ogt_scene->num_models);
+	    for (unsigned i = 0; i < ogt_scene->num_models; i++)
 	    {
-	    	delete[] buffer;
-	    	ogt_vox_destroy_scene(scene);
-	    	throw std::runtime_error(partial_path + ": vox file contained no models");
+			scene.models[i] = g::game::voxels<uint8_t>{
+				ogt_scene->models[i]->voxel_data,
+				ogt_scene->models[i]->size_x,
+				ogt_scene->models[i]->size_y,
+				ogt_scene->models[i]->size_z
+			};
 	    }
 
-	    voxels[partial_path] = { time(nullptr), g::game::voxels_paletted{
-	    	scene->palette,
-	    	scene->models[0]->voxel_data,
-	    	scene->models[0]->size_x,
-	    	scene->models[0]->size_y,
-	    	scene->models[0]->size_z
-	    } };
+		// copy groups
+		scene.groups.resize(ogt_scene->num_groups);
+		for (unsigned i = 0; i < ogt_scene->num_groups; i++)
+		{
+			auto& g = ogt_scene->groups[i];
+			scene.groups[i].parent = g.parent_group_index == 0xffffffff ? nullptr : &scene.groups[g.parent_group_index];
+			scene.groups[i].transform = ogt2xmath(g.transform);
+			scene.groups[i].hidden = g.hidden;
+		
+			
+		}
+
+		// copy model instances
+		for (unsigned i = 0; i < ogt_scene->num_instances; i++)
+		{
+			auto& inst = ogt_scene->instances[i];
+			scene.instances[std::string(inst.name == nullptr ? "unnamed" : inst.name)] = {
+				ogt2xmath(inst.transform),
+				&scene.groups[inst.group_index],
+				&scene.models[inst.model_index]
+			};
+		}
+
+	    // if (scene->num_models == 0)
+	    // {
+	    // 	delete[] buffer;
+	    // 	ogt_vox_destroy_scene(scene);
+	    // 	throw std::runtime_error(partial_path + ": vox file contained no models");
+	    // }
+
+	    // voxels[partial_path] = { time(nullptr), g::game::voxels_paletted{
+	    // 	scene->palette,
+	    // 	scene->models[0]->voxel_data,
+	    // 	scene->models[0]->size_x,
+	    // 	scene->models[0]->size_y,
+	    // 	scene->models[0]->size_z
+	    // } };
 
 	    // the buffer can be safely deleted once the scene is instantiated.
 	    delete[] buffer;
-	    ogt_vox_destroy_scene(scene);
+	    ogt_vox_destroy_scene(ogt_scene);
 	}
 
     return voxels[partial_path].get();
@@ -283,7 +331,7 @@ g::snd::track& g::asset::store::sound(const std::string& partial_path, bool make
 	auto itr = sounds.find(partial_path);
 	if (itr == sounds.end())
 	{
-		if (make_if_missing && g::io::file{root + "/tex/" + partial_path}.exists() == false)
+		if (make_if_missing && g::io::file{root + "/snd/" + partial_path}.exists() == false)
 		{ // TODO: this isn't exactly right since the extension is ignored and assumed to be wav
 			std::vector<int16_t> channel;
 			g::snd::track::description desc;

@@ -89,7 +89,14 @@ int main (int argc, const char* argv[])
 {
 	my_core core;
 
-	core.start({ "05.offscreen_render", true, 512, 512 });
+	core.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 
 	return 0;
 }

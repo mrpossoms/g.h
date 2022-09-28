@@ -22,12 +22,16 @@ struct file
 	{
 		mode() = default;
 
-		bool write = false;
-		bool read = true;
-		bool truncate = false;
+		bool _write = false;
+		bool _read = false;
+		bool _truncate = false;
 
-		static mode read_only() { return mode{}; }
-		static mode write_only() { return mode{true, false, false}; }
+		mode& write(bool f) { _write = f; return *this; }
+		mode& read(bool f) { _read = f; return *this; }
+		mode& truncate(bool f) { _truncate = f; return *this; }
+
+		static mode read_only() { return file::mode{}.read(true); }
+		static mode write_only() { return file::mode{}.write(true); }
 	};
 
 	file(const std::string& path, const mode& mode=mode::read_only());

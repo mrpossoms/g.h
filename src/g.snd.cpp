@@ -1,10 +1,34 @@
 #include "g.snd.h"
 
+static ALCdevice* dev;
+static ALCcontext* ctx;
 
 constexpr static ALenum formats[2][g::snd::bit_depth::count] = {
     {AL_FORMAT_MONO8, AL_FORMAT_MONO16},
     {AL_FORMAT_STEREO8, AL_FORMAT_STEREO16},
 };
+
+
+void g::snd::initialize()
+{
+    // ensure that the audio api has been initialized
+    if (nullptr == ctx)
+    {
+        dev = alcOpenDevice(nullptr);
+
+        if (!dev)
+        {
+            std::cerr << G_TERM_RED << "Could not open audio device" << std::endl;
+            throw std::runtime_error("alcOpenDevice() returned NULL");
+        }
+
+        ctx = alcCreateContext(dev, nullptr);
+        alcMakeContextCurrent(ctx);
+    }
+}
+
+
+bool g::snd::has_sound() { return ctx != nullptr; }
 
 
 g::snd::track::~track()

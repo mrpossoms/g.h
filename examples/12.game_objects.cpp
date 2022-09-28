@@ -21,10 +21,10 @@ struct my_core : public g::core
     {
         plane0 = g::game::object{&assets, "data/plane0.yaml", {
             {"traits", {
-                { "thrust", 100},
-                { "roll_power", 1},
-                { "yaw_power", 1},
-                { "pitch_power", 1}}},
+                { "thrust", 100.f},
+                { "roll_power", 1.f},
+                { "yaw_power", 1.f},
+                { "pitch_power", 1.f}}},
             {"textures", {
                 { "color", "plane0/color.png"}}},
             {"geometry", {
@@ -68,7 +68,14 @@ my_core core;
 
 int main (int argc, const char* argv[])
 {
-    core.start({ "12.game_objects", true, 512, 512 });
+    core.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 
     return 0;
 }

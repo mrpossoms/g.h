@@ -22,6 +22,12 @@ sources:
     sparse_paths:
       -
     rev: master
+  - name: libtiff
+    type: git
+    repo: https://gitlab.com/libtiff/libtiff.git
+    rev: master
+    sparse_paths:
+      -
   - name: glfw
     type: git
     repo: https://github.com/glfw/glfw.git
@@ -36,17 +42,17 @@ sources:
     sparse_paths:
       -
     rev: glew-2.2.0
-    scripts:
-      - make -C auto
-      - ./cmake-testbuild.sh
+    # scripts:
+    #   - make -C auto
+    #   - ./cmake-testbuild.sh
   - name: sha1
     type: git
     repo: https://github.com/mrpossoms/sha1.git
     sparse_paths:
       -
     rev: master
-    scripts:
-      - make static
+    # scripts:
+    #   - make static
   - name: freetype
     type: git
     repo: https://github.com/freetype/freetype.git
@@ -73,9 +79,9 @@ sources:
     rev: integer-formats
   - name: rapidyaml
     type: git
-    repo: git@github.com:biojppm/rapidyaml.git
+    repo: https://github.com/biojppm/rapidyaml.git
     rev: master
-    params: --recursive
+    params: --recurse-submodules
 
 default_group: ''
 groups:

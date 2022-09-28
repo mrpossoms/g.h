@@ -3,8 +3,10 @@
 #include <string.h>
 #include <stddef.h>
 #include <ogt_vox.h>
+#include <assert.h>
 
 #include <unordered_set>
+#include <unordered_map>
 #include <vector>
 #include <iostream>
 
@@ -85,9 +87,10 @@ struct voxels
 		struct voxel
 		{
 			size_t x, y, z;
+			vec<3,size_t> size;
 			DAT* vox;
 
-			voxel(DAT* vox, size_t x, size_t y, size_t z)
+			voxel(DAT* vox, size_t x, size_t y, size_t z) : size({x, y, z})
 			{
 				this->vox = vox;
 				this->x = x; this->y = y; this->z = z;
@@ -146,12 +149,21 @@ struct voxels
 	};
 
 	size_t width, height, depth;
+	vec<3, size_t> size;
 	std::vector<DAT> v;
 	vec<3> com;
 
 	voxels() = default;
 
-	voxels(size_t w, size_t h, size_t d)
+	voxels(vec<3, int> s) : size(s.cast<size_t>())
+	{
+		width = s[0];
+		height = s[1];
+		depth = s[2];
+		v.resize(width * height * depth);
+	}
+
+	voxels(size_t w, size_t h, size_t d) : size({w, h, d})
 	{
 		width = w;
 		height = h;
@@ -159,7 +171,7 @@ struct voxels
 		v.resize(w * h * d);
 	}
 
-	voxels(const DAT* ptr, size_t w, size_t h, size_t d)
+	voxels(const DAT* ptr, size_t w, size_t h, size_t d) : size({ w, h, d })
 	{
 		width = w;
 		height = h;
@@ -173,6 +185,7 @@ struct voxels
 		width = w;
 		height = h;
 		depth = d;
+		size = vec<3, size_t>{ w, h, d };
 		v.resize(w * h * d);
 	}
 
@@ -266,8 +279,260 @@ struct voxels
 		return { v + (idx_w * height * depth), depth };
 	}
 
+	inline DAT& operator[](const vec<3, size_t>& idx)
+	{
+		return idx2(idx[0], idx[1], idx[2]);
+	}
+
 	itr begin() { return itr(v, width, height, depth, false); }
 	itr end() { return itr(v, width, height, depth, true); }
+};
+
+/**
+ * @brief      Represents a scene tree stored in a vox files.
+ */
+struct vox_scene
+{
+	/**
+	 * @brief      Vox group object (partial impl)
+	 */
+	struct group
+	{
+		group* parent = nullptr;
+		mat<4, 4> transform;
+		bool hidden = false;
+		// TODO: layer index
+	};
+
+	/**
+	 * @brief      Specific scene instance of a model stored
+	 * in the vox file.
+	 */
+	struct model_instance
+	{
+		mat<4, 4> transform;
+		vox_scene::group* group = nullptr;
+		voxels<uint8_t>* model;
+
+		/**
+		 * @brief      Computes the transform relative to the global reference frame.
+		 *
+		 * @return     Transformation matrix
+		 */
+		mat<4, 4> global_transform() const
+		{
+			auto T = transform;
+			vox_scene::group* g = group;
+
+			while (g != nullptr)
+			{
+				T *= g->transform;// *T;
+				g = g->parent;
+			}
+
+			return T;
+		}
+
+		/**
+		 * @brief      Returns the extants (corners) of the model volume in the scene
+		 * relative to the origin of the root reference frame.
+		 *
+		 * @param[in]  transform  The global transform of this model instance relative
+		 * to the origin reference frame.
+		 *
+		 * @return     Tuple of min and max corner values. Post transformation.
+		 */
+		std::tuple<vec<3, int>, vec<3, int>> corners(const mat<4, 4>& transform) const
+		{
+			auto half = model->size.cast<float>() / 2;
+			vec<3> m = -half, M = half;
+
+			m = transform * m;
+			M = transform * M;
+
+			return { m.cast<int>(), M.ceil().cast<int>() };
+		}
+
+
+		/**
+		 * @brief      { function_description }
+		 *
+		 * @param[in]  voxel   The voxel
+		 * @param[in]  global  The global
+		 *
+		 * @return     { description_of_the_return_value }
+		 */
+		vec<3> position_of(const vec<3>& voxel, bool global = false) const
+		{
+			auto half = model->size.cast<float>() / 2;
+			auto T = transform;			
+
+			if (global)
+			{
+				T = global_transform() * T;
+			}
+
+			return T * (voxel - half);
+		} 
+
+		struct mating_options
+		{
+			// TODO
+		};
+
+		/**
+		 * @brief      Position one model instance adjacent to another by placing two
+		 * specific voxels coincident to one another via a translation transformation
+		 * only. The two models should share a parent space to make the mating valid.
+		 *
+		 * @param[in]  other        The other model to mate against.
+		 * @param[in]  my_voxel     The voxel from this model to make `other_voxel` coincident to.
+		 * @param[in]  other_voxel  The voxel from `other` which should be made coincident to `my_voxel`.
+		 * @param[in]  opts         The mating options.
+		 *
+		 * @return     True if the mating was sucessful, false if constraints were violated.
+		 */
+		bool mate(const model_instance& other, const vec<3, int>& my_voxel, const vec<3, int>& other_voxel, const mating_options& opts={})
+		{
+			transform = other.transform;
+			group = other.group;
+
+			auto delta = other.position_of(other_voxel.cast<float>()) - position_of(my_voxel.cast<float>());
+		
+			transform[0][0] += delta[0];
+			transform[1][0] += delta[1];
+			transform[2][0] += delta[2];
+
+			return true;
+		}
+	};
+
+	ogt_vox_palette palette = {};
+	ogt_vox_matl_array materials = {};
+	std::vector<voxels<uint8_t>> models;
+	std::vector<group> groups;
+	std::unordered_map<std::string, model_instance> instances;
+
+	/**
+	 * @brief      The extents of this voxel scene. In other words, the min
+	 * and max corners considering all model instances.
+	 *
+	 * @param[in]  parent  The parent group
+	 *
+	 * @return     Tuple containing the min position and max position in the tuple 
+	 * respectively.
+	 */
+	std::tuple<vec<3, int>, vec<3, int>> corners(const group* parent = nullptr) const
+	{
+		vec<3, int> m = { 0, 0, 0 }, M = { 0, 0, 0 };
+		auto first = true;
+
+		for (auto& kvp : instances)
+		{
+			auto& inst = kvp.second;
+			auto T = inst.global_transform();
+			std::tuple<vec<3, int>, vec<3, int>> corners = inst.corners(T);
+
+			if (first)
+			{
+				m = std::get<0>(corners);
+				M = std::get<1>(corners);
+				first = false;
+			}
+			else
+			{
+				m = m.take_min(std::get<0>(corners));
+				m = m.take_min(std::get<1>(corners));
+				M = M.take_max(std::get<0>(corners));
+				M = M.take_max(std::get<1>(corners));
+			}
+		}
+
+		return { m, M };
+	}
+
+	/**
+	 * @brief      Dimentions of the entire scene.
+	 *
+	 * @return     3-dimensional integer vector describing the dimensions of the scene 
+	 */
+	vec<3, size_t> size() const
+	{
+		auto c = corners();
+
+		return (std::get<1>(c) - std::get<0>(c)).cast<size_t>();
+	}
+
+	/**
+	 * @brief      Center point between the corners computed by the `corners()` method
+	 *
+	 * @return     3-dimensional integer vector describing the central point.
+	 */
+	vec<3, int> center()
+	{
+		auto c = corners();
+		return (std::get<0>(c) + std::get<1>(c)) / 2;
+	}
+
+	/**
+	 * @brief      Copies a model instance into the scene
+	 *
+	 * @param[in]  inst      The instance
+	 * @param[in]  dup_name  The duplicate name
+	 */
+	void duplicate_instance(const model_instance& inst, const std::string& dup_name)
+	{
+		instances[dup_name] = inst;
+	}
+
+	/**
+	 * @brief      Transform and copy each model instance into a single voxel model
+	 * sized appropriately to fit the extents of each model post global transformation
+	 *
+	 * @return     Resulting model
+	 */
+	voxels<uint8_t> flatten()
+	{
+		auto c = corners();
+		auto min = std::get<0>(c);
+		auto min_f = min.cast<float>();
+		vec<3, int> size = std::get<1>(c) - min;
+
+		voxels<uint8_t> out(size);
+
+		for (auto& kvp : instances)
+		{
+			auto& inst = kvp.second;
+			auto T = inst.global_transform();
+
+			auto half = (inst.model->size.cast<float>() / 2) - 0.5f;
+
+			for (int z = 0; z < inst.model->depth; z++)
+			for (int y = 0; y < inst.model->height; y++)
+			for (int x = 0; x < inst.model->width; x++)
+			{
+				auto v = inst.model->idx2(x, y, z);
+
+				if (0 == v) { continue; }
+
+				assert(x < inst.model->width);
+				assert(y < inst.model->height);
+				assert(z < inst.model->depth);
+				auto coord = ((T * (vec<3>{(float)x, (float)y, (float)z} - half)) - min_f);
+
+				assert(coord[0] < size[0]);
+				assert(coord[1] < size[1]);
+				assert(coord[2] < size[2]);
+
+				out[coord.cast<size_t>()] = v;
+			
+			}
+
+		}
+
+		return out;
+	}
+
 };
 
 struct voxels_paletted : public voxels<uint8_t>

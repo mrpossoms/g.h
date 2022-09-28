@@ -47,7 +47,7 @@ struct voxel_world : public g::core
 			};
 		});
 
-		temple = g::gfx::mesh_factory::from_voxels<g::gfx::vertex::pos_norm_color>(assets.vox("temple.vox"),
+		temple = g::gfx::mesh_factory::from_voxels<g::gfx::vertex::pos_norm_color>((g::game::voxels<uint8_t>)assets.vox("farm.vox").flatten(), assets.vox("farm.vox").palette,
 		[](ogt_mesh_vertex* v) -> g::gfx::vertex::pos_norm_color {
 			return {
 				{ v->pos.x, v->pos.y, v->pos.z },
@@ -56,9 +56,9 @@ struct voxel_world : public g::core
 			};
 		});
 
-		assets.vox("temple.vox").center_of_mass(true);
+		//assets.vox("temple.vox").center_of_mass(true);
 
-		cam.position = {0, 0, 30};
+		cam.position = assets.vox("farm.vox").center().cast<float>() + vec<3>{2, 0, 0};
 		light.width = 42;
 		light.height = 55;
 
@@ -88,7 +88,7 @@ struct voxel_world : public g::core
 
 		cam.aspect_ratio(g::gfx::aspect());
 
-		auto model = mat4::translation(assets.vox("temple.vox").center_of_bounds() * -1);
+		auto model = mat4::translation(assets.vox("temple.vox").center().cast<float>() * -1);
 		light.position = vec<3>{cos(t * 0.1f) * 60, sin(t * 0.1f) * 60, 60};
 		light.look_at(vec<3>{0, 0, 0}, vec<3>{0, 0, 1});
 
@@ -176,9 +176,14 @@ int main (int argc, const char* argv[])
 {
 	voxel_world game;
 
-	game.start({
-		"voxels", true, 1024, 768
-	});
+	game.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 1024,
+            .height = 768 
+        }
+    });
 
 	return 0;
 }

@@ -146,14 +146,14 @@ void text::measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out)
 
 		if (first)
 		{
-			offset_out = p + vec<2>{0, ctx.glyph.height};
+			offset_out = (p + vec<2>{0, ctx.glyph.height});
 			first = false;
 		}
 	}
 
-	offset_out *= vec<2>{-1, -1};
-	min *= vec<2>{1, -1};
-	max *= vec<2>{1, -1};
+	offset_out *= vec<2>{-1, -1} * font.point;
+	//min *= vec<2>{1, -1};
+	//max *= vec<2>{1, -1};
 
-	dims_out = (max - min);
+	dims_out = (max - min) * font.point;
 }

@@ -119,7 +119,16 @@ int main (int argc, const char* argv[])
 // 	core.start({ "04.basic_draw", true, 512, 512 });
 // 	emscripten_set_main_loop(main_loop, 144, 1);
 // #else
-	core.start({ "04.basic_draw", true, 512, 512 });
+	// g::core::opts opts ;
+
+	core.start({ 
+		.name = "04.basic_draw",
+		.gfx = {
+			.display = true,
+			.width = 512,
+			.height = 512 
+		}
+	});
 // #endif
 
 	return 0;
