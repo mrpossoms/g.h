@@ -311,7 +311,7 @@ struct vox_scene
 	struct model_instance
 	{
 		mat<4, 4> transform;
-		group* group = nullptr;
+		vox_scene::group* group = nullptr;
 		voxels<uint8_t>* model;
 
 		/**

@@ -9,6 +9,7 @@
 #include <math.h>
 #include <iostream>
 
+#define RAND_F (((rand() % 2048) / 1024.f) - 1.f)
 
 bool near(double x, double y, double tol=0.000001f)
 {

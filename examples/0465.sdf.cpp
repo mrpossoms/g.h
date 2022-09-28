@@ -119,8 +119,8 @@ struct my_core : public g::core
             {
                 auto dx = xpos - xlast;
                 auto dy = ypos - ylast;
-                cam.pitch += (-dy * dt * sensitivity);
-                cam.yaw += (dx * dt * sensitivity);
+                cam.pitch += (dy * dt * sensitivity);
+                cam.yaw += (-dx * dt * sensitivity);
             }
 
             xlast = xpos; ylast = ypos;
@@ -210,7 +210,14 @@ my_core core;
 
 int main (int argc, const char* argv[])
 {
-    core.start({ "0465.sdf", true, 512, 512 });
+    core.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 
     return 0;
 }

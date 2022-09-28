@@ -50,7 +50,7 @@ struct my_core : public g::core
         // car = assets.geo("car.obj");
 
         cam.position = {0, 2, 4};
-        glDisable(GL_CULL_FACE);
+        // glDisable(GL_CULL_FACE);
 
         return true;
     }
@@ -61,10 +61,11 @@ struct my_core : public g::core
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         const auto speed = 4.0f;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) cam.position += cam.forward() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_W) == GLFW_PRESS) 
+            cam.position += cam.forward() * dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_S) == GLFW_PRESS) cam.position += cam.forward() * -dt * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
-        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_A) == GLFW_PRESS) cam.position += cam.left() * dt * speed;
+        if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_D) == GLFW_PRESS) cam.position += cam.left() * -dt * speed;
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_Q) == GLFW_PRESS) cam.d_roll(-dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_E) == GLFW_PRESS) cam.d_roll(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_LEFT) == GLFW_PRESS) cam.d_yaw(-dt);
@@ -72,7 +73,7 @@ struct my_core : public g::core
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_UP) == GLFW_PRESS) cam.d_pitch(dt);
         if (glfwGetKey(g::gfx::GLFW_WIN, GLFW_KEY_DOWN) == GLFW_PRESS) cam.d_pitch(-dt);
 
-        auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, -1, -2});
+        auto model = mat4::translation({ 0, -1, -2 }) * mat4::rotation({0, 1, 0}, t + M_PI);
         auto proj = mat4::perspective(0.1, 10, M_PI / 2, g::gfx::aspect());
 
         assets.geo("car.obj").using_shader(basic_shader)
@@ -96,7 +97,14 @@ int main (int argc, const char* argv[])
 //  core.start({ "04.basic_draw", true, 512, 512 });
 //  emscripten_set_main_loop(main_loop, 144, 1);
 // #else
-    core.start({ "045.basic_model", true, 512, 512 });
+    core.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 // #endif
 
     return 0;

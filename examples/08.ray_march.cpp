@@ -22,7 +22,7 @@ struct volumetric : public g::core
 	{
 		plane = g::gfx::mesh_factory::plane();
 
-		render_buffer = g::gfx::framebuffer_factory{1024 >> 0, 768 >> 0}.color().create();
+		render_buffer = g::gfx::framebuffer_factory{1024 >> 1, 768 >> 1}.color().create();
 
 		cam.position = { 0, 1, 0 };
 
@@ -144,21 +144,20 @@ struct volumetric : public g::core
 
 		auto ld = xmath::vec<3>{ 0.6f, -1, 1};
 
-		render_buffer.bind_as_target();
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_3D, cube);
-		plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))
-		     .set_camera(cam)
-		     ["u_view_pos"].vec3(cam.position)
-		     ["u_cube"].int1(0)
-		     ["u_show"].int1(show)
-		     ["u_sub_step"].flt(sub_step)
-		     ["u_light_pos"].vec3(cam.position + cam.up())
-		     // ["u_light_pos"].vec3({20 * cos(t), 100, 20 * sin(t)})
-		     .draw<GL_TRIANGLE_FAN>();
-
-		render_buffer.unbind_as_target();
+		{
+			g::gfx::framebuffer::scoped_draw sd(render_buffer);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_3D, cube);
+			plane.using_shader(assets.shader("raymarch.vs+raymarch.fs"))
+			     .set_camera(cam)
+			     ["u_view_pos"].vec3(cam.position)
+			     ["u_cube"].int1(0)
+			     ["u_show"].int1(show)
+			     ["u_sub_step"].flt(sub_step)
+			     ["u_light_pos"].vec3(cam.position + cam.up())
+			     // ["u_light_pos"].vec3({20 * cos(t), 100, 20 * sin(t)})
+			     .draw<GL_TRIANGLE_FAN>();	
+		}
 
 		plane.using_shader(assets.shader("basic_post.vs+basic_texture.fs"))
 			["u_texture"].texture(render_buffer.color)
@@ -173,7 +172,14 @@ int main (int argc, const char* argv[])
 {
 	volumetric game;
 
-	game.start({ "volume", true, 1024, 768 });
+	game.start({ 
+        .name = argv[0],
+        .gfx = {
+            .display = true,
+            .width = 512,
+            .height = 512 
+        }
+    });
 
 	return 0;
 }

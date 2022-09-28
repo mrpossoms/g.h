@@ -128,6 +128,12 @@ struct texture
 	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
 	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
 
+	void to_disk(const std::string& path) const;
+
+	size_t bytes() const;
+
+	void get_pixels(unsigned char** data_out, size_t& data_out_size) const;
+
 	void bind() const;
 
 	void unbind() const;
@@ -745,11 +751,11 @@ struct mesh
 				if (voxel_case == 0 || voxel_case == 255) { return verts_generated; }
 
 				float w[12];
-				for (int i = 0; i < 12; ++i)
+				for (int i = 12; i--;)
 				{
 					int e_i = tri_edge_list_case[voxel_case][i];
 
-					if (e_i == -1) break;
+					if (e_i == -1) continue;
 
 					// v0 * w + v1 * (1 - w)
 					// w = 0.5
@@ -1032,13 +1038,14 @@ struct mesh_factory
 		{
 			unsigned i = x + y * (tex.size[0]);
 			unsigned j = x + (y + 1) * (tex.size[0]);
-			indices.push_back(j);
-			indices.push_back(i + 1);
+			
 			indices.push_back(i);
-
 			indices.push_back(i + 1);
 			indices.push_back(j);
+
 			indices.push_back(j + 1);
+			indices.push_back(j);
+			indices.push_back(i + 1);
 		}
 
 		mesh<VERT>::compute_normals(vertices, indices);
@@ -1125,13 +1132,18 @@ namespace debug
 	{
 		vec<4> cur_color;
 		g::game::camera* cur_cam;
+		g::gfx::texture* cur_tex;
 		mat<4, 4> cur_model = mat<4, 4>::I();
 
 		print(g::game::camera* cam);
+		print(g::game::camera& cam);
 
 		print& color(const vec<4>& c);
 
 		print& model(const mat<4, 4>& m);
+
+		// TODO
+		// print& texture(const g::gfx::texture& t);
 
 		void ray(const vec<2>& o, const vec<2>& d);
 
@@ -1142,6 +1154,9 @@ namespace debug
 		void point(const vec<3>& o);
 
 		void box(const vec<3> corners[2]);
+
+	private:
+		void init(g::game::camera* cam);
 	};
 }
 
@@ -1384,6 +1399,8 @@ void shadow_0(const mesh<V>& m, const framebuffer& shadow_map, game::camera& lig
 	glPolygonOffset( 0, 0 );
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
+
+void shadow(const framebuffer& shadow_map, const framebuffer& camera_fb, game::camera& light, game::camera& cam);
 
 void blit(const framebuffer& fb);
 

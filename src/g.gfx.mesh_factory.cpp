@@ -336,8 +336,6 @@ mesh<vertex::pos_uv_norm> mesh_factory::from_obj(const std::string& path)
         }
     }
 
-    std::reverse(indices.begin(), indices.end());
-
     glGenBuffers(2, &mesh.vbo);
     mesh.set_vertices(vertices);
     mesh.set_indices(indices);

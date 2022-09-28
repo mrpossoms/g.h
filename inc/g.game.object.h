@@ -15,7 +15,7 @@ namespace game
 
 struct object
 {
-	using trait = std::variant<std::string, float, double, int>;
+	using trait = std::variant<std::string, float>;
 	using trait_map = std::unordered_map<std::string, trait>;
 	using multi_trait_map = std::unordered_map<std::string, trait_map>;
 
@@ -29,7 +29,7 @@ struct object
 		load_if_newer();
 
 		{ // write the object back out
-			g::io::file of(name, g::io::file::mode{true, false, true});
+			g::io::file of(name, g::io::file::mode{}.write(true).truncate(true));
 			serialize(of);
 		}
 	}
@@ -148,7 +148,10 @@ struct object
 
 			_traits["sounds"][key_str] = path_str;
 
-			sound(key_str);
+			if (g::snd::has_sound())
+			{
+				sound(key_str);
+			}
 		}
 	}
 

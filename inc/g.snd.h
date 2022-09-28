@@ -5,6 +5,8 @@
 #include <g.game.h>
 
 #include <vorbis/codec.h>
+
+#define OV_EXCLUDE_STATIC_CALLBACKS
 #include <vorbis/vorbisfile.h>
 #include <AudioFile.h>
 
@@ -38,6 +40,10 @@ enum bit_depth
     bits16 = 2,
     count,
 };
+
+void initialize();
+
+bool has_sound();
 
 /**
  * @brief

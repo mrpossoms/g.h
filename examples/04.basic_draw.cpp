@@ -93,11 +93,11 @@ struct my_core : public g::core
 
 		t += dt;
 
-		auto model = mat4::rotation({0, 1, 0}, t + M_PI) * mat4::translation({0, 0, -1});
+		auto model = mat4::translation({ 0, 0, -1 }) * mat4::rotation({0, 1, 0}, t + M_PI);
 		auto proj = mat4::perspective(0.1, 10, M_PI / 2, g::gfx::aspect());
 
 		plane.using_shader(basic_shader)
-		["u_model"].mat4(model)
+		["u_model"].mat4(model.transpose())
 		["u_proj"].mat4(proj)
 		["u_tex"].texture(grid_tex)
 		// ["u_tex"].texture(assets.tex("brick.color.png"))
@@ -119,7 +119,16 @@ int main (int argc, const char* argv[])
 // 	core.start({ "04.basic_draw", true, 512, 512 });
 // 	emscripten_set_main_loop(main_loop, 144, 1);
 // #else
-	core.start({ "04.basic_draw", true, 512, 512 });
+	// g::core::opts opts ;
+
+	core.start({ 
+		.name = "04.basic_draw",
+		.gfx = {
+			.display = true,
+			.width = 512,
+			.height = 512 
+		}
+	});
 // #endif
 
 	return 0;
