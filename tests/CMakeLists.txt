@@ -46,8 +46,13 @@ add_custom_command(TARGET game-object PRE_BUILD
                   )
 
 add_test(NAME voxel-hash COMMAND voxel-hash)
-add_test(NAME vox-scene COMMAND vox-scene)
 add_test(NAME ray-plane-intersect COMMAND ray-plane-intersect)
 add_test(NAME thread-pool COMMAND thread-pool)
-add_test(NAME game-object COMMAND game-object)
 add_test(NAME screen_space_shadows COMMAND screen_space_shadows)
+
+if (NOT (GITHUB_ACTION AND WIN32))
+# These two tests can't run on the windows runner since they both link to
+# opengl32.dll and openal32.dll, neither of which are provided
+add_test(NAME game-object COMMAND game-object)
+add_test(NAME vox-scene COMMAND vox-scene)
+endif()
