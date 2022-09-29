@@ -48,3 +48,5 @@ add_custom_command(TARGET 01.core PRE_BUILD
                    ${CMAKE_SOURCE_DIR}/examples/data
                    $<TARGET_FILE_DIR:01.core>/data
                   )
+
+add_subdirectory(gloom)
