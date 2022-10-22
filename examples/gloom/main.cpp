@@ -1,10 +1,12 @@
 #include <g.h>
 
+#include "state.hpp"
+
 
 struct Gloom : public g::core
 {
 		g::net::client client;
-		g::net::host<> host;
+		g::net::host<gloom::Player::Session> host;
 
 		Gloom()
 		{

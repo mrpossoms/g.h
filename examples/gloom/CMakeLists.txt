@@ -7,7 +7,7 @@ link_libraries(glfw)
 link_libraries(${OPENAL_LIBRARY})
 link_libraries(vorbis)
 
-include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../inc ${OPENAL_INCLUDE_DIR})
+include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../inc ${CMAKE_CURRENT_SOURCE_DIR}/inc ${OPENAL_INCLUDE_DIR})
 
 # set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 # set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
