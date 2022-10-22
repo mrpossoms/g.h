@@ -9,4 +9,18 @@ struct State
 };
 
 
+struct Player
+{
+	struct Session
+	{
+
+	};
+
+	struct Commands
+	{
+
+	};
+};
+
+
 }
