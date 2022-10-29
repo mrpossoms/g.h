@@ -163,6 +163,7 @@ struct my_core : public g::core
 
         // process input and update the velocities.
         cam.pre_update(dt, 0);
+        cam.aspect_ratio(g::gfx::aspect());
 
         // compute intersections. This tells the camera if it's touching a surface and used for
         // collision resolution in the next step

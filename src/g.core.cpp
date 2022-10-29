@@ -1,6 +1,5 @@
 #include "g.h"
 #include <chrono>
-#include <regex>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -15,20 +14,20 @@ void g::core::tick()
 	auto t_0 = std::chrono::system_clock::now();
 	std::chrono::duration<float> dt = t_0 - t_1;
 
+	if (g::gfx::api::instance != nullptr)
+	{
+		g::gfx::api::instance->pre_draw();
+	}
+
 	update(dt.count());
 	t_1 = t_0;
 
-	if (g::gfx::GLFW_WIN)
+	if (g::gfx::api::instance != nullptr)
 	{
-		glfwSwapBuffers(g::gfx::GLFW_WIN);
-		glfwPollEvents();
+		g::gfx::api::instance->post_draw();
+		// TODO: migrate to api::interface
 		running &= !glfwWindowShouldClose(g::gfx::GLFW_WIN);
 	}
-}
-
-static void error_callback(int error, const char* description)
-{
-    std::cerr << description << std::endl;
 }
 
 #ifdef __EMSCRIPTEN__
@@ -42,90 +41,9 @@ void g::core::start(const core::opts& opts)
 {
 	if (opts.gfx.display)
 	{
-		glfwSetErrorCallback(error_callback);
-
-		if (!glfwInit()) { throw std::runtime_error("glfwInit() failed"); }
-
-		// api specific hints pre context creation
-		switch (opts.gfx.api)
-		{
-			case g::core::opts::render_api::OPEN_GL:
-				glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, opts.gfx.api_version.major);
-				glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, opts.gfx.api_version.minor);
-				glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-				glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-				break;
-		}
-
-		if (opts.gfx.fullscreen)
-		{
-			auto monitor = glfwGetPrimaryMonitor();
-			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-
-			// glfwWindowHint(GLFW_RED_BITS, mode->redBits);
-			// glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
-			// glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
-			// glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);					
-			g::gfx::GLFW_WIN = glfwCreateWindow(mode->width, mode->height, opts.name ? opts.name : "", monitor, NULL);
-		}
-		else
-		{
-			g::gfx::GLFW_WIN = glfwCreateWindow(opts.gfx.width, opts.gfx.height, opts.name ? opts.name : "", NULL, NULL);
-		}
-
-		if (!g::gfx::GLFW_WIN)
-		{
-			glfwTerminate();
-			throw std::runtime_error("glfwCreateWindow() returned NULL");
-		}
-
-		glfwMakeContextCurrent(g::gfx::GLFW_WIN);
-
-		auto glsl_ver_str = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-		std::cerr << "GL renderer: " << glGetString(GL_VERSION) << std::endl;
-		std::cerr << "GLSL version: " << glsl_ver_str << std::endl;
-
-		// set the correct glsl shader header based on the version we found
-		std::cmatch m;
-		std::regex re("[0-9]+[.][0-9]+");
-		if(std::regex_search (glsl_ver_str, m, re))
-		{
-			std::string version = m[0];
-			version.erase(version.find("."), 1);
-
-			g::gfx::shader_factory::shader_header = std::string("#version ") + version + std::string("\n");
-		}
-		else
-		{
-			std::cerr << "Couldn't identify glsl version" << std::endl;	
-		}
-
-		// rendering api standard config post context creation
-		switch (opts.gfx.api)
-		{
-		case g::core::opts::render_api::OPEN_GL:
-		{
-			GLuint vao;
-			GLenum err = glewInit();
-			if (GLEW_OK != err)
-			{
-				std::cerr << "glew Error: " << glewGetErrorString(err) << std::endl;
-				/* Problem: glewInit failed, something is seriously wrong. */
-				throw std::runtime_error("glew runtime error");
-			}
-
-			glGenVertexArrays(1, &vao);
-			glBindVertexArray(vao);
-
-			glEnable(GL_BLEND);
-			glEnable(GL_DEPTH_TEST);
-			glEnable(GL_CULL_FACE);
-			glCullFace(GL_BACK);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		}
-		break;
-		}
+		// TODO: construct the appropriate graphics api instance based on user request
+		g::gfx::api::instance = std::make_unique<g::gfx::api::opengl>();
+		g::gfx::api::instance->initialize(opts.gfx, opts.name);
 	}
 
 	if (opts.snd.enabled)

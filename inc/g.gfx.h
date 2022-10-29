@@ -12,6 +12,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <memory>
 
 #include <string.h>
 #include <assert.h>
@@ -52,7 +53,6 @@
 
 #include <GLFW/glfw3.h>
 
-
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
 
@@ -60,6 +60,60 @@ using namespace xmath;
 
 namespace g {
 namespace gfx {
+
+namespace api {
+
+enum class render_api
+{
+	OPEN_GL,
+};
+
+struct render_api_version
+{
+	unsigned int major, minor;
+};
+
+struct options
+{
+	bool display = true;
+	size_t width = 640;
+	size_t height = 480;
+	bool fullscreen = false;
+	render_api_version api_version = { 4, 1 };
+};
+
+struct interface {
+	virtual void initialize(const options& opts, const char* name=nullptr) = 0;
+	virtual void pre_draw() = 0;
+	virtual void post_draw() = 0;
+	virtual size_t width() = 0;
+	virtual size_t height() = 0;
+	virtual float aspect() = 0;
+};
+
+struct opengl final : public interface
+{
+	opengl();
+	~opengl();
+
+	void initialize(const options& opts, const char* name=nullptr) override;
+	void pre_draw() override;
+	void post_draw() override;
+
+	size_t width() override;
+	size_t height() override;
+	float aspect() override;
+private:
+	GLFWwindow* win;
+	struct {
+		int width;
+		int height;
+	} framebuffer;
+};
+
+extern std::unique_ptr<interface> instance;
+
+} // namespace api
 
 static bool gl_get_error()
 {

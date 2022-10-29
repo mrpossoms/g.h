@@ -46,38 +46,14 @@ struct core
 {
 	struct opts
 	{
-		enum class render_api
-		{
-			OPEN_GL,
-		};
-
-		struct render_api_version
-		{
-			unsigned int major, minor;
-		};
-
 		const char* name;
-		struct {
-			bool display = true;
-			size_t width = 640;
-			size_t height = 480;
-			bool fullscreen = false;
-			render_api api = render_api::OPEN_GL;
-			render_api_version api_version = { 4, 1 };
-		} gfx;
+
 
 		struct {
 			bool enabled = true;
 		} snd;
-		// opts() = default;
-
-		// opts(const char* name, bool display, size_t width, size_t height)
-		// {
-		// 	this->name = name;
-		// 	gfx.display = display;
-		// 	gfx.width = width;
-		// 	gfx.height = height;
-		// }
+		
+		g::gfx::api::options gfx;
 	};
 
 	/**

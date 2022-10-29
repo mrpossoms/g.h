@@ -8,6 +8,8 @@
 
 using namespace g::gfx;
 
+std::unique_ptr<api::interface> api::instance;
+
 bool g::gfx::has_graphics()
 {
 	return nullptr != g::gfx::GLFW_WIN;
@@ -15,23 +17,17 @@ bool g::gfx::has_graphics()
 
 size_t g::gfx::width()
 {
-	int width, height;
-	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
-	return width;
+	return api::instance->width();
 }
 
 size_t g::gfx::height()
 {
-	int width, height;
-	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
-	return height;
+	return api::instance->height();
 }
 
 float g::gfx::aspect()
 {
-	int width, height;
-	glfwGetFramebufferSize(GLFW_WIN, &width, &height);
-	return width / (float)height;
+	return api::instance->aspect();
 }
 
 float g::gfx::noise::perlin(const vec<3>& p, const std::vector<int8_t>& entropy)
