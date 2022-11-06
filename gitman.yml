@@ -82,7 +82,11 @@ sources:
     repo: https://github.com/biojppm/rapidyaml.git
     rev: master
     params: --recurse-submodules
-
+  - name: flatbuffers
+    type: git
+    repo: https://github.com/google/flatbuffers.git
+    rev: master
+    params: --depth=1
 default_group: ''
 groups:
   -

@@ -13,7 +13,7 @@ struct Player
 {
 	struct Session
 	{
-
+		
 	};
 
 	struct Commands
