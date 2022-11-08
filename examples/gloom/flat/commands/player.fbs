@@ -1,0 +1,9 @@
+namespace gloom.commands.player;
+
+table Configure {
+	name:string;
+}
+
+table Control {
+	
+}

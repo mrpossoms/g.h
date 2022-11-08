@@ -106,10 +106,10 @@ else()
 if (WIN32)
 message(STATUS "Trying to build glew for windows using mingw64")
 
-execute_process(COMMAND msys2_shell.cmd -mingw64 -c "make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto")
+execute_process(COMMAND msys2_shell.cmd -mingw64 -c "make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto -j4")
 
 else()
-execute_process(COMMAND make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto)
+execute_process(COMMAND make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto -j4)
 endif()
 # execute_process(COMMAND msys2_shell.cmd -mingw64 -c "${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/cmake-testbuild.sh")
 
@@ -117,8 +117,8 @@ execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/
                    -B${CMAKE_BINARY_DIR}/out/build/glew
                    -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
                   )
-execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/glew --target install --config Debug)
-execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/glew --target install --config Release)
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/glew --target install --config Debug --parallel 4)
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/glew --target install --config Release --parallel 4)
 
 # set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
@@ -189,8 +189,8 @@ execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/ogg/
                    -B${CMAKE_BINARY_DIR}/out/build/ogg
                    -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
                   )
-execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Debug)
-execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Release)
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Debug --parallel 4)
+execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/ogg --target install --config Release --parallel 4)
 set(CMAKE_MODULE_PATH "${CMAKE_BINARY_DIR}/out/lib/cmake;${CMAKE_MODULE_PATH}")
 endif()
 
@@ -239,12 +239,4 @@ message(INFO "  \\___|   |_|\\___/__/\\__/__/")
                             
 if (G_BUILD_TESTS)
 add_subdirectory(tests)
-endif()
-
-message(INFO "   __ _      _   _          __  __            ")
-message(INFO "  / _| |__ _| |_| |__ _  _ / _|/ _|___ _ _ ___")
-message(INFO " |  _| / _` |  _| '_ \ || |  _|  _/ -_) '_(_-<")
-message(INFO " |_| |_\\__,_|\\__|_.__/\\_,_|_| |_| \\___|_| /__/")
-set(FLATBUFFERS_BUILD_TESTS OFF)
-set(FLATBUFFERS_BUILD_TESTS OFF)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/flatbuffers)                                              
+endif()                                     

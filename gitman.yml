@@ -8,43 +8,54 @@ sources:
     rev: master
     scripts:
       -
+
   - name: opengametools
     type: git
     repo: https://github.com/jpaver/opengametools.git
+    params: --depth=1
     sparse_paths:
       -
     rev: master
     scripts:
       -
+
   - name: lodepng
     type: git
     repo: https://github.com/lvandeve/lodepng.git
+    params: --depth=1
     sparse_paths:
       -
     rev: master
+
   - name: libtiff
     type: git
     repo: https://gitlab.com/libtiff/libtiff.git
-    rev: master
+    params: --depth=1
+    rev: v4.2.0
     sparse_paths:
       -
+
   - name: glfw
     type: git
     repo: https://github.com/glfw/glfw.git
+    params: --depth=1
     sparse_paths:
       -
     rev: 3.3.4
     scripts:
       -
+
   - name: glew
     type: git
     repo: https://github.com/nigels-com/glew.git
+    params: --depth=1
     sparse_paths:
       -
     rev: glew-2.2.0
     # scripts:
     #   - make -C auto
     #   - ./cmake-testbuild.sh
+
   - name: sha1
     type: git
     repo: https://github.com/mrpossoms/sha1.git
@@ -53,40 +64,52 @@ sources:
     rev: master
     # scripts:
     #   - make static
+   
   - name: freetype
     type: git
     repo: https://github.com/freetype/freetype.git
     sparse_paths:
       -
-    rev: 2.6.5
+    params: --depth=1
+    rev: VER-2-6-5
     scripts:
       -
+
   - name: ogg
     type: git
     repo: https://github.com/xiph/ogg.git
+    params: --depth=1
     rev: v1.3.5
+
   - name: vorbis
     type: git
     repo: https://github.com/xiph/vorbis.git
+    params: --depth=1
     sparse_paths:
       -
     rev: v1.3.7
+
   - name: AudioFile
     type: git
     repo: https://github.com/mrpossoms/AudioFile.git
     sparse_paths:
       -
     rev: integer-formats
+
   - name: rapidyaml
     type: git
     repo: https://github.com/biojppm/rapidyaml.git
-    rev: master
-    params: --recurse-submodules
+    rev: v0.4.1
+    params: --recurse-submodules --depth=1
+
   - name: flatbuffers
     type: git
     repo: https://github.com/google/flatbuffers.git
-    rev: master
+    rev: v22.10.26
     params: --depth=1
+    scripts:
+      - cmake -B build -DCMAKE_BUILD_TYPE=Release -DFLATBUFFERS_BUILD_TESTS=OFF
+      - cmake --build ./build --config Release --parallel 4
 default_group: ''
 groups:
   -
