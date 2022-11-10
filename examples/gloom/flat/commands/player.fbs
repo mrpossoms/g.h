@@ -1,3 +1,5 @@
+include "../types.fbs";
+
 namespace gloom.commands.player;
 
 table Configure {
@@ -5,5 +7,6 @@ table Configure {
 }
 
 table Control {
-	
+	orientation: Quat;
+	control: Vec3f;
 }

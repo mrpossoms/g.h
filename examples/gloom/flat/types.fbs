@@ -1,0 +1,16 @@
+namespace gloom;
+
+struct Vec3i
+{
+	v:[int:3];
+}
+
+struct Vec3f
+{
+	v:[float:3];
+}
+
+struct Quat
+{
+	v:[float:4];
+}

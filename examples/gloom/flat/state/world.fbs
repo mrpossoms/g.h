@@ -1,0 +1,20 @@
+include "../types.fbs";
+
+namespace gloom.state.world;
+
+struct Strip {
+	v:[ubyte:16];
+}
+
+struct Slice {
+	v:[Strip:16];
+}
+
+struct Chunk {
+	v:[Slice:16];
+}
+
+struct Delta {
+	corner: Vec3i;
+	chunk: Chunk;
+}
