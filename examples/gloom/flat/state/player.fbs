@@ -1,0 +1,5 @@
+namespace gloom.state.world;
+
+struct Player {
+	id: uint;
+}

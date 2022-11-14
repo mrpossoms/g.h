@@ -10,7 +10,12 @@ link_libraries(vorbis)
 set(GLOOM_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 set(FLATC ${CMAKE_SOURCE_DIR}/gitman_sources/flatbuffers/build/Release/flatc)
 
-include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../inc ${CMAKE_CURRENT_SOURCE_DIR}/inc ${OPENAL_INCLUDE_DIR})
+include_directories(${PROJECT_NAME} PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../inc 
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc 
+    ${OPENAL_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}/gitman_sources/flatbuffers/include
+    )
 
 # set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 # set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -20,11 +25,19 @@ include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../inc $
 add_executable(gloom main.cpp)
 
 add_custom_command(TARGET gloom PRE_BUILD
-                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api ${GLOOM_ROOT}/flat/commands/player.fbs
+                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api --filename-suffix _commands ${GLOOM_ROOT}/flat/types.fbs
                   )
 
 add_custom_command(TARGET gloom PRE_BUILD
-                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api ${GLOOM_ROOT}/flat/state/world.fbs
+                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api --filename-suffix _commands ${GLOOM_ROOT}/flat/commands/player.fbs
+                  )
+
+add_custom_command(TARGET gloom PRE_BUILD
+                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api --filename-suffix _state ${GLOOM_ROOT}/flat/state/world.fbs
+                  )
+
+add_custom_command(TARGET gloom PRE_BUILD
+                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api --filename-suffix _state ${GLOOM_ROOT}/flat/state/player.fbs
                   )
 
 if (WIN32)
