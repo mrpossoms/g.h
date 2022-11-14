@@ -1,0 +1,3 @@
+include "state/player.fbs";
+include "state/world.fbs";
+include "commands/player.fbs";

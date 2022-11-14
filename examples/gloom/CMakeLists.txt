@@ -25,19 +25,7 @@ include_directories(${PROJECT_NAME} PRIVATE
 add_executable(gloom main.cpp)
 
 add_custom_command(TARGET gloom PRE_BUILD
-                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api --filename-suffix _commands ${GLOOM_ROOT}/flat/types.fbs
-                  )
-
-add_custom_command(TARGET gloom PRE_BUILD
-                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api --filename-suffix _commands ${GLOOM_ROOT}/flat/commands/player.fbs
-                  )
-
-add_custom_command(TARGET gloom PRE_BUILD
-                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api --filename-suffix _state ${GLOOM_ROOT}/flat/state/world.fbs
-                  )
-
-add_custom_command(TARGET gloom PRE_BUILD
-                   COMMAND ${FLATC} --cpp -o ${GLOOM_ROOT}/inc/api --filename-suffix _state ${GLOOM_ROOT}/flat/state/player.fbs
+                   COMMAND ${FLATC} --cpp --gen-all -o ${GLOOM_ROOT}/inc/api ${GLOOM_ROOT}/flat/api.fbs
                   )
 
 if (WIN32)
