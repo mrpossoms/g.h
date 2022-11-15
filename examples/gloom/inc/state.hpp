@@ -1,3 +1,4 @@
+#pragma once
 #include <g.h>
 
 #include <random>

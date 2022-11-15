@@ -8,12 +8,12 @@ namespace gloom
 namespace gameplay
 {
 
-unsigned new_player_id(const gloom::State& state)
+unsigned new_player_id(gloom::State& state)
 {
 	std::uniform_int_distribution<unsigned> id_dist(0,0xFFFFFFFF);
 	unsigned id = 0;
 
-	while (state.contains(id))
+	while (state.sessions.contains(id))
 	{
 		id = id_dist(state.rng);
 	}

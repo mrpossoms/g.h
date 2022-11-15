@@ -332,7 +332,7 @@ struct net
 		host() = default;
 		~host()
 		{
-			close(listen_socket);
+			::close(listen_socket);
 		}
 
 		/**

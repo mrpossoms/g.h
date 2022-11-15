@@ -1,64 +1,62 @@
+#include <memory>
+
 #include <g.h>
 
 #include "state.hpp"
 #include "gameplay.hpp"
+#include "network.hpp"
 
 using namespace gloom;
 
 struct Gloom : public g::core
 {
-		g::net::client client;
-		g::net::host<State::Player::Session> host;
+		std::shared_ptr<g::net::client> client;
+		std::shared_ptr<g::net::host<State::Player::Session>> host;
 		State state;
 
-		Gloom()
+		Gloom(bool hosting)
 		{
+			std::cerr << "here?\n";
+
 			// TODO
+			if (hosting)
+			{
+				std::cerr << "hosting" << std::endl;
+				host = gloom::network::make_host(state);
+			}
+			else
+			{
+				std::cerr << "connecting" << std::endl;
+				client = gloom::network::make_client("localhost");
+			}
 		}
 
 		bool initialize() override
 		{
-
-			if (hosting)
-			{
-				host.on_connection = [&](int sock, State::Player::Session& sess) {
-					std::cout << "player" << sock << " connected.\n";
-					sess.id = gameplay::new_player_id(state);
-					state.sessions.insert({sess.id, sess});
-				};
-
-				host.on_disconnection = [&](int sock, State::Player::Session& sess) {
-					std::cout << "player" << sock << " disconnected\n";
-					state.players.remove_at(p.index);
-				};
-
-				host.on_packet = [&](int sock, State::Player::Session& sess) -> int {
-					player_commands msg;
-					auto bytes = read(sock, &msg, sizeof(msg));
-					msg.to_machine();
-
-					commands[p.index] = msg;
-
-					return 0;
-				};
-			}
-			else
-			{
-
-			}
+			return true;
 		}
 
 		void update(float dt) override
 		{
-
+			if (client)
+			{
+				client->update();
+			}
+			else if (host)
+			{
+				host->update();
+			}
 		}
 };
 
 
 int main(const int argc, const char* argv[])
 {
+	bool hosting = argc <= 1;
 
-	Gloom{}.start({ 
+	std::cerr << "wtf?\n";
+
+	Gloom{hosting}.start({ 
         .name = argv[0],
         .gfx = {
             .display = true,
