@@ -507,9 +507,9 @@ struct vox_scene
 
 			auto half = (inst.model->size.cast<float>() / 2) - 0.5f;
 
-			for (int z = 0; z < inst.model->depth; z++)
-			for (int y = 0; y < inst.model->height; y++)
-			for (int x = 0; x < inst.model->width; x++)
+			for (size_t z = 0; z < inst.model->depth; z++)
+			for (size_t y = 0; y < inst.model->height; y++)
+			for (size_t x = 0; x < inst.model->width; x++)
 			{
 				auto v = inst.model->idx2(x, y, z);
 
