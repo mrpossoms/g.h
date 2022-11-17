@@ -28,6 +28,8 @@ struct Gloom : public g::core
 			{
 				std::cerr << "connecting" << std::endl;
 				client = gloom::network::make_client("localhost");
+				std::cerr << "connected" << std::endl;
+				client->listen();
 			}
 		}
 
@@ -40,11 +42,11 @@ struct Gloom : public g::core
 		{
 			if (client)
 			{
-				client->update();
+				// TODO: client game logic
 			}
 			else if (host)
 			{
-				host->update();
+				// TODO: host game logic
 			}
 		}
 };
