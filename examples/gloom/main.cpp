@@ -27,7 +27,17 @@ struct Gloom : public g::core
 			else
 			{
 				std::cerr << "connecting" << std::endl;
-				client = gloom::network::make_client("localhost");
+
+				try
+				{
+					client = gloom::network::make_client("localhost");
+				}
+				catch (std::runtime_error e)
+				{
+					std::cerr << "Connection to server failed: " << std::endl << e.what() << std::endl;
+					exit(-1);
+				}
+
 				std::cerr << "connected" << std::endl;
 				client->listen();
 			}

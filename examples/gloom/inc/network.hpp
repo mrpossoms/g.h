@@ -46,7 +46,15 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
 		return 0;
 	};
 
-	host->listen(1337);
+	try
+	{
+		host->listen(1337);
+	}
+	catch(std::runtime_error e)
+	{
+		std::cerr << e.what() << std::endl;
+		exit(-1);
+	}
 
 	return host;
 }

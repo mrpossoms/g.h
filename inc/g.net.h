@@ -23,6 +23,27 @@
 /* for uint32_t */
 #include <stdint.h>
 
+#ifdef _WIN32
+using socket_t = SOCKET;
+
+static bool init_winsock()
+{
+	WSADATA wsa_data = {0};
+	auto result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+	if (result != 0) 
+	{
+		std::cerr << "WSAStartup failed: " << result << std::endl;
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+#else
+using socket_t = int;
+#endif
+
 typedef struct
 {
     uint32_t state[5];
@@ -301,7 +322,6 @@ static void SHA1(
 namespace g
 {
 
-
 struct net
 {
 	struct msg
@@ -321,15 +341,27 @@ struct net
 	template<typename T>
 	struct host
 	{
-		std::function<void(int socket, T& client)> on_connection;
-		std::function<void(int socket, T& client)> on_disconnection;
-		std::function<int(int socket, T& client)> on_packet;
-		std::unordered_map<int, T> sockets;
-		std::unordered_set<int> senders;
+
+		std::function<void(socket_t socket, T& client)> on_connection;
+		std::function<void(socket_t socket, T& client)> on_disconnection;
+		std::function<int(socket_t socket, T& client)> on_packet;
+		std::unordered_map<socket_t, T> sockets;
+		std::unordered_set<socket_t> senders;
 		std::thread listen_thread;
 		int listen_socket;
 
-		host() = default;
+		host()
+		{
+#ifdef _WIN32
+			static bool winsock_inited;
+
+			if (!winsock_inited)
+			{
+				winsock_inited = init_winsock();
+			}
+#endif
+		}
+
 		~host()
 		{
 			::close(listen_socket);
@@ -345,15 +377,21 @@ struct net
 		 */
 		void listen(short port)
 		{
-			listen_socket = ::socket(AF_INET, SOCK_STREAM, 0);
-			struct sockaddr_in name = {};
-			name.sin_family      = AF_INET;
-			name.sin_port        = htons(port);
-			name.sin_addr.s_addr = htonl(INADDR_ANY);
+#ifdef _WIN32
+			int protocol = IPPROTO_TCP;
+#else
+			int protocol = 0;
+#endif
 
+			listen_socket = ::socket(AF_INET, SOCK_STREAM, protocol);
+
+#ifdef _WIN32
+			if (listen_socket == INVALID_SOCKET)
+#else
 			if (listen_socket < 0)
+#endif
 			{
-				throw std::runtime_error("listen sock creation failed");
+				throw std::runtime_error("listen sock creation failed: " + std::string(strerror(errno)));
 			}
 
 			// allow port reuse for quicker restarting
@@ -365,6 +403,11 @@ struct net
 				throw std::runtime_error("Setting SO_REUSEPORT to listen socket failed");
 			}
 #endif
+
+			struct sockaddr_in name = {};
+			name.sin_family = AF_INET;
+			name.sin_port = htons(port);
+			name.sin_addr.s_addr = htonl(INADDR_ANY);
 
 			// bind the listening sock to port number
 			if (bind(listen_socket, (const struct sockaddr*)&name, sizeof(name)))
@@ -462,7 +505,7 @@ struct net
 
 		void update()
 		{
-			int max_sock = listen_socket;
+			socket_t max_sock = listen_socket;
 			fd_set rfds;
 			FD_ZERO(&rfds);
 			FD_SET(listen_socket, &rfds);
@@ -473,7 +516,7 @@ struct net
 				int sock = pair.first;
 
 				FD_SET(sock, &rfds);
-				max_sock = std::max<int>(sock, max_sock);
+				max_sock = std::max<socket_t>(sock, max_sock);
 			}
 
 			switch (select(max_sock + 1, &rfds, NULL, NULL, NULL))
@@ -482,7 +525,7 @@ struct net
 				case 0: { /* timeout occured */ }
 				default:
 				{
-					std::vector<int> disconnected_socks;
+					std::vector<socket_t> disconnected_socks;
 
 					// check all client sockets to see if any have messages
 					for (auto& pair : sockets)
@@ -493,7 +536,41 @@ struct net
 						// check the connection status of the client socket
 						// otherwise, pass the message over to the lambda
 						char c;
-						switch (recv(sock, &c, 1, MSG_PEEK))
+						auto res = recv(sock, &c, 1, MSG_PEEK);
+#ifdef _WIN32
+						switch (res)
+						{
+							case -1:
+								// Error, try again (maybe)
+								// some additional logic is needed here
+								break;
+							case 0:
+								// Connection has closed
+								on_disconnection(sock, sockets[sock]);
+								close(sock);
+								disconnected_socks.push_back(sock);
+
+								// if the last connection just dropped, just return.
+								if (sockets.size() == 0) { return; }
+								break;
+
+							default:
+								if (senders.count(sock) == 0)
+								{
+									// this socket hasn't sent anything yet
+									// lets check to see if it's a WS.
+									if (is_client_ws(sock))
+									{
+										senders.insert(sock);
+										break;
+									}
+								}
+								on_packet(sock, pair.second);
+								senders.insert(sock);
+								break;
+						}
+#else
+						switch (res)
 						{
 							case -1:
 							case 0:
@@ -524,6 +601,7 @@ struct net
 								senders.insert(sock);
 								break;
 						}
+#endif
 					}
 
 					// clean up those that have disconnected
@@ -537,16 +615,20 @@ struct net
 					{
 						struct sockaddr_in client_name = {};
 #ifdef _WIN32
-						int client_name_len = 0;
+						int client_name_len = sizeof(client_name);
 #else
 						socklen_t client_name_len = 0;
 #endif
-						auto sock = accept(
+						socket_t sock = accept(
 							listen_socket,
 							(struct sockaddr*)&client_name,
 							&client_name_len
 						);
 
+						if (sock == INVALID_SOCKET)
+						{
+							std::cerr << "invalid " << std::endl;
+						}
 #ifdef __linux__
 						int one = 1, five = 5;
 						setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
@@ -568,8 +650,20 @@ struct net
 		std::function<int(int socket)> on_packet;
 		std::function<void(int socket)> on_disconnection;
 		std::thread listen_thread;
-		int socket;
+		socket_t socket;
 		volatile bool is_connected = false;
+
+		client()
+		{
+#ifdef _WIN32
+			static bool winsock_inited;
+
+			if (!winsock_inited)
+			{
+				winsock_inited = init_winsock();
+			}
+#endif
+		}
 
 		bool connect(const std::string& hostname, short port)
 		{
@@ -580,11 +674,27 @@ struct net
 				return false;
 			}
 
+			// print resolved host information
+			std::cerr << "hostname: " << host->h_name << std::endl;
+			std::cerr << "address_type: " << host->h_addrtype << " address_len: " << host->h_length << std::endl;
+			std::cerr << "addresses:" << std::endl;
+			for (unsigned i = 0; host->h_addr_list[i] != nullptr; i++)
+			{
+				std::cerr << "\t";
+				for (unsigned j = 0; j < 4; j++)
+				{
+					std::cerr << static_cast<unsigned>(host->h_addr_list[i][j]);
+					if (j < 3) { std::cerr << "."; }
+				}
+				std::cerr << std::endl;
+			}
+
+
 			struct sockaddr_in host_addr = {};
 			// fill in host_addr with resolved info
 			memcpy(
+				(char*)&host_addr.sin_addr.s_addr,
 				(char *)host->h_addr_list[0],
-				(char *)&host_addr.sin_addr.s_addr,
 				host->h_length
 			);
 			host_addr.sin_port   = htons(port);
@@ -608,6 +718,8 @@ struct net
 				is_connected = true;
 				return true;
 			}
+
+			throw std::runtime_error("sock connection failed: " + std::string(strerror(errno)));
 
 			// otherwise, cleanup and return false.
 			close(socket);
