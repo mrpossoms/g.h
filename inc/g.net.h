@@ -543,6 +543,37 @@ struct net
 							case -1:
 								// Error, try again (maybe)
 								// some additional logic is needed here
+							{
+								// ref: https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-recv
+								switch (WSAGetLastError())
+								{
+									case WSANOTINITIALISED:
+									case WSAENETDOWN:
+									case WSAEFAULT:
+									case WSAENOTCONN:
+									case WSAENETRESET:
+									case WSAENOTSOCK:
+									case WSAEOPNOTSUPP:
+									case WSAESHUTDOWN:
+									case WSAEINVAL:
+									case WSAECONNABORTED:
+									case WSAETIMEDOUT:
+									case WSAECONNRESET:
+										// Connection has closed
+										on_disconnection(sock, sockets[sock]);
+										// close(sock);
+										disconnected_socks.push_back(sock);
+
+										// if the last connection just dropped, just return.
+										if (sockets.size() == 0) { return; }
+										break;
+									case WSAEINTR:
+									case WSAEINPROGRESS:
+									case WSAEWOULDBLOCK:
+									case WSAEMSGSIZE:
+										break;
+								}
+							}
 								break;
 							case 0:
 								// Connection has closed
