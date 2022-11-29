@@ -1,12 +1,19 @@
 include "../types.fbs";
 
-namespace gloom.commands.player;
+namespace gloom.commands;
 
-table Configure {
+table ConfigureCommand {
 	name:string;
 }
 
-table Control {
+table ControlCommand {
 	orientation: Quat;
 	control: Vec3f;
 }
+
+table Player {
+	configure: ConfigureCommand;
+	control: ControlCommand;
+}
+
+root_type Player;

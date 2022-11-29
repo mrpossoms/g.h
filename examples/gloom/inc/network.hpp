@@ -6,6 +6,7 @@
 #include "state.hpp"
 #include "gameplay.hpp"
 #include "api/api_generated.h"
+#include "flatbuffers/flatbuffers.h"
 
 namespace gloom
 {
@@ -37,8 +38,12 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
 	};
 
 	host->on_packet = [&](int sock, State::Player::Session& sess) -> int {
+		char datagram[0xFFFF];
+
 		// player_commands msg;
-		// auto bytes = read(sock, &msg, sizeof(msg));
+		auto bytes = read(sock, &datagram, sizeof(datagram));
+
+		auto command = flatbuffers::GetRoot<gloom::commands::Player>(datagram);
 		// msg.to_machine();
  
 		// commands[p.index] = msg;
@@ -58,6 +63,8 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
 
 	return host;
 }
+
+
 
 } // namespace network
 

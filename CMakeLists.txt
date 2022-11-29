@@ -221,6 +221,7 @@ if (WIN32)
 target_link_libraries(${PROJECT_NAME} wsock32 ws2_32)
 endif()
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/flatbuffers)
 
 message(INFO "   ___   ___                     _        ")
 message(INFO "  / __| | __|_ ____ _ _ __  _ __| |___ ___")
