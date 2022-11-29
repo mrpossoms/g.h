@@ -656,10 +656,7 @@ struct net
 							&client_name_len
 						);
 
-						if (sock == INVALID_SOCKET)
-						{
-							std::cerr << "invalid " << std::endl;
-						}
+						// TODO: handle bad socket	
 #ifdef __linux__
 						int one = 1, five = 5;
 						setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
@@ -678,8 +675,9 @@ struct net
 
 	struct client
 	{
-		std::function<int(int socket)> on_packet;
-		std::function<void(int socket)> on_disconnection;
+		std::function<int(socket_t socket)> on_connection;
+		std::function<int(socket_t socket)> on_packet;
+		std::function<void(socket_t socket)> on_disconnection;
 		std::thread listen_thread;
 		socket_t socket;
 		volatile bool is_connected = false;
@@ -746,6 +744,11 @@ struct net
 
 			if (0 == res)
 			{
+				if (nullptr != on_connection)
+				{
+					on_connection(socket);
+				}
+
 				is_connected = true;
 				return true;
 			}
