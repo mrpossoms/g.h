@@ -6,6 +6,7 @@
 #include "state.hpp"
 #include "gameplay.hpp"
 #include "api/api_generated.h"
+#include "flatbuffers/flatbuffers.h"
 
 namespace gloom
 {
@@ -18,7 +19,13 @@ static std::shared_ptr<g::net::client> make_client(const std::string& hostname, 
 
 	client->on_connection = [&](socket_t sock) -> int
 	{
+		flatbuffers::FlatBufferBuilder builder(0xFFFF);
 
+		auto config_command = gloom::commands::CreateConfigureCommand(builder, builder.CreateString("foob"));
+		auto player_command = gloom::commands::CreatePlayer(builder, config_command);
+		builder.Finish(player_command);
+
+		write(sock, builder.GetBufferPointer(), builder.GetSize());
 
 		return 0;
 	};
@@ -54,11 +61,24 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
 	};
 
 	host->on_packet = [&](int sock, State::Player::Session& sess) -> int {
-		char datagram[0xffff];
+		char datagram[0xFFFF];
 
+		// player_commands msg;
 		auto bytes = read(sock, &datagram, sizeof(datagram));
 
- 
+		auto command = flatbuffers::GetRoot<gloom::commands::Player>(datagram);
+		// msg.to_machine();
+ 		if (command->configure())
+ 		{
+ 			std::cout << "configure command" << std::endl;
+			std::cout << "player " << command->configure()->name()->c_str() << " joined" << std::endl;
+ 		}
+
+ 		if (command->control())
+ 		{
+ 			std::cout << "control command" << std::endl;
+ 		}
+
 		// commands[p.index] = msg;
 
 		return 0;
@@ -76,6 +96,8 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
 
 	return host;
 }
+
+
 
 } // namespace network
 

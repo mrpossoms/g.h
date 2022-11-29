@@ -558,7 +558,7 @@ struct net
 									case WSAECONNRESET:
 										// Connection has closed
 										on_disconnection(sock, sockets[sock]);
-										// close(sock);
+										// close(sock); // Closing 
 										disconnected_socks.push_back(sock);
 
 										// if the last connection just dropped, just return.
