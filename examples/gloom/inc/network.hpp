@@ -12,9 +12,26 @@ namespace gloom
 namespace network
 {
 
-static std::shared_ptr<g::net::client> make_client(const std::string& hostname)
+static std::shared_ptr<g::net::client> make_client(const std::string& hostname, gloom::State& state)
 {
 	auto client = std::make_shared<g::net::client>();
+
+	client->on_connection = [&](socket_t sock) -> int
+	{
+
+
+		return 0;
+	};
+
+	client->on_packet = [&](socket_t sock) -> int
+	{
+
+		return 0;
+	};
+
+	client->on_disconnection = [&](socket_t sock) {
+
+	};
 
 	client->connect(hostname, 1337);
 

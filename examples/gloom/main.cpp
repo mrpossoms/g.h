@@ -30,7 +30,7 @@ struct Gloom : public g::core
 
 				try
 				{
-					client = gloom::network::make_client("localhost");
+					client = gloom::network::make_client("localhost", state);
 				}
 				catch (std::runtime_error e)
 				{
