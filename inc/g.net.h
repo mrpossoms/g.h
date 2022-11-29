@@ -42,6 +42,7 @@ static bool init_winsock()
 }
 #else
 using socket_t = int;
+#define INVALID_SOCKET (-1)
 #endif
 
 typedef struct
@@ -385,11 +386,7 @@ struct net
 
 			listen_socket = ::socket(AF_INET, SOCK_STREAM, protocol);
 
-#ifdef _WIN32
 			if (listen_socket == INVALID_SOCKET)
-#else
-			if (listen_socket < 0)
-#endif
 			{
 				throw std::runtime_error("listen sock creation failed: " + std::string(strerror(errno)));
 			}
@@ -656,17 +653,20 @@ struct net
 							&client_name_len
 						);
 
-						// TODO: handle bad socket	
-#ifdef __linux__
-						int one = 1, five = 5;
-						setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
-						setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &five, sizeof(five));
-						setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &one, sizeof(one));
-						setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &five, sizeof(five));
-#endif
-						sockets[sock] = {};
+						if (sock != INVALID_SOCKET)
+						{
+						
+	#ifdef __linux__
+							int one = 1, five = 5;
+							setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(one));
+							setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &five, sizeof(five));
+							setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &one, sizeof(one));
+							setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &five, sizeof(five));
+	#endif
+							sockets[sock] = {};
 
-						on_connection(sock, sockets[sock]);
+							on_connection(sock, sockets[sock]);
+						}
 					}
 				}
 			}

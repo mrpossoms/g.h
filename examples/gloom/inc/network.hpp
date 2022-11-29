@@ -54,9 +54,10 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
 	};
 
 	host->on_packet = [&](int sock, State::Player::Session& sess) -> int {
-		// player_commands msg;
-		// auto bytes = read(sock, &msg, sizeof(msg));
-		// msg.to_machine();
+		char datagram[0xffff];
+
+		auto bytes = read(sock, &datagram, sizeof(datagram));
+
  
 		// commands[p.index] = msg;
 
