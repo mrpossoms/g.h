@@ -76,7 +76,11 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
 
  		if (command->control())
  		{
- 			std::cout << "control command" << std::endl;
+ 			auto& player = state.players[sess.id];
+ 			auto& c = *command->control()->control()->v();
+ 			auto& o = *command->control()->orientation()->v();
+ 			player.control = { c[0], c[1], c[2] };
+ 			player.orientation = { o[0], o[1], o[2], o[3] };
  		}
 
 		// commands[p.index] = msg;

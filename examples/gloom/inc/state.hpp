@@ -24,6 +24,11 @@ struct State
 		{
 			unsigned id;
 		};
+
+		vec<3> position;
+		vec<3> control;
+		quat<> orientation;
+
 	};
 
 	std::default_random_engine rng;
