@@ -1,3 +1,2 @@
-include "state/player.fbs";
-include "state/world.fbs";
+include "state/game.fbs";
 include "commands/player.fbs";

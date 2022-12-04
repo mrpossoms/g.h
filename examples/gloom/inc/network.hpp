@@ -13,6 +13,8 @@ namespace gloom
 namespace network
 {
 
+
+
 static std::shared_ptr<g::net::client> make_client(const std::string& hostname, gloom::State& state)
 {
 	auto client = std::make_shared<g::net::client>();
@@ -45,9 +47,30 @@ static std::shared_ptr<g::net::client> make_client(const std::string& hostname, 
 	return client;
 }
 
-static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::State& state)
+struct Host final : public g::net::host<State::Player::Session>
 {
-	auto host = std::make_shared<g::net::host<State::Player::Session>>();
+	Host() = default;
+
+	void send_states(const gloom::State& state)
+	{
+		flatbuffers::FlatBufferBuilder builder(0xFFFF);
+	
+		std::vector<gloom::state::Player> players_vec;
+		std::vector<gloom::state::PlayerConfig> player_configs_vec;
+
+		for (auto& sock_sess_pair : state.players)
+		{
+			auto& id = sock_sess_pair.first;
+			auto& player = sock_sess_pair.second;
+
+			players_vec.push_back(gloom::state::CreatePlayer(id, {0,0,0}, {0,0,0}, {0,0,0,1}));
+		}
+	}
+};
+
+static std::shared_ptr<gloom::network::Host> make_host(gloom::State& state)
+{
+	auto host = std::make_shared<gloom::network::Host>();
 
 	host->on_connection = [&](int sock, State::Player::Session& sess) {
 		std::cout << "player" << sock << " connected.\n";
@@ -63,6 +86,8 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
 	host->on_packet = [&](int sock, State::Player::Session& sess) -> int {
 		char datagram[0xFFFF];
 
+ 		auto& player = state.players[sess.id];
+
 		// player_commands msg;
 		auto bytes = read(sock, &datagram, sizeof(datagram));
 
@@ -72,11 +97,11 @@ static std::shared_ptr<g::net::host<State::Player::Session>> make_host(gloom::St
  		{
  			std::cout << "configure command" << std::endl;
 			std::cout << "player " << command->configure()->name()->c_str() << " joined" << std::endl;
+			player.name = std::string(command->configure()->name()->c_str());
  		}
 
  		if (command->control())
  		{
- 			auto& player = state.players[sess.id];
  			auto& c = *command->control()->control()->v();
  			auto& o = *command->control()->orientation()->v();
  			player.control = { c[0], c[1], c[2] };

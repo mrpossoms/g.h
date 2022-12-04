@@ -12,12 +12,6 @@ namespace gloom
 
 struct State
 {
-	struct World
-	{
-			
-	};
-
-
 	struct Player
 	{
 		struct Session
@@ -25,9 +19,16 @@ struct State
 			unsigned id;
 		};
 
+		std::string name;
+
 		vec<3> position;
 		vec<3> control;
 		quat<> orientation;
+
+	};
+
+	struct World
+	{
 
 	};
 

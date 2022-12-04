@@ -1,0 +1,14 @@
+include "player.fbs";
+include "world.fbs";
+
+namespace gloom.state;
+
+table game
+{
+	my_id:uint8;
+
+	players:[Player];
+	player_configs:[PlayerConfig];
+
+	chunk_delta:[world.Delta];
+}
