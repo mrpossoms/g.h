@@ -3,13 +3,13 @@ include "../types.fbs";
 namespace gloom.state;
 
 struct Player {
-	id: uint8;
+	id: uint32;
 	position: Vec3f;
 	velocity: Vec3f;
 	orientation: Quat;
 }
 
 table PlayerConfig {
-	id: uint8;
+	id: uint32;
 	name: string;
 }

@@ -11,9 +11,21 @@ table ControlCommand {
 	control: Vec3f;
 }
 
+table RequestCommand {
+	world_blocks: [Vec3i];
+}
+
+enum State:byte { unknown = 0, loading, ready }
+
+table Status {
+	state: State;
+}
+
 table Player {
 	configure: ConfigureCommand;
 	control: ControlCommand;
+	request: RequestCommand;
+	status: Status;
 }
 
 root_type Player;

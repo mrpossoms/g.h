@@ -5,6 +5,12 @@ struct Vec3i
 	v:[int:3];
 }
 
+struct Vec3ui
+{
+	v:[uint:3];
+}
+
+
 struct Vec3f
 {
 	v:[float:3];

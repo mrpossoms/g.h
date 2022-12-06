@@ -18,3 +18,8 @@ struct Delta {
 	corner: Vec3i;
 	chunk: Chunk;
 }
+
+struct Info {
+	hash: uint32;
+	shape: Vec3ui;
+}

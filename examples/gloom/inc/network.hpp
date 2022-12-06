@@ -63,9 +63,14 @@ struct Host final : public g::net::host<State::Player::Session>
 			auto& id = sock_sess_pair.first;
 			auto& player = sock_sess_pair.second;
 
-			players_vec.push_back(gloom::state::CreatePlayer(id, {0,0,0}, {0,0,0}, {0,0,0,1}));
+			auto pos = gloom::Vec3f(player.position.v);
+			auto vel = gloom::Vec3f(player.velocity.v);
+			auto ori = gloom::Quat(player.orientation.v);
+			players_vec.push_back(gloom::state::Player(id, pos, vel, ori));
 		}
 	}
+
+	std::vector<vec<3, unsigned>> modified_chunks; //< Min corner of each 16^3 cube modified in this time step
 };
 
 static std::shared_ptr<gloom::network::Host> make_host(gloom::State& state)
@@ -106,6 +111,19 @@ static std::shared_ptr<gloom::network::Host> make_host(gloom::State& state)
  			auto& o = *command->control()->orientation()->v();
  			player.control = { c[0], c[1], c[2] };
  			player.orientation = { o[0], o[1], o[2], o[3] };
+ 		}
+
+ 		auto req = command->request();
+ 		if (req)
+ 		{
+ 			if (req->world_blocks())
+ 			{
+ 				for (auto corner : *req->world_blocks())
+ 				{
+ 					auto& c = *corner->v();
+ 					sess.requested_blocks.push_back({c[0], c[1], c[2]});
+ 				}
+ 			}
  		}
 
 		// commands[p.index] = msg;

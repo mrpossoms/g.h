@@ -3,10 +3,14 @@ include "world.fbs";
 
 namespace gloom.state;
 
+enum State:byte { unknown = 0, waiting, ready, playing }
+
 table game
 {
-	my_id:uint8;
+	world: world.Info;
+	state: State;
 
+	my_id: uint32;
 	players:[Player];
 	player_configs:[PlayerConfig];
 

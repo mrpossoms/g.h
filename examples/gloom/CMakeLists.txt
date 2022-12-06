@@ -26,7 +26,7 @@ message("Using flatc found at '${FLATC}'")
 
 add_custom_command(
     OUTPUT ${GLOOM_ROOT}/inc/api/api_generated.h
-    COMMAND ${FLATC} --cpp --gen-all -o ${GLOOM_ROOT}/inc/api ${GLOOM_ROOT}/flat/api.fbs ${GLOOM_ROOT}/flat/state/player.fbs
+    COMMAND ${FLATC} --cpp --gen-all -o ${GLOOM_ROOT}/inc/api ${GLOOM_ROOT}/flat/api.fbs
     DEPENDS ${GLOOM_ROOT}/flat/api.fbs ${FLATC} main.cpp
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
