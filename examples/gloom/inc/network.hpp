@@ -55,9 +55,18 @@ struct Host final : public g::net::host<State::Player::Session>
 	{
 		flatbuffers::FlatBufferBuilder builder(0xFFFF);
 	
-		std::vector<gloom::state::Player> players_vec;
-		std::vector<gloom::state::PlayerConfig> player_configs_vec;
+		// Player info gets sent to all players every time
+		gloom::state::Player players[state.players.size()];
+		std::vector<const gloom::state::Player*> players_vec;
+		std::vector<flatbuffers::Offset<gloom::state::PlayerConfig>> player_configs_vec;
 
+		auto world_size = gloom::Vec3ui(state.world.voxels.size.cast<uint32_t>().v);
+		auto world_info = gloom::state::world::Info(
+			state.world.voxels.hash(),
+			world_size
+		);
+
+		unsigned i = 0;
 		for (auto& sock_sess_pair : state.players)
 		{
 			auto& id = sock_sess_pair.first;
@@ -66,8 +75,24 @@ struct Host final : public g::net::host<State::Player::Session>
 			auto pos = gloom::Vec3f(player.position.v);
 			auto vel = gloom::Vec3f(player.velocity.v);
 			auto ori = gloom::Quat(player.orientation.v);
-			players_vec.push_back(gloom::state::Player(id, pos, vel, ori));
+			players[i] = gloom::state::Player(id, pos, vel, ori);
+
+			players_vec.push_back({&players[i]});
+			i++;
+			// TODO: player_configs_vec
 		}
+
+		gloom::state::gameBuilder gs_builder(builder);
+		gs_builder.add_world(&world_info);
+		gs_builder.add_players(builder.CreateVector(players_vec));
+		gs_builder.add_player_configs(builder.CreateVector(player_configs_vec));
+
+		for (auto& sock_sess_pair : state.players)
+		{
+			// TODO: player specific updates to game state here
+			// TODO: send packet
+		}
+
 	}
 
 	std::vector<vec<3, unsigned>> modified_chunks; //< Min corner of each 16^3 cube modified in this time step

@@ -37,6 +37,8 @@ struct State
 	std::default_random_engine rng;
 	std::unordered_map<unsigned, State::Player> players;
 	std::unordered_map<unsigned, State::Player::Session> sessions;
+
+	World world;
 };
 
 } // namespace gloom
