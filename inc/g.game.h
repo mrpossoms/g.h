@@ -276,7 +276,7 @@ struct voxels
 
 	slice operator[](size_t idx_w)
 	{
-		return { v + (idx_w * height * depth), depth };
+		return { v.data() + (idx_w * height * depth), depth };
 	}
 
 	inline DAT& operator[](const vec<3, size_t>& idx)

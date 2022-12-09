@@ -51,10 +51,8 @@ struct Host final : public g::net::host<State::Player::Session>
 {
 	Host() = default;
 
-	void send_states(const gloom::State& state)
+	void send_states(gloom::State& state)
 	{
-		flatbuffers::FlatBufferBuilder builder(0xFFFF);
-	
 		// Player info gets sent to all players every time
 		gloom::state::Player players[state.players.size()];
 		std::vector<const gloom::state::Player*> players_vec;
@@ -66,6 +64,7 @@ struct Host final : public g::net::host<State::Player::Session>
 			world_size
 		);
 
+		// build up list of player states
 		unsigned i = 0;
 		for (auto& sock_sess_pair : state.players)
 		{
@@ -78,19 +77,56 @@ struct Host final : public g::net::host<State::Player::Session>
 			players[i] = gloom::state::Player(id, pos, vel, ori);
 
 			players_vec.push_back({&players[i]});
-			i++;
 			// TODO: player_configs_vec
+			i++;
 		}
 
-		gloom::state::gameBuilder gs_builder(builder);
-		gs_builder.add_world(&world_info);
-		gs_builder.add_players(builder.CreateVector(players_vec));
-		gs_builder.add_player_configs(builder.CreateVector(player_configs_vec));
-
-		for (auto& sock_sess_pair : state.players)
+		for (auto& sock_sess_pair : state.sessions)
 		{
+			auto& sock = sock_sess_pair.first;
+			auto& sess = sock_sess_pair.second;
+			flatbuffers::FlatBufferBuilder builder(0xFFFF);
+
+			gloom::state::gameBuilder gs_builder(builder);
+			gs_builder.add_world(&world_info);
+			gs_builder.add_players(builder.CreateVector(players_vec));
+			gs_builder.add_player_configs(builder.CreateVector(player_configs_vec));
+
 			// TODO: player specific updates to game state here
-			// TODO: send packet
+			gs_builder.add_my_id(sock);
+
+			// We will not send more than 15 chunk deltas per step
+			for (unsigned i = 0; i < 15 && sess.requested_blocks.size() > 0; i++)
+			{
+				auto& corner = sess.requested_blocks.back();
+				uint8_t block[4096];
+
+				// TODO: there should be a copy_block function added to the voxels class
+				for (unsigned x_i = 0; x_i < 16; x_i++)
+				{
+					auto slice = state.world.voxels[x_i + corner[0]];
+					constexpr auto x_stride = 16 * 16;
+
+					for (unsigned y_i = 0; y_i < 16; y_i++)
+					{
+						constexpr auto y_stride = 16;
+						memcpy(
+							block + (x_i * x_stride) + (y_i * y_stride),
+							slice[y_i + corner[1]], 
+							sizeof(uint8_t) * y_stride
+						);
+					}
+				}
+
+				sess.requested_blocks.pop_back();
+
+				gloom::state::world::Delta chunk_d;
+
+
+			}
+			
+			auto game_state = gs_builder.Finish();
+			write(sock, &game_state, sizeof(game_state)); // TODO: this use of game_state is not correct, need to figure out how to get ptr and size
 		}
 
 	}

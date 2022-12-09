@@ -16,7 +16,7 @@ struct Chunk {
 
 struct Delta {
 	corner: Vec3i;
-	chunk: Chunk;
+	chunk: [ubyte:4096];
 }
 
 struct Info {
