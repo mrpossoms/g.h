@@ -286,9 +286,7 @@ g::game::vox_scene& g::asset::store::vox(const std::string& partial_path, bool m
 			auto& g = ogt_scene->groups[i];
 			scene.groups[i].parent = g.parent_group_index == 0xffffffff ? nullptr : &scene.groups[g.parent_group_index];
 			scene.groups[i].transform = ogt2xmath(g.transform);
-			scene.groups[i].hidden = g.hidden;
-		
-			
+			scene.groups[i].hidden = g.hidden;	
 		}
 
 		// copy model instances

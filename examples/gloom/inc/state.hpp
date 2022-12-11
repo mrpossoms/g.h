@@ -10,6 +10,8 @@
 namespace gloom
 {
 
+using Result = bool;
+
 struct State
 {
 	struct Player
@@ -35,6 +37,8 @@ struct State
 	};
 
 	std::default_random_engine rng;
+	g::asset::store assets;
+
 	std::unordered_map<unsigned, State::Player> players;
 	std::unordered_map<unsigned, State::Player::Session> sessions;
 

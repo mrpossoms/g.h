@@ -23,6 +23,8 @@ struct Gloom : public g::core
 			{
 				std::cerr << "hosting" << std::endl;
 				host = gloom::network::make_host(state);
+
+				gloom::gameplay::load_level(state, "foo");
 			}
 			else
 			{

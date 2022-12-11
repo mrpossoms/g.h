@@ -180,6 +180,36 @@ struct voxels
 		memcpy(v.data(), ptr, sizeof(DAT) * w * h * d);
 	}
 
+	voxels(voxels& o) : v(o.v)
+	{
+		width = o.width;
+		height = o.height;
+		depth = o.depth;
+		size = o.size;
+	}
+
+
+	voxels(voxels&& o)
+	{
+		width = o.width;
+		height = o.height;
+		depth = o.depth;
+		size = o.size;
+
+		v = std::move(o.v);
+	}
+
+	voxels& operator=(voxels&& o)
+	{
+		width = o.width;
+		height = o.height;
+		depth = o.depth;
+		size = o.size;
+
+		v = std::move(o.v);
+		return *this;	
+	}
+
 	void resize(size_t w, size_t h, size_t d)
 	{
 		width = w;
