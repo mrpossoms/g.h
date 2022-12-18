@@ -23,8 +23,8 @@ static std::shared_ptr<g::net::client> make_client(const std::string& hostname, 
 	{
 		flatbuffers::FlatBufferBuilder builder(0xFFFF);
 
-		auto config_command = gloom::commands::CreateConfigureCommand(builder, builder.CreateString("foob"));
-		auto player_command = gloom::commands::CreatePlayer(builder, config_command);
+		auto config_command = gloom::api::commands::CreateConfigureCommand(builder, builder.CreateString("foob"));
+		auto player_command = gloom::api::commands::CreatePlayer(builder, config_command);
 		builder.Finish(player_command);
 
 		write(sock, builder.GetBufferPointer(), builder.GetSize());
@@ -54,12 +54,12 @@ struct Host final : public g::net::host<State::Player::Session>
 	void send_states(gloom::State& state)
 	{
 		// Player info gets sent to all players every time
-		gloom::state::Player players[state.players.size()];
-		std::vector<const gloom::state::Player*> players_vec;
-		std::vector<flatbuffers::Offset<gloom::state::PlayerConfig>> player_configs_vec;
+		gloom::api::state::Player players[state.players.size()];
+		std::vector<const gloom::api::state::Player*> players_vec;
+		std::vector<flatbuffers::Offset<gloom::api::state::PlayerConfig>> player_configs_vec;
 
 		auto world_size = gloom::Vec3ui(state.world.voxels.size.cast<uint32_t>().v);
-		auto world_info = gloom::state::world::Info(
+		auto world_info = gloom::api::state::world::Info(
 			state.world.voxels.hash(),
 			world_size
 		);
@@ -74,7 +74,7 @@ struct Host final : public g::net::host<State::Player::Session>
 			auto pos = gloom::Vec3f(player.position.v);
 			auto vel = gloom::Vec3f(player.velocity.v);
 			auto ori = gloom::Quat(player.orientation.v);
-			players[i] = gloom::state::Player(id, pos, vel, ori);
+			players[i] = gloom::api::state::Player(id, pos, vel, ori);
 
 			players_vec.push_back({&players[i]});
 			// TODO: player_configs_vec
@@ -87,7 +87,7 @@ struct Host final : public g::net::host<State::Player::Session>
 			auto& sess = sock_sess_pair.second;
 			flatbuffers::FlatBufferBuilder builder(0xFFFF);
 
-			gloom::state::gameBuilder gs_builder(builder);
+			gloom::api::state::gameBuilder gs_builder(builder);
 			gs_builder.add_world(&world_info);
 			gs_builder.add_players(builder.CreateVector(players_vec));
 			gs_builder.add_player_configs(builder.CreateVector(player_configs_vec));
@@ -120,7 +120,7 @@ struct Host final : public g::net::host<State::Player::Session>
 
 				sess.requested_blocks.pop_back();
 
-				gloom::state::world::Delta chunk_d;
+				gloom::api::state::world::Delta chunk_d;
 
 
 			}
@@ -157,7 +157,7 @@ static std::shared_ptr<gloom::network::Host> make_host(gloom::State& state)
 		// player_commands msg;
 		auto bytes = read(sock, &datagram, sizeof(datagram));
 
-		auto command = flatbuffers::GetRoot<gloom::commands::Player>(datagram);
+		auto command = flatbuffers::GetRoot<gloom::api::commands::Player>(datagram);
 		// msg.to_machine();
  		if (command->configure())
  		{

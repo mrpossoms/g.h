@@ -177,20 +177,24 @@ struct fps_camera : public camera_perspective, updateable, ray_collider
 	{
 		if (on_input) on_input(*this, dt);
 
+
 		auto up = -gravity.unit();
 		auto d = up.dot({ 0, 1, 0 });
 		auto a = acos(d);
 		auto axis = vec<3>::cross(up, { 0, 1, 0 });
 		if (axis.magnitude() < 0.0001) { axis = { 1, 0, 0 }; }
 		axis = axis.unit();
-		q = quat<>::from_axis_angle(axis, a).inverse();
+
+		if (!isnan(a))
+		{
+			q = quat<>::from_axis_angle(axis, a).inverse();
+		}
 
 		pitch = std::min<float>(max_pitch, std::max<float>(min_pitch, pitch));
 
 		yaw_q = quat<>::from_axis_angle(body_up(), yaw);
 		r = quat<>::from_axis_angle(body_left(), pitch) * yaw_q;
-		orientation = r * q;		
-
+		orientation = r * q;					
 
 		velocity += -velocity * drag * dt;
 		velocity += gravity * dt;

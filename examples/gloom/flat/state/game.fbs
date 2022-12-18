@@ -1,7 +1,7 @@
 include "player.fbs";
 include "world.fbs";
 
-namespace gloom.state;
+namespace gloom.api.state;
 
 enum State:byte { unknown = 0, waiting, ready, playing }
 

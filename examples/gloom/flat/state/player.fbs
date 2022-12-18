@@ -1,6 +1,6 @@
 include "../types.fbs";
 
-namespace gloom.state;
+namespace gloom.api.state;
 
 struct Player {
 	id: uint32;

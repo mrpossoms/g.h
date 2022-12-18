@@ -12,7 +12,9 @@ gloom::Result load_level(gloom::State& state, const std::string& name)
 {
 	try
 	{
-		state.world.voxels = state.assets.vox(name).flatten();
+		auto& vox = state.assets.vox(name);
+		state.world.voxels = vox.flatten();
+		state.world.palette = vox.palette;
 	}
 	catch (std::runtime_error e)
 	{

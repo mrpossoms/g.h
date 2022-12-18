@@ -1,6 +1,6 @@
 include "../types.fbs";
 
-namespace gloom.commands;
+namespace gloom.api.commands;
 
 table ConfigureCommand {
 	name:string;
@@ -15,17 +15,17 @@ table RequestCommand {
 	world_blocks: [Vec3i];
 }
 
-enum State:byte { unknown = 0, loading, ready }
+//enum State:byte { unknown = 0, loading, ready }
 
-table Status {
-	state: State;
-}
+//table Status {
+//	state: State;
+//}
 
 table Player {
 	configure: ConfigureCommand;
 	control: ControlCommand;
 	request: RequestCommand;
-	status: Status;
+//	status: Status;
 }
 
 root_type Player;

@@ -1,6 +1,6 @@
 include "../types.fbs";
 
-namespace gloom.state.world;
+namespace gloom.api.state.world;
 
 struct Strip {
 	v:[ubyte:16];

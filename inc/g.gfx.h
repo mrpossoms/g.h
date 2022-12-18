@@ -596,6 +596,8 @@ struct mesh
 
 	inline bool is_initialized() const { return vbo != 0; }
 
+	inline operator bool() const { return is_initialized(); }
+
 	void destroy()
 	{
 		if (GL_TRUE == glIsBuffer(vbo))

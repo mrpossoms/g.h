@@ -34,6 +34,7 @@ struct State
 	struct World
 	{
 		g::game::voxels<uint8_t> voxels;
+		ogt_vox_palette palette;
 	};
 
 	std::default_random_engine rng;
@@ -43,6 +44,8 @@ struct State
 	std::unordered_map<unsigned, State::Player::Session> sessions;
 
 	World world;
+
+	g::game::fps_camera camera;
 };
 
 } // namespace gloom
