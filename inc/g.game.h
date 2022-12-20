@@ -521,12 +521,19 @@ struct vox_scene
 	 *
 	 * @return     Resulting model
 	 */
-	voxels<uint8_t> flatten()
+	voxels<uint8_t> flatten(bool switch_y_z=true)
 	{
 		auto c = corners();
 		auto min = std::get<0>(c);
 		auto min_f = min.cast<float>();
 		vec<3, int> size = std::get<1>(c) - min;
+
+		if (switch_y_z)
+		{
+			auto t = size[1];
+			size[1] = size[2];
+			size[2] = t;
+		}
 
 		voxels<uint8_t> out(size);
 
@@ -548,14 +555,22 @@ struct vox_scene
 				assert(x < inst.model->width);
 				assert(y < inst.model->height);
 				assert(z < inst.model->depth);
-				auto coord = ((T * (vec<3>{(float)x, (float)y, (float)z} - half)) - min_f);
+				auto coord = (T * (vec<3>{(float)x, (float)y, (float)z} - half)) - min_f;
 
-				assert(coord[0] < size[0]);
-				assert(coord[1] < size[1]);
-				assert(coord[2] < size[2]);
-
-				out[coord.cast<size_t>()] = v;
-			
+				if (switch_y_z)
+				{
+					assert(coord[0] < size[0]);
+					assert(coord[1] < size[2]);
+					assert(coord[2] < size[1]);
+					out[vec<3, size_t>{coord[0], coord[2], coord[1]}] = v;
+				}
+				else
+				{
+					assert(coord[0] < size[0]);
+					assert(coord[1] < size[1]);
+					assert(coord[2] < size[2]);
+					out[vec<3, size_t>{coord[0], coord[1], coord[2]}] = v;
+				}
 			}
 
 		}

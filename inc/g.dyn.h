@@ -361,6 +361,53 @@ private:
     g::game::sdf sdf;
 };
 
+template<typename DAT>
+struct voxel_collider : public collider
+{
+    voxel_collider(const g::game::voxels<DAT>& v) : vox(v) {}
+
+    intersection ray_intersects(const ray& r) const override
+    {
+        // TODO:
+        auto o = r.position.floor();
+        auto d = r.direction.clamp({-1, -1, -1}, {1, 1, 1});
+        float t = 0;
+
+        if (vox[o + d * t])
+        {
+            // resolve more accurately here
+        }
+
+        return {}; // no intersection
+    }
+
+    bool generates_rays() override { return false; }
+
+    std::vector<ray>& rays() override
+    {
+        ray_list.clear();
+        return ray_list;
+    }
+
+    const std::vector<intersection>& intersections(collider& other, float max_t = std::numeric_limits<float>::infinity()) override
+    {
+        intersection_list.clear();
+        if (other.generates_rays())
+        {
+            for (auto& r : other.rays())
+            {
+                auto i = ray_intersects(r);
+                if (i && i.time >= 0 && i.time < max_t) { intersection_list.push_back(i); }
+            }
+        }
+        return intersection_list;
+    }
+
+private:
+    std::vector<intersection> intersection_list;
+    std::vector<ray> ray_list;
+    const g::game::voxels<DAT>& vox;
+};
 
 } // end namespace cd
 

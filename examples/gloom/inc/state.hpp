@@ -14,7 +14,7 @@ using Result = bool;
 
 struct State
 {
-	struct Player
+	struct Player final : public updateable, ray_collider
 	{
 		struct Session
 		{
@@ -29,6 +29,15 @@ struct State
 		vec<3> control;
 		quat<> orientation;
 
+		void pre_update (float dt, float time)
+		{
+
+		}
+
+		void update (float dt, float time)
+		{
+
+		}
 	};
 
 	struct World
