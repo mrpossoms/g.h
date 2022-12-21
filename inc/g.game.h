@@ -180,7 +180,7 @@ struct voxels
 		memcpy(v.data(), ptr, sizeof(DAT) * w * h * d);
 	}
 
-	voxels(voxels& o) : v(o.v)
+	voxels(const voxels& o) : v(o.v)
 	{
 		width = o.width;
 		height = o.height;

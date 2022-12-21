@@ -29,6 +29,15 @@ struct State
 		vec<3> control;
 		quat<> orientation;
 
+		std::vector<ray>& rays() override
+		{
+			ray_list.clear();
+			ray_list.push_back({position - vec<3>{0, 1, 0}, velocity});
+			ray_list.push_back({position, velocity});
+
+			return ray_list;
+		}
+
 		void pre_update (float dt, float time)
 		{
 
@@ -43,6 +52,7 @@ struct State
 	struct World
 	{
 		g::game::voxels<uint8_t> voxels;
+		std::unique_ptr<g::game::voxel_collider<uint8_t>> collider;
 		ogt_vox_palette palette;
 	};
 

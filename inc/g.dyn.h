@@ -369,14 +369,35 @@ struct voxel_collider : public collider
     intersection ray_intersects(const ray& r) const override
     {
         // TODO:
-        auto o = r.position.floor();
-        auto d = r.direction.clamp({-1, -1, -1}, {1, 1, 1});
+        auto o = r.position; //.floor();
+        auto d = r.direction; //.clamp({-1, -1, -1}, {1, 1, 1});
+        int steps = 10;
         float t = 0;
+        float dt = r.direction.magnitude() / (float)steps;
+        auto p_t_1 = o;
 
-        if (vox[o + d * t])
+        for (; steps--;)
         {
-            // resolve more accurately here
+            auto p_t = o + d * t;
+
+            if (vox[p_t.cast<size_t>()])
+            {
+                // resolve more accurately here
+                auto normal = (p_t.cast<int>() - p_t_1.cast<int>()).cast<float>();
+
+                return {
+                    t,
+                    r.position,
+                    r.direction,
+                    p_t,
+                    normal
+                };
+            }
+
+            t += dt;            
+            p_t_1 = p_t;
         }
+
 
         return {}; // no intersection
     }
