@@ -314,6 +314,11 @@ struct voxels
 		return idx2(idx[0], idx[1], idx[2]);
 	}
 
+	inline const DAT& operator[](const vec<3, size_t>& idx) const
+	{
+		return v.at(idx[0] + (idx[1] * width) + (idx[2] * width * height));
+	}
+
 	itr begin() { return itr(v, width, height, depth, false); }
 	itr end() { return itr(v, width, height, depth, true); }
 };
@@ -562,14 +567,14 @@ struct vox_scene
 					assert(coord[0] < size[0]);
 					assert(coord[1] < size[2]);
 					assert(coord[2] < size[1]);
-					out[vec<3, size_t>{coord[0], coord[2], coord[1]}] = v;
+					out[vec<3, size_t>{(size_t)coord[0], (size_t)coord[2], (size_t)coord[1]}] = v;
 				}
 				else
 				{
 					assert(coord[0] < size[0]);
 					assert(coord[1] < size[1]);
 					assert(coord[2] < size[2]);
-					out[vec<3, size_t>{coord[0], coord[1], coord[2]}] = v;
+					out[vec<3, size_t>{(size_t)coord[0], (size_t)coord[1], (size_t)coord[2]}] = v;
 				}
 			}
 

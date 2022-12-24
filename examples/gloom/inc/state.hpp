@@ -40,12 +40,12 @@ struct State
 
 		void pre_update (float dt, float time)
 		{
-
+			velocity += control * dt;
 		}
 
 		void update (float dt, float time)
 		{
-
+			position += velocity * dt;
 		}
 	};
 
@@ -55,6 +55,8 @@ struct State
 		std::unique_ptr<g::game::voxel_collider<uint8_t>> collider;
 		ogt_vox_palette palette;
 	};
+
+	float time;
 
 	std::default_random_engine rng;
 	g::asset::store assets;

@@ -25,6 +25,23 @@ gloom::Result load_level(gloom::State& state, const std::string& name)
 	return true;
 }
 
+void update_player_dynamics(gloom::State& state, float dt)
+{
+	auto& world_collider = *state.world.collider;
+
+	for (auto& id_player_pair : state.players)
+	{
+		auto& player = id_player_pair.second;
+
+		player.pre_update(dt, state.time);
+
+		auto& intersections = world_collider.intersections(player);
+		g::dyn::cr::resolve_linear<gloom::State::Player>(player, intersections);
+
+		player.update(dt, state.time);
+	}
+}
+
 unsigned new_player_id(gloom::State& state)
 {
 	std::uniform_int_distribution<unsigned> id_dist(0,0xFFFFFFFF);

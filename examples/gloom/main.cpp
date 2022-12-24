@@ -102,6 +102,8 @@ struct Gloom : public g::core
 			}
 			else if (host)
 			{
+				gloom::gameplay::update_player_dynamics(state, dt);
+
 		        // process input and update the velocities.
 		        state.camera.pre_update(dt, 0);
 		        state.camera.aspect_ratio(g::gfx::aspect());
