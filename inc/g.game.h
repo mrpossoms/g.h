@@ -210,6 +210,11 @@ struct voxels
 		return *this;	
 	}
 
+	inline bool contains(const vec<3, size_t>& idx) const
+	{
+		return idx[0] < size[0] && idx[1] < size[1] && idx[2] < size[2];
+	}
+
 	void resize(size_t w, size_t h, size_t d)
 	{
 		width = w;

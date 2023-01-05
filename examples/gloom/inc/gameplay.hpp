@@ -25,35 +25,43 @@ gloom::Result load_level(gloom::State& state, const std::string& name)
 	return true;
 }
 
-void update_player_dynamics(gloom::State& state, float dt)
+namespace player
 {
-	auto& world_collider = *state.world.collider;
-
-	for (auto& id_player_pair : state.players)
+	static void update_dynamics(gloom::State& state, float dt)
 	{
-		auto& player = id_player_pair.second;
+		auto& world_collider = *state.world.collider;
 
-		player.pre_update(dt, state.time);
+		for (auto& id_player_pair : state.players)
+		{
+			auto& player = id_player_pair.second;
 
-		auto& intersections = world_collider.intersections(player);
-		g::dyn::cr::resolve_linear<gloom::State::Player>(player, intersections);
+			player.pre_update(dt, state.time);
 
-		player.update(dt, state.time);
-	}
-}
+			auto& intersections = world_collider.intersections(player);
+			g::dyn::cr::resolve_linear<gloom::State::Player>(player, intersections);
 
-unsigned new_player_id(gloom::State& state)
-{
-	std::uniform_int_distribution<unsigned> id_dist(0,0xFFFFFFFF);
-	unsigned id = 0;
-
-	while (state.sessions.contains(id))
-	{
-		id = id_dist(state.rng);
+			player.update(dt, state.time);
+		}
 	}
 
-	return id;
-}
+	static void spawn(gloom::State& state, gloom::State::Player& p)
+	{
+		// TODO: find a place to spawn the player
+	}
+
+	static unsigned new_id(gloom::State& state)
+	{
+		std::uniform_int_distribution<unsigned> id_dist(0,0xFFFFFFFF);
+		unsigned id = 0;
+
+		while (state.sessions.contains(id))
+		{
+			id = id_dist(state.rng);
+		}
+
+		return id;
+	}
+} // namespace player
 
 } // namespace gameplay
 } // namespace gameplay

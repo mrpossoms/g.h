@@ -379,8 +379,9 @@ struct voxel_collider : public collider
         for (; steps--;)
         {
             auto p_t = o + d * t;
+            auto p_t_idx = p_t.cast<size_t>();
 
-            if (vox[p_t.cast<size_t>()])
+            if (vox.contains(p_t_idx) && vox[p_t_idx])
             {
                 // resolve more accurately here
                 auto normal = (p_t.cast<int>() - p_t_1.cast<int>()).cast<float>();

@@ -12,7 +12,7 @@ using namespace gloom;
 struct Gloom : public g::core
 {
 		std::shared_ptr<g::net::client> client;
-		std::shared_ptr<g::net::host<State::Player::Session>> host;
+		std::shared_ptr<gloom::network::Host> host;
 		State state;
 
 		GameRenderer renderer;
@@ -50,7 +50,19 @@ struct Gloom : public g::core
 
 		bool initialize() override
 		{
-			// TODO: temp
+			if (host)
+			{
+				// TODO: spawn in host's player here
+				state.sessions[0] = {};
+				state.players[0] = {};
+				gloom::gameplay::player::spawn(state, state.players[0]);
+			}
+			else
+			{
+
+			}
+
+
 	        state.camera.on_input = [](fps_camera& cam, float dt){
 	            static double xlast, ylast;
 	            float sensitivity = 0.5f;
@@ -102,7 +114,7 @@ struct Gloom : public g::core
 			}
 			else if (host)
 			{
-				gloom::gameplay::update_player_dynamics(state, dt);
+				gloom::gameplay::player::update_dynamics(state, dt);
 
 		        // process input and update the velocities.
 		        state.camera.pre_update(dt, 0);
@@ -112,6 +124,9 @@ struct Gloom : public g::core
 		        state.camera.update(dt, 0);
 
 				// TODO: host game logic
+				 // we probably don't need/want to send after every frame
+		        host->send_states(state);
+
 				renderer.draw(dt, state);
 			}
 		}

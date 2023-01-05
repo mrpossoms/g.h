@@ -140,13 +140,14 @@ static std::shared_ptr<gloom::network::Host> make_host(gloom::State& state)
 
 	host->on_connection = [&](int sock, State::Player::Session& sess) {
 		std::cout << "player" << sock << " connected.\n";
-		sess.id = gameplay::new_player_id(state);
+		sess.id = gameplay::player::new_id(state);
 		state.sessions.insert({sess.id, sess});
 	};
 
 	host->on_disconnection = [&](int sock, State::Player::Session& sess) {
 		std::cout << "player" << sock << " disconnected\n";
 		state.sessions.erase(sess.id);
+		state.players.erase(sess.id);
 	};
 
 	host->on_packet = [&](int sock, State::Player::Session& sess) -> int {
