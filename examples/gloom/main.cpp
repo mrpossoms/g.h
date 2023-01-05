@@ -53,8 +53,10 @@ struct Gloom : public g::core
 			if (host)
 			{
 				// TODO: spawn in host's player here
-				state.sessions[0] = {};
+				State::Player::Session sess;
+				gloom::network::new_session(state, sess, true);
 				state.players[0] = {};
+
 				gloom::gameplay::player::spawn(state, state.players[0]);
 			}
 			else

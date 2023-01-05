@@ -364,7 +364,7 @@ private:
 template<typename DAT>
 struct voxel_collider : public collider
 {
-    voxel_collider(const g::game::voxels<DAT>& v) : vox(v) {}
+    voxel_collider(g::game::voxels<DAT>& v) : vox(v) {}
 
     intersection ray_intersects(const ray& r) const override
     {
@@ -428,7 +428,7 @@ struct voxel_collider : public collider
 private:
     std::vector<intersection> intersection_list;
     std::vector<ray> ray_list;
-    const g::game::voxels<DAT>& vox;
+    g::game::voxels<DAT>& vox;
 };
 
 } // end namespace cd

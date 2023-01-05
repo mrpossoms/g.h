@@ -85,12 +85,19 @@ struct Host final : public g::net::host<State::Player::Session>
 		{
 			auto& sock = sock_sess_pair.first;
 			auto& sess = sock_sess_pair.second;
+
+			// As the host, we don't need to send a game state to ourselves
+			if (sess.is_local()) { continue; }
+
 			flatbuffers::FlatBufferBuilder builder(0xFFFF);
+
+			auto fb_players_vec = builder.CreateVector(players_vec);
+			auto fb_players_config_vec = builder.CreateVector(player_configs_vec);
 
 			gloom::api::state::gameBuilder gs_builder(builder);
 			gs_builder.add_world(&world_info);
-			gs_builder.add_players(builder.CreateVector(players_vec));
-			gs_builder.add_player_configs(builder.CreateVector(player_configs_vec));
+			gs_builder.add_players(fb_players_vec);
+			gs_builder.add_player_configs(fb_players_config_vec);
 
 			// TODO: player specific updates to game state here
 			gs_builder.add_my_id(sock);
@@ -125,8 +132,10 @@ struct Host final : public g::net::host<State::Player::Session>
 
 			}
 			
-			auto game_state = gs_builder.Finish();
-			write(sock, &game_state, sizeof(game_state)); // TODO: this use of game_state is not correct, need to figure out how to get ptr and size
+			auto root = gs_builder.Finish();
+			builder.Finish(root);
+
+			write(sock, builder.GetBufferPointer(), builder.GetSize()); // TODO: this use of game_state is not correct, need to figure out how to get ptr and size
 		}
 
 	}
@@ -134,14 +143,27 @@ struct Host final : public g::net::host<State::Player::Session>
 	std::vector<vec<3, unsigned>> modified_chunks; //< Min corner of each 16^3 cube modified in this time step
 };
 
+static void new_session(gloom::State& state, State::Player::Session& sess, bool is_local=false)
+{
+	if (is_local)
+	{
+		sess.id = 0;
+	}
+	else
+	{
+		sess.id = gameplay::player::new_id(state);		
+	}
+
+	state.sessions.insert({sess.id, sess});
+}
+
 static std::shared_ptr<gloom::network::Host> make_host(gloom::State& state)
 {
 	auto host = std::make_shared<gloom::network::Host>();
 
 	host->on_connection = [&](int sock, State::Player::Session& sess) {
 		std::cout << "player" << sock << " connected.\n";
-		sess.id = gameplay::player::new_id(state);
-		state.sessions.insert({sess.id, sess});
+		new_session(state, sess);
 	};
 
 	host->on_disconnection = [&](int sock, State::Player::Session& sess) {

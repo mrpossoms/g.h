@@ -20,6 +20,8 @@ struct State
 		{
 			unsigned id;
 			std::vector<vec<3, int>> requested_blocks;
+
+			inline bool is_local() const { return id == 0; }
 		};
 
 		std::string name;

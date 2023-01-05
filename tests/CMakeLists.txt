@@ -25,6 +25,7 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 add_executable(voxel-hash voxel-hash.cpp)
 add_executable(vox-scene vox-scene.cpp)
+add_executable(voxel-collider voxel-collider.cpp)
 add_executable(ray-plane-intersect ray-plane-intersect.cpp)
 add_executable(thread-pool thread-pool.cpp)
 add_executable(game-object game-object.cpp)
