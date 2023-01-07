@@ -378,7 +378,7 @@ namespace cr //< Collision resolution
      *                            `position` and `velocity` vec<3> members
      */
     template<typename T>
-    void resolve_linear(T& obj, const std::vector<cd::intersection>& intersections)
+    void resolve_linear(T& obj, const std::vector<cd::intersection>& intersections, float static_friction_tol=0.5)
     {
         // bool printed = false;
 
@@ -393,7 +393,7 @@ namespace cr //< Collision resolution
             obj.velocity += friction;
 
             // static coefficent of friction fudge factor
-            if (obj.velocity.magnitude() < 0.5) obj.velocity *= 0;
+            if (obj.velocity.magnitude() < static_friction_tol) obj.velocity *= 0;
 
             // correct penetration
             // obj.position = intersection.point - (intersection.origin - obj.position);
