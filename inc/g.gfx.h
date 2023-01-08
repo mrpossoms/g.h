@@ -246,9 +246,69 @@ struct texture_factory
 	texture create();
 };
 
-struct sprite_sheet
+struct sprite
 {
+	struct frame
+	{
+		vec<2, unsigned> position;
+		vec<2, unsigned> size;
+		float duration_s;
+	};
 
+	struct track
+	{
+		std::vector<frame*> frames;
+	};
+
+	std::vector<frame> frames;
+	std::unordered_map<std::string, track> animation;
+	vec<2, unsigned> sheet_size;
+	float scale = 1;
+
+	struct instance : public g::game::updateable
+	{
+		const sprite* sheet;
+		const track* animation;
+		unsigned frame_idx;
+		float frame_time_s;
+		bool loop;
+
+		void update(float dt, float time) override
+		{
+			frame_time_s += dt;
+			auto& current = current_frame();
+
+			if (frame_time_s >= current.duration_s)
+			{
+				auto residual = frame_time_s - current.duration_s;
+				frame_time_s = residual;
+				frame_idx++;
+			}
+
+			if (frame_idx >= animation->frames.size())
+			{
+				if (loop) { frame_idx = 0; }
+				else
+				{
+					frame_idx = animation->frames.size() - 1;
+				}
+			}
+		}
+
+		const frame& current_frame() { return *animation->frames[frame_idx]; }
+	};
+
+	instance make_instance()
+	{
+		instance i;
+
+		i.sheet = this;
+		i.animation = &(*animation.begin()).second;
+		i.frame_idx = 0;
+		i.frame_time_s = 0;
+		i.loop = false;
+		return i; 
+	}
 };
 
 struct framebuffer
