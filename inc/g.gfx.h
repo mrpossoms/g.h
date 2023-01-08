@@ -246,6 +246,10 @@ struct texture_factory
 	texture create();
 };
 
+struct sprite_sheet
+{
+
+};
 
 struct framebuffer
 {
@@ -1246,7 +1250,7 @@ struct density_volume
     std::vector<density_volume::block> blocks;
     std::vector<vec<3>> offsets;
 
-    g::game::sdf sdf;
+    const g::game::sdf& sdf;
     std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator;
     float scale = 1;
     unsigned depth = 1;
@@ -1261,9 +1265,10 @@ struct density_volume
         std::function<V(const g::game::sdf& sdf, const vec<3>& pos)> generator,
         const std::vector<vec<3>>& offset_config) :
         
-        offsets(offset_config)
+        offsets(offset_config),
+        sdf(sdf)
     {
-        this->sdf = sdf;
+        // this->sdf = sdf;
         this->generator = generator;
 
         for (auto& offset : offsets)
@@ -1347,10 +1352,12 @@ struct density_volume
                 block_ptr->mesh.set_vertices(block_ptr->vertices);
                 block_ptr->mesh.set_indices(block_ptr->indices);
 
+#ifdef G_GFX_DENSITY_VOLUME_DEBUG
                 char buf[256];
                 std::chrono::duration<float> diff = std::chrono::system_clock::now() - block_ptr->start;
                 snprintf(buf, sizeof(buf), "%lu vertices - block %s in %f sec\n", block_ptr->vertices.size(), block_ptr->index.to_string().c_str(), diff.count());
                 write(1, buf, strlen(buf));
+#endif
             });
         }
     }
@@ -1366,7 +1373,9 @@ struct density_volume
 
             chain.template draw<GL_TRIANGLES>();
 
+#ifdef G_GFX_DENSITY_VOLUME_DEBUG
            g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
+#endif
         }
     }
 };

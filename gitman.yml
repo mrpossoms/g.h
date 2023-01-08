@@ -8,6 +8,7 @@ sources:
     rev: master
     scripts:
       -
+
   - name: opengametools
     type: git
     repo: https://github.com/jpaver/opengametools.git
@@ -16,18 +17,21 @@ sources:
     rev: master
     scripts:
       -
+
   - name: lodepng
     type: git
     repo: https://github.com/lvandeve/lodepng.git
     sparse_paths:
       -
     rev: master
+
   - name: libtiff
     type: git
     repo: https://gitlab.com/libtiff/libtiff.git
     rev: master
     sparse_paths:
       -
+
   - name: glfw
     type: git
     repo: https://github.com/glfw/glfw.git
@@ -36,6 +40,7 @@ sources:
     rev: 3.3.4
     scripts:
       -
+
   - name: glew
     type: git
     repo: https://github.com/nigels-com/glew.git
@@ -45,6 +50,7 @@ sources:
     # scripts:
     #   - make -C auto
     #   - ./cmake-testbuild.sh
+
   - name: sha1
     type: git
     repo: https://github.com/mrpossoms/sha1.git
@@ -53,6 +59,7 @@ sources:
     rev: master
     # scripts:
     #   - make static
+
   - name: freetype
     type: git
     repo: https://github.com/freetype/freetype.git
@@ -61,27 +68,36 @@ sources:
     rev: 2.6.5
     scripts:
       -
+
   - name: ogg
     type: git
     repo: https://github.com/xiph/ogg.git
     rev: v1.3.5
+
   - name: vorbis
     type: git
     repo: https://github.com/xiph/vorbis.git
     sparse_paths:
       -
     rev: v1.3.7
+
   - name: AudioFile
     type: git
     repo: https://github.com/mrpossoms/AudioFile.git
     sparse_paths:
       -
     rev: integer-formats
+
   - name: rapidyaml
     type: git
     repo: https://github.com/biojppm/rapidyaml.git
     rev: master
     params: --recurse-submodules
+
+  - name: json
+    type: git
+    repo: https://github.com/nlohmann/json.git
+    rev: v3.11.2
 
 default_group: ''
 groups:

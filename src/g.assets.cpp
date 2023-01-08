@@ -76,6 +76,11 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 				chain = chain.smooth();
 			}
 
+			if (std::string::npos != partial_path.find("pixelated"))
+			{
+				chain = chain.pixelated();
+			}
+
 			auto tex = chain.create();
 			textures[partial_path] = { time(nullptr), tex };
 		}
