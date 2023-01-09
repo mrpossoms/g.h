@@ -221,6 +221,10 @@ if (WIN32)
 target_link_libraries(${PROJECT_NAME} wsock32 ws2_32)
 endif()
 
+message(INFO "============ JSON ===========")
+set(BUILD_TESTS OFF)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/json)
+target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)
 
 message(INFO "   ___   ___                     _        ")
 message(INFO "  / __| | __|_ ____ _ _ __  _ __| |___ ___")

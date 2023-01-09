@@ -250,8 +250,8 @@ struct sprite
 {
 	struct frame
 	{
-		vec<2, unsigned> position;
-		vec<2, unsigned> size;
+		vec<2> position;
+		vec<2> size;
 		float duration_s;
 	};
 
@@ -260,9 +260,10 @@ struct sprite
 		std::vector<frame*> frames;
 	};
 
+	g::gfx::texture* texture;
 	std::vector<frame> frames;
 	std::unordered_map<std::string, track> animation;
-	vec<2, unsigned> sheet_size;
+	vec<2> sheet_size;
 	float scale = 1;
 
 	struct instance : public g::game::updateable
@@ -272,6 +273,11 @@ struct sprite
 		unsigned frame_idx;
 		float frame_time_s;
 		bool loop;
+
+		const g::gfx::texture& texture()
+		{
+			return *sheet->texture;
+		}
 
 		void update(float dt, float time) override
 		{
@@ -295,7 +301,8 @@ struct sprite
 			}
 		}
 
-		const frame& current_frame() { return *animation->frames[frame_idx]; }
+		const frame& current_frame() const
+		{ return *animation->frames[frame_idx]; }
 	};
 
 	instance make_instance()
@@ -405,6 +412,8 @@ struct shader
 		}
 
 		usage set_camera(g::game::camera& cam);
+
+		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
 		uniform_usage set_uniform(const std::string& name);
 
@@ -1316,7 +1325,7 @@ struct density_volume
     unsigned depth = 1;
     unsigned kernel = 2;
     std::vector<density_volume::block*> to_regenerate;
-    g::proc::thread_pool<10> generator_pool;
+    g::proc::thread_pool<2> generator_pool;
 
     density_volume() = default;
 
