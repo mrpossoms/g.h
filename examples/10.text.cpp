@@ -19,7 +19,7 @@ struct my_core : public g::core
     {
         // ubuntu = g::gfx::font_factory{}.from_true_type("data/fonts/OpenSans-Regular.ttf", 64);
         plane = g::gfx::mesh_factory{}.plane();
-        cam.position = { 0, 0, -15 };
+        cam.position = { 0, 0, 0 };
         cam.orientation = xmath::quat<>::from_axis_angle({ 0, 1, 0 }, M_PI);
         glDisable(GL_CULL_FACE);
         glPointSize(5);
@@ -57,11 +57,17 @@ struct my_core : public g::core
         text.measure(str, dims, offset);
         offset = (dims * -0.5);// - offset * 0.5;
 
-        auto model = mat4::translation({offset[0], offset[1], 0}) * mat4::rotation({0,0,1}, t+=dt) * mat4::translation({sin(t) * 10, 0, 0});
+        auto model = mat4::translation({0, 0, 10}) * mat4::scale({0.1f, 0.1f, 1.0f});
 
         text.draw(assets.shader("basic_gui.vs+basic_font.fs"), str, cam, model);
         // debug::print{&cam}.color({0, 1, 0, 1}).model(model).ray(vec<2>{}, dims);
         // debug::print{&cam}.color({0, 1, 0, 1}).model(model).point(offset + dims);
+        // 
+        plane.using_shader(assets.shader("basic_gui.vs+basic_texture.fs"))
+        .set_camera(cam)
+        ["u_texture"].texture(assets.font("UbuntuMono-B.ttf").face)
+        ["u_model"].mat4(mat4::translation({10, 0, 10}))
+        .draw<GL_TRIANGLE_FAN>();
     }
 };
 

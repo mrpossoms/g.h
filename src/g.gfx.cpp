@@ -1030,7 +1030,13 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 				continue;
 			}
 
+			if (kern.x == 0 && kern.y == 0)
+			{ // there's no point in storing kerning for pairs which have no adjustment
+				continue;
+			}
+
 			font.kerning_map[ci].insert({(unsigned char)cii, {kern.x / (float)point, kern.y / (float)point}});
+
 		}
 
 		auto slot = face->glyph;
@@ -1072,7 +1078,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 				slot->bitmap.width / (float)point,
 				slot->bitmap.rows / (float)point,
 				{ (float)-slot->bitmap_left / (float)point, (float)slot->bitmap_top / (float)point },
-				{ (float)(slot->advance.x >> 6) / (float)point, (float)(slot->advance.y >> 6) / (float)point },
+				{ (float)(slot->advance.x / 64.f) / (float)point, (float)(slot->advance.y / 64.f) / (float)point },
 			}
 		});
 	}

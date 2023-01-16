@@ -12,8 +12,8 @@ void main (void)
 {
     vec2 uv = v_uv;
 
-    float a = texture(u_texture, uv).r;
+    float a = texture(u_texture, uv).a;
     color = u_font_color;
-    color.rg = uv;
-    color.a *= a;
+    // color.rg = uv;
+    color *= a;
 }

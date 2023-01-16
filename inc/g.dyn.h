@@ -386,17 +386,20 @@ namespace cr //< Collision resolution
         {
             auto n = intersection.normal;
 
+            // correct penetration
+            // obj.position -= intersection.direction - (intersection.point - obj.position);
+
             // allow the velocity components parallel to the surface plane persist
             // which will allow the object to slide along the surface
             obj.velocity = obj.velocity - (n * (std::min<float>(0, obj.velocity.dot(n))));
+            // obj.velocity *= vec<3>{intersection.normal[1], -intersection.normal[0], 0.f};
+
             auto friction = obj.velocity * -0.3;
             obj.velocity += friction;
 
             // static coefficent of friction fudge factor
             if (obj.velocity.magnitude() < static_friction_tol) obj.velocity *= 0;
 
-            // correct penetration
-            // obj.position = intersection.point - (intersection.origin - obj.position);
         } 
     }
 } // end namespace cr
