@@ -113,6 +113,8 @@ g::gfx::sprite& g::asset::store::sprite(const std::string& partial_path, bool ma
 	{
 		std::ifstream f(root + "/sprite/" + partial_path);
 
+		if (!f.is_open()) { throw std::runtime_error(partial_path + ": sprite file could not be opened"); }
+
 		auto data = nlohmann::json::parse(f);
 
 		auto& frames = data["frames"];

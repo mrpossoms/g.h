@@ -274,6 +274,21 @@ struct sprite
 		float frame_time_s;
 		bool loop;
 
+		void track(const std::string& track_name)
+		{
+			auto itr = sheet->animation.find(track_name);
+
+			if (itr != sheet->animation.end())
+			{
+				if (animation != &(*itr).second)
+				{
+					animation = &(*itr).second;
+					frame_idx = 0;
+					frame_time_s = 0;
+				}
+			}
+		}
+
 		const g::gfx::texture& texture()
 		{
 			return *sheet->texture;
@@ -313,7 +328,7 @@ struct sprite
 		i.animation = &(*animation.begin()).second;
 		i.frame_idx = 0;
 		i.frame_time_s = 0;
-		i.loop = false;
+		i.loop = true;
 		return i; 
 	}
 };
