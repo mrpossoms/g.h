@@ -246,9 +246,91 @@ struct texture_factory
 	texture create();
 };
 
-struct sprite_sheet
+struct sprite
 {
+	struct frame
+	{
+		vec<2> position;
+		vec<2> size;
+		float duration_s;
+	};
 
+	struct animation_track
+	{
+		std::vector<frame*> frames;
+	};
+
+	g::gfx::texture* texture;
+	std::vector<frame> frames;
+	std::unordered_map<std::string, animation_track> animation;
+	vec<2> sheet_size;
+	float scale = 1;
+
+	struct instance : public g::game::updateable
+	{
+		const sprite* sheet;
+		const animation_track* animation;
+		unsigned frame_idx;
+		float frame_time_s;
+		bool loop;
+
+		void track(const std::string& track_name)
+		{
+			auto itr = sheet->animation.find(track_name);
+
+			if (itr != sheet->animation.end())
+			{
+				if (animation != &(*itr).second)
+				{
+					animation = &(*itr).second;
+					frame_idx = 0;
+					frame_time_s = 0;
+				}
+			}
+		}
+
+		const g::gfx::texture& texture()
+		{
+			return *sheet->texture;
+		}
+
+		void update(float dt, float time) override
+		{
+			frame_time_s += dt;
+			auto& current = current_frame();
+
+			if (frame_time_s >= current.duration_s)
+			{
+				auto residual = frame_time_s - current.duration_s;
+				frame_time_s = residual;
+				frame_idx++;
+			}
+
+			if (frame_idx >= animation->frames.size())
+			{
+				if (loop) { frame_idx = 0; }
+				else
+				{
+					frame_idx = animation->frames.size() - 1;
+				}
+			}
+		}
+
+		const frame& current_frame() const
+		{ return *animation->frames[frame_idx]; }
+	};
+
+	instance make_instance()
+	{
+		instance i;
+
+		i.sheet = this;
+		i.animation = &(*animation.begin()).second;
+		i.frame_idx = 0;
+		i.frame_time_s = 0;
+		i.loop = true;
+		return i; 
+	}
 };
 
 struct framebuffer
@@ -345,6 +427,8 @@ struct shader
 		}
 
 		usage set_camera(g::game::camera& cam);
+
+		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
 		uniform_usage set_uniform(const std::string& name);
 
@@ -1256,7 +1340,7 @@ struct density_volume
     unsigned depth = 1;
     unsigned kernel = 2;
     std::vector<density_volume::block*> to_regenerate;
-    g::proc::thread_pool<10> generator_pool;
+    g::proc::thread_pool<2> generator_pool;
 
     density_volume() = default;
 

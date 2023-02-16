@@ -742,6 +742,17 @@ shader::usage shader::usage::set_camera(g::game::camera& cam)
 }
 
 
+shader::usage shader::usage::set_sprite(const g::gfx::sprite::instance& sprite)
+{
+	this->set_uniform("u_sprite_sheet").texture(*sprite.sheet->texture);
+	this->set_uniform("u_sprite_sheet_size").vec2(sprite.sheet->sheet_size);
+	this->set_uniform("u_sprite_sheet_frame_pos").vec2(sprite.current_frame().position);
+	this->set_uniform("u_sprite_sheet_frame_size").vec2(sprite.current_frame().size);
+
+	return *this;
+}
+
+
 shader::uniform_usage shader::usage::set_uniform(const std::string& name)
 {
 	if (nullptr == shader_ref) { return {*this, 0xffffffff}; }
@@ -1019,7 +1030,13 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 				continue;
 			}
 
+			if (kern.x == 0 && kern.y == 0)
+			{ // there's no point in storing kerning for pairs which have no adjustment
+				continue;
+			}
+
 			font.kerning_map[ci].insert({(unsigned char)cii, {kern.x / (float)point, kern.y / (float)point}});
+
 		}
 
 		auto slot = face->glyph;
@@ -1061,7 +1078,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 				slot->bitmap.width / (float)point,
 				slot->bitmap.rows / (float)point,
 				{ (float)-slot->bitmap_left / (float)point, (float)slot->bitmap_top / (float)point },
-				{ (float)(slot->advance.x >> 6) / (float)point, (float)(slot->advance.y >> 6) / (float)point },
+				{ (float)(slot->advance.x / 64.f) / (float)point, (float)(slot->advance.y / 64.f) / (float)point },
 			}
 		});
 	}

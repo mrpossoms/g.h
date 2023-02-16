@@ -13,6 +13,8 @@
 #include <ogt_vox.h>
 #include <ogt_voxel_meshify.h>
 
+#include <nlohmann/json.hpp>
+
 g::asset::store::~store()
 {
 	// tear down assets
@@ -101,6 +103,78 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 	}
 
 	return textures[partial_path].get();
+}
+
+// TODO: this all needs serious cleanup
+g::gfx::sprite& g::asset::store::sprite(const std::string& partial_path, bool make_if_missing)
+{
+	auto itr = sprites.find(partial_path);
+	if (itr == sprites.end())
+	{
+		std::ifstream f(root + "/sprite/" + partial_path);
+
+		if (!f.is_open()) { throw std::runtime_error(partial_path + ": sprite file could not be opened"); }
+
+		auto data = nlohmann::json::parse(f);
+
+		auto& frames = data["frames"];
+		auto& meta = data["meta"];
+
+		sprites[partial_path] = { time(nullptr), {} };
+
+		auto& sprite = sprites[partial_path].get();
+
+		sprite.texture = &tex(meta["image"]);
+		sprite.sheet_size = vec<2>{ meta["size"]["w"], meta["size"]["h"] };
+		//TODO: sprite.scale = meta.
+
+		for (auto& frame : frames)
+		{
+			auto spatial = frame["frame"];
+			g::gfx::sprite::frame sprite_frame = {
+				{ spatial["x"], spatial["y"] },
+				{ spatial["w"], spatial["h"]},
+				static_cast<float>(frame["duration"]) / 1000.f
+			};
+
+			sprite.frames.push_back(sprite_frame);
+		}
+
+		if (meta.contains("frameTags"))
+		{
+			for (auto& tag : meta["frameTags"])
+			{
+				auto from = tag["from"];
+				auto to = tag["to"];
+
+				for (unsigned i = from; i <= to; i++)
+				{
+					sprite.animation[tag["name"]].frames.push_back(&sprite.frames[i]);
+				}
+			}
+		}
+		else
+		{
+			sprite.animation["default"].frames.push_back(&sprite.frames[0]);
+		}
+
+	}
+	else if (hot_reload)
+	{
+		// auto mod_time = g::io::file(root + "/tex/" + partial_path).modified();
+		// // std::cerr << mod_time << " - " << itr->second.last_accessed << std::endl;
+		// if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
+		// {
+		// 	std::cerr << partial_path << " has been updated, reloading" << std::endl;
+
+		// 	itr->second.get().destroy();
+		// 	sprites.erase(itr);
+
+		// 	return this->tex(partial_path);
+		// }
+	}
+
+	return sprites[partial_path].get();
 }
 
 
