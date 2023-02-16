@@ -255,21 +255,21 @@ struct sprite
 		float duration_s;
 	};
 
-	struct track
+	struct animation_track
 	{
 		std::vector<frame*> frames;
 	};
 
 	g::gfx::texture* texture;
 	std::vector<frame> frames;
-	std::unordered_map<std::string, track> animation;
+	std::unordered_map<std::string, animation_track> animation;
 	vec<2> sheet_size;
 	float scale = 1;
 
 	struct instance : public g::game::updateable
 	{
 		const sprite* sheet;
-		const track* animation;
+		const animation_track* animation;
 		unsigned frame_idx;
 		float frame_time_s;
 		bool loop;
