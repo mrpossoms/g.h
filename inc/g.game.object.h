@@ -119,6 +119,22 @@ struct object
 			if (g::gfx::has_graphics()) { texture(key_str); }
 		}
 
+		// load sprites
+		for (const auto& item : tree["sprites"])
+		{
+			if (!item.has_key() || !item.has_val()) { continue; }
+
+			std::string key_str(item.key().str, item.key().len);
+			std::string path_str(item.val().str, item.val().len);
+
+			if (_traits.find("sprites") == _traits.end()) { _traits["sprites"] = trait_map{}; }
+			_traits["sprites"][key_str] = path_str;
+
+			// if we have a rendering context setup then poke the texture
+			// which will cause it to be created if it doesn't exist
+			if (g::gfx::has_graphics()) { sprite(key_str); }
+		}
+
 		// load geometry
 		for (const auto& item : tree["geometry"])
 		{
@@ -176,6 +192,13 @@ struct object
 		load_if_newer();
 
 		return _store->tex(std::get<std::string>(_traits["textures"][name]), /* make_if_missing = */ true); 
+	}
+
+	g::gfx::sprite& sprite(const std::string& name)
+	{
+		load_if_newer();
+
+		return _store->sprite(std::get<std::string>(_traits["sprites"][name]), /* make_if_missing = */ true); 
 	}
 
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geometry(const std::string& name)

@@ -33,7 +33,17 @@ void text::it::operator++()
 	_ctx.glyph = _font.char_map[_ctx.c];
 }
 
-vec<2> text::it::kerning() { return _font.kerning_map[_last_char][_str[_pos]]; }
+vec<2> text::it::kerning()
+{ 
+	auto& left_char = _font.kerning_map[_last_char];
+
+	if ( left_char.contains(_ctx.c))
+	{
+		return left_char[_ctx.c];
+	}
+
+	return {0, 0};
+}
 
 bool text::it::operator!=(it &i) {return _pos != i._pos || _str != i._str; }
 
@@ -71,9 +81,9 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 	{
 		auto ctx = *itr;
 		auto& glyph = ctx.glyph;//font.char_map[str[i]];
-		auto p = (ctx.pen + ctx.glyph.left_top + itr.kerning() + vec<2>{ctx.glyph.width, 0}) * font.point;
+		auto p = vec<2>{-1, 1} * (ctx.pen + ctx.glyph.left_top + vec<2>{ctx.glyph.width, 0}) * font.point;
 
-		vec<3> glyph_scale({-glyph.width * font.point, glyph.height * font.point, 1});
+		vec<3> glyph_scale({glyph.width * font.point, glyph.height * font.point, 1});
 		vec<3> glyph_pos({p[0], p[1], 0});
 
 		auto ct = verts.size();
@@ -88,7 +98,7 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 		{
 			auto vert = tri_quad[i];
 			vert.position = (vert.position * glyph_scale) + glyph_pos;
-			// vert.uv = (vec<2>{1.0, 1.0} - vert.uv) * (glyph.uv_bottom_right - glyph.uv_top_left) + glyph.uv_top_left;
+			vert.uv = (vec<2>{1.0, 1.0} - vert.uv) * (glyph.uv_bottom_right - glyph.uv_top_left) + glyph.uv_top_left;
 
 			verts.push_back(vert);
 		}
