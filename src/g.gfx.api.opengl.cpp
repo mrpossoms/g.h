@@ -71,6 +71,7 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 		std::string version = m[0];
 		version.erase(version.find("."), 1);
 
+		g::gfx::shader_factory::shader_path = std::string("glsl/") + version + std::string("/");
 		g::gfx::shader_factory::shader_header = std::string("#version ") + version + std::string("\n");
 	}
 	else

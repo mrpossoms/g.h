@@ -108,21 +108,22 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 // TODO: this all needs serious cleanup
 g::gfx::sprite& g::asset::store::sprite(const std::string& partial_path, bool make_if_missing)
 {
-	auto itr = sprites.find(partial_path);
+	auto path = g::gfx::shader_factory::shader_path + partial_path;
+	auto itr = sprites.find(path);
 	if (itr == sprites.end())
 	{
-		std::ifstream f(root + "/sprite/" + partial_path);
+		std::ifstream f(root + "/sprite/" + path);
 
-		if (!f.is_open()) { throw std::runtime_error(partial_path + ": sprite file could not be opened"); }
+		if (!f.is_open()) { throw std::runtime_error(path + ": sprite file could not be opened"); }
 
 		auto data = nlohmann::json::parse(f);
 
 		auto& frames = data["frames"];
 		auto& meta = data["meta"];
 
-		sprites[partial_path] = { time(nullptr), {} };
+		sprites[path] = { time(nullptr), {} };
 
-		auto& sprite = sprites[partial_path].get();
+		auto& sprite = sprites[path].get();
 
 		sprite.texture = &tex(meta["image"]);
 		sprite.sheet_size = vec<2>{ meta["size"]["w"], meta["size"]["h"] };
@@ -161,20 +162,20 @@ g::gfx::sprite& g::asset::store::sprite(const std::string& partial_path, bool ma
 	}
 	else if (hot_reload)
 	{
-		// auto mod_time = g::io::file(root + "/tex/" + partial_path).modified();
+		// auto mod_time = g::io::file(root + "/tex/" + path).modified();
 		// // std::cerr << mod_time << " - " << itr->second.last_accessed << std::endl;
 		// if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
 		// {
-		// 	std::cerr << partial_path << " has been updated, reloading" << std::endl;
+		// 	std::cerr << path << " has been updated, reloading" << std::endl;
 
 		// 	itr->second.get().destroy();
 		// 	sprites.erase(itr);
 
-		// 	return this->tex(partial_path);
+		// 	return this->tex(path);
 		// }
 	}
 
-	return sprites[partial_path].get();
+	return sprites[path].get();
 }
 
 
@@ -186,13 +187,15 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 		g::gfx::shader_factory factory;
 		for (auto shader_path : g::utils::split(program_collection, "+"))
 		{
+			auto path = root + "/shader/" + g::gfx::shader_factory::shader_path + shader_path;
+
 			if (std::string::npos != shader_path.find(".vs"))
 			{
-				factory = factory.add<GL_VERTEX_SHADER>(root + "/shader/" + shader_path);
+				factory = factory.add<GL_VERTEX_SHADER>(path);
 			}
 			else if (std::string::npos != shader_path.find(".fs"))
 			{
-				factory = factory.add<GL_FRAGMENT_SHADER>(root + "/shader/" + shader_path);
+				factory = factory.add<GL_FRAGMENT_SHADER>(path);
 			}
 		}
 
@@ -204,14 +207,16 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 
 		for (auto shader_path : g::utils::split(program_collection, "+"))
 		{
+			auto path = root + "/shader/" + g::gfx::shader_factory::shader_path + shader_path;
+
 			if (std::string::npos != shader_path.find(".vs"))
 			{
-				auto mod_time = g::io::file(root + "/shader/" + shader_path).modified();
+				auto mod_time = g::io::file(path).modified();
 				do_reload |= mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time;
 			}
 			else if (std::string::npos != shader_path.find(".fs"))
 			{
-				auto mod_time = g::io::file(root + "/shader/" + shader_path).modified();
+				auto mod_time = g::io::file(path).modified();
 				do_reload |= mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time;
 			}
 		}

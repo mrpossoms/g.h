@@ -870,6 +870,8 @@ shader::usage shader::uniform_usage::texture(const g::gfx::texture& tex)
 	std::string shader_factory::shader_header = "#version 410\n";
 #endif
 
+	std::string shader_factory::shader_path;
+
 GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
 {
 	// Create the GL shader and attempt to compile it
