@@ -1,5 +1,6 @@
 #include "g.h"
 #include <chrono>
+#include <filesystem>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -8,6 +9,24 @@
 #endif
 
 GLFWwindow* g::gfx::GLFW_WIN = nullptr;
+
+
+static std::string executable_path()
+{
+#if defined(_WIN32)
+	WCHAR path[MAX_PATH];
+	GetModuleFileNameW(NULL, path, MAX_PATH);
+	return std::filesystem::path(path).remove_filename().string();
+#elif defined(__linux__)
+	char path[MAX_PATH];
+	if (readlink("/proc/self/exe", path, sizeof(path) - 1))
+	{
+		std::cerr << G_TERM_RED << "reading exe path link failed: " << std::string(strerror(errno)) << G_TERM_COLOR_OFF << std::endl;
+		return "";
+	}
+	return std::filesystem::path(path).remove_filename().string();
+#endif
+}
 
 void g::core::tick()
 {
@@ -39,6 +58,15 @@ static void EMSCRIPTEN_MAIN_LOOP(void* arg)
 
 void g::core::start(const core::opts& opts)
 {
+	auto exe_path = executable_path();
+
+	if (exe_path.length() == 0)
+	{ 
+		std::cerr << G_TERM_RED << "exe path zero length" <<  G_TERM_COLOR_OFF << std::endl;
+		return;
+	}
+	std::filesystem::current_path(exe_path);
+
 	if (opts.gfx.display)
 	{
 		// TODO: construct the appropriate graphics api instance based on user request
