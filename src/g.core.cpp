@@ -1,6 +1,7 @@
 #include "g.h"
 #include <chrono>
 #include <filesystem>
+#include <limits.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -14,17 +15,17 @@ GLFWwindow* g::gfx::GLFW_WIN = nullptr;
 static std::string executable_path()
 {
 #if defined(_WIN32)
-	WCHAR path[MAX_PATH];
-	GetModuleFileNameW(NULL, path, MAX_PATH);
-	return std::filesystem::path(path).remove_filename().string();
+	WCHAR path_buf[MAX_PATH];
+	GetModuleFileNameW(NULL, path_buf, MAX_PATH);
+	return std::filesystem::path(path_buf).remove_filename().string();
 #elif defined(__linux__)
-	char path[MAX_PATH];
-	if (readlink("/proc/self/exe", path, sizeof(path) - 1))
+	char path_buf[PATH_MAX];
+	if (readlink("/proc/self/exe", path_buf, sizeof(path_buf) - 1) <= 0)
 	{
 		std::cerr << G_TERM_RED << "reading exe path link failed: " << std::string(strerror(errno)) << G_TERM_COLOR_OFF << std::endl;
 		return "";
 	}
-	return std::filesystem::path(path).remove_filename().string();
+	return std::filesystem::path(path_buf).remove_filename().string();
 #endif
 }
 

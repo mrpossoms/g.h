@@ -108,22 +108,21 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 // TODO: this all needs serious cleanup
 g::gfx::sprite& g::asset::store::sprite(const std::string& partial_path, bool make_if_missing)
 {
-	auto path = g::gfx::shader_factory::shader_path + partial_path;
-	auto itr = sprites.find(path);
+	auto itr = sprites.find(partial_path);
 	if (itr == sprites.end())
 	{
-		std::ifstream f(root + "/sprite/" + path);
+		std::ifstream f(root + "/sprite/" + partial_path);
 
-		if (!f.is_open()) { throw std::runtime_error(path + ": sprite file could not be opened"); }
+		if (!f.is_open()) { throw std::runtime_error(partial_path + ": sprite file could not be opened"); }
 
 		auto data = nlohmann::json::parse(f);
 
 		auto& frames = data["frames"];
 		auto& meta = data["meta"];
 
-		sprites[path] = { time(nullptr), {} };
+		sprites[partial_path] = { time(nullptr), {} };
 
-		auto& sprite = sprites[path].get();
+		auto& sprite = sprites[partial_path].get();
 
 		sprite.texture = &tex(meta["image"]);
 		sprite.sheet_size = vec<2>{ meta["size"]["w"], meta["size"]["h"] };
@@ -162,20 +161,20 @@ g::gfx::sprite& g::asset::store::sprite(const std::string& partial_path, bool ma
 	}
 	else if (hot_reload)
 	{
-		// auto mod_time = g::io::file(root + "/tex/" + path).modified();
+		// auto mod_time = g::io::file(root + "/tex/" + partial_path).modified();
 		// // std::cerr << mod_time << " - " << itr->second.last_accessed << std::endl;
 		// if (mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time)
 		// {
-		// 	std::cerr << path << " has been updated, reloading" << std::endl;
+		// 	std::cerr << partial_path << " has been updated, reloading" << std::endl;
 
 		// 	itr->second.get().destroy();
 		// 	sprites.erase(itr);
 
-		// 	return this->tex(path);
+		// 	return this->tex(partial_path);
 		// }
 	}
 
-	return sprites[path].get();
+	return sprites[partial_path].get();
 }
 
 
