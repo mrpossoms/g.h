@@ -29,8 +29,8 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 	// api specific hints pre context creation
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, gfx.api_version.major);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, gfx.api_version.minor);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	// glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	// glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	if (gfx.fullscreen)
 	{
@@ -71,6 +71,7 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 		std::string version = m[0];
 		version.erase(version.find("."), 1);
 
+		g::gfx::shader_factory::shader_path = std::string("glsl/") + version + std::string("/");
 		g::gfx::shader_factory::shader_header = std::string("#version ") + version + std::string("\n");
 	}
 	else

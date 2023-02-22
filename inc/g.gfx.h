@@ -495,6 +495,7 @@ struct shader_factory
 	std::unordered_map<GLenum, GLuint> shaders;
 
 	static std::string shader_header;
+	static std::string shader_path;
 
 	static GLuint compile_shader (GLenum type, const GLchar* src, GLsizei len);
 

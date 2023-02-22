@@ -197,8 +197,10 @@ struct object
 	g::gfx::sprite& sprite(const std::string& name)
 	{
 		load_if_newer();
-
-		return _store->sprite(std::get<std::string>(_traits["sprites"][name]), /* make_if_missing = */ true); 
+		auto sprites = _traits["sprites"];
+		auto sprite = sprites[name];
+		auto sprite_name = std::get<std::string>(sprite);
+		return _store->sprite(sprite_name, /* make_if_missing = */ true); 
 	}
 
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm>& geometry(const std::string& name)

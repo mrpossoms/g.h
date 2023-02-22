@@ -186,13 +186,15 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 		g::gfx::shader_factory factory;
 		for (auto shader_path : g::utils::split(program_collection, "+"))
 		{
+			auto path = root + "/shader/" + g::gfx::shader_factory::shader_path + shader_path;
+
 			if (std::string::npos != shader_path.find(".vs"))
 			{
-				factory = factory.add<GL_VERTEX_SHADER>(root + "/shader/" + shader_path);
+				factory = factory.add<GL_VERTEX_SHADER>(path);
 			}
 			else if (std::string::npos != shader_path.find(".fs"))
 			{
-				factory = factory.add<GL_FRAGMENT_SHADER>(root + "/shader/" + shader_path);
+				factory = factory.add<GL_FRAGMENT_SHADER>(path);
 			}
 		}
 
@@ -204,14 +206,16 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 
 		for (auto shader_path : g::utils::split(program_collection, "+"))
 		{
+			auto path = root + "/shader/" + g::gfx::shader_factory::shader_path + shader_path;
+
 			if (std::string::npos != shader_path.find(".vs"))
 			{
-				auto mod_time = g::io::file(root + "/shader/" + shader_path).modified();
+				auto mod_time = g::io::file(path).modified();
 				do_reload |= mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time;
 			}
 			else if (std::string::npos != shader_path.find(".fs"))
 			{
-				auto mod_time = g::io::file(root + "/shader/" + shader_path).modified();
+				auto mod_time = g::io::file(path).modified();
 				do_reload |= mod_time < itr->second.last_accessed && itr->second.loaded_time < mod_time;
 			}
 		}
