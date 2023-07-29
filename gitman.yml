@@ -64,7 +64,7 @@ sources:
     rev: master
     # scripts:
     #   - make static
-   
+
   - name: freetype
     type: git
     repo: https://github.com/freetype/freetype.git
@@ -110,6 +110,12 @@ sources:
     scripts:
       - cmake -B build -DCMAKE_BUILD_TYPE=Release -DFLATBUFFERS_BUILD_TESTS=OFF
       - cmake --build ./build --config Release --parallel 4
+
+  - name: json
+    type: git
+    repo: https://github.com/nlohmann/json.git
+    rev: v3.11.2
+
 default_group: ''
 groups:
   -
