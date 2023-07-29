@@ -43,6 +43,8 @@ enum bit_depth
 
 void initialize();
 
+void tear_down();
+
 bool has_sound();
 
 /**

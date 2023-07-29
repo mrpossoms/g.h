@@ -27,6 +27,21 @@ void g::snd::initialize()
     }
 }
 
+void g::snd::tear_down()
+{
+    if (nullptr != ctx)
+    {
+        alcDestroyContext(ctx);
+        ctx = nullptr;
+    }
+
+    if (nullptr != dev)
+    {
+        alcCloseDevice(dev);
+        dev = nullptr;
+    }
+}
+
 
 bool g::snd::has_sound() { return ctx != nullptr; }
 

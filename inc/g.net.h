@@ -349,6 +349,7 @@ struct net
 		std::unordered_map<socket_t, T> sockets;
 		std::unordered_set<socket_t> senders;
 		std::thread listen_thread;
+		std::atomic<bool> running = {true};
 		int listen_socket;
 
 		host()
@@ -365,7 +366,9 @@ struct net
 
 		~host()
 		{
+			running = false;
 			::close(listen_socket);
+			listen_thread.join();
 		}
 
 		/**
@@ -421,7 +424,7 @@ struct net
 			}
 
 			listen_thread = std::thread([&]{
-				while(true)
+				while(running)
 				{
 					update();
 				}
@@ -516,7 +519,9 @@ struct net
 				max_sock = std::max<socket_t>(sock, max_sock);
 			}
 
-			switch (select(max_sock + 1, &rfds, NULL, NULL, NULL))
+			struct timeval timeout = { 0, 500000 };
+
+			switch (select(max_sock + 1, &rfds, NULL, NULL, &timeout))
 			{
 				case -1: { /* select error, possible disconnect */ }
 				case 0: { /* timeout occured */ }

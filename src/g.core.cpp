@@ -64,6 +64,11 @@ void g::core::start(const core::opts& opts)
 	}
 #endif
 
+	// tear down here
+	if (opts.snd.enabled)
+	{
+		g::snd::tear_down();
+	}
 }
 
 
