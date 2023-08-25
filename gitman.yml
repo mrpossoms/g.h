@@ -51,6 +51,13 @@ sources:
     #   - make -C auto
     #   - ./cmake-testbuild.sh
 
+  - name: glad
+    type: git
+    repo: https://github.com/Dav1dde/glad.git
+    sparse_paths:
+      -
+    rev: v2.0.4
+
   - name: sha1
     type: git
     repo: https://github.com/mrpossoms/sha1.git
