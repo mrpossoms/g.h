@@ -16,6 +16,7 @@ gloom::Result load_level(gloom::State& state, const std::string& name)
 		state.world.voxels = vox.flatten(true);
 		state.world.palette = vox.palette;
 		state.world.collider = std::make_unique<g::game::voxel_collider<uint8_t>>(state.world.voxels);
+		state.world.voxels.center_of_mass(/*recompute=*/true);
 	}
 	catch (std::runtime_error e)
 	{
@@ -47,6 +48,7 @@ namespace player
 	static void spawn(gloom::State& state, gloom::State::Player& p)
 	{
 		// TODO: find a place to spawn the player
+		p.position = state.world.voxels.center_of_mass();
 	}
 
 	static unsigned new_id(gloom::State& state)

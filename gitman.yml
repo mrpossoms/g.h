@@ -52,9 +52,9 @@ sources:
     sparse_paths:
       -
     rev: glew-2.2.0
-    # scripts:
-    #   - make -C auto
-    #   - ./cmake-testbuild.sh
+    scripts:
+      - make -C auto
+      - ./cmake-testbuild.sh
 
   - name: sha1
     type: git
