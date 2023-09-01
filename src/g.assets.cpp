@@ -64,7 +64,7 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 			.create();
 			textures[partial_path] = { time(nullptr), tex };
 		}
-		else
+		else if (partial_path.find(".png") == partial_path.length() - 4)
 		{
 			auto chain = g::gfx::texture_factory().from_png(root + "/tex/" + partial_path).pixelated();
 			// do spicy chain thing with processors here
@@ -81,6 +81,23 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 			if (std::string::npos != partial_path.find("pixelated"))
 			{
 				chain = chain.pixelated();
+			}
+
+			auto tex = chain.create();
+			textures[partial_path] = { time(nullptr), tex };
+		}
+		else if (partial_path.find(".tiff") == partial_path.length() - 5)
+		{
+			auto chain = g::gfx::texture_factory().from_tiff(root + "/tex/" + partial_path).pixelated();
+			// do spicy chain thing with processors here
+			if (std::string::npos != partial_path.find("repeating"))
+			{
+				chain = chain.repeating();
+			}
+
+			if (std::string::npos != partial_path.find("smooth"))
+			{
+				chain = chain.smooth();
 			}
 
 			auto tex = chain.create();

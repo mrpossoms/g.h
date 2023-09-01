@@ -65,6 +65,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gi
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
 
 
+find_package(Threads REQUIRED)
+
 # find OpenGL
 find_package(OpenGL REQUIRED)
 

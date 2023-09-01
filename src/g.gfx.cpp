@@ -1,5 +1,6 @@
 #include "g.gfx.h"
 #include <lodepng.h>
+#include <tiffio.h>
 #include <algorithm>
 
 #ifdef _WIN32
@@ -393,7 +394,7 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	// switch(colortype)
 	// {
 	// 	case LCT_GREY:
-	// 		color_type = GL_R;
+	// 		color_type = GL_RED;
 	// 		break;
 	// 	case LCT_GREY_ALPHA:
 	// 		color_type = GL_RG;
@@ -409,6 +410,223 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	// }
 
 	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
+
+	return *this;
+}
+
+texture_factory& texture_factory::from_tiff(const std::string& path)
+{
+	std::cerr << "loading texture '" <<  path << "'... ";
+
+	if (nullptr != data)
+	{
+		delete data;
+		data = nullptr;
+	}
+
+	auto tiff = TIFFOpen(path.c_str(), "r");
+
+	if (tiff == NULL)
+	{
+		std::cout << G_TERM_RED "[libtiff::TIFFOpen] '" << path << "' could not be opened" << G_TERM_COLOR_OFF << std::endl;
+		TIFFClose(tiff);
+		exit(-1);
+	}
+
+	uint32_t width = 0, height = 0, depth = 0, bits = 0;
+
+	TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &width);
+	TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &height);	
+	TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &depth);
+	TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bits);
+  	
+	size[0] = width; size[1] = height; size[2] = depth;
+	auto sample_bytes = depth * (bits / 8);
+	auto row_bytes = width * sample_bytes;
+
+	data = new uint8_t[row_bytes * height];
+	{
+		int fd_r = open("/dev/random", O_RDONLY);
+		read(fd_r, data, row_bytes * height);
+		close(fd_r);
+	}
+
+	std::cerr << "TIFF: (" << width << ", " << height << ", " << depth << ")" << std::endl;
+	std::cerr << "TIFF: bits per channel: " << bits << std::endl;
+
+	if (TIFFIsTiled(tiff))
+	{
+		std::unordered_map<uint32_t, uint32_t*> tiles;
+		std::unordered_map<uint32_t, std::tuple<vec<2, unsigned>, vec<2, unsigned>>> tile_bounds;
+
+		uint32_t tile_width = 0, tile_height = 0;
+		uint32_t tile_count = TIFFNumberOfTiles(tiff);
+		auto tile_row_bytes = TIFFTileRowSize(tiff);
+
+
+		TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tile_width);
+		TIFFGetField(tiff, TIFFTAG_TILELENGTH, &tile_height);
+		std::cerr << "TIFF: num tiles: " << TIFFNumberOfTiles(tiff) << " size: (" << tile_width << "," << tile_height << ")" << std::endl;
+
+		auto pixel_bytes = tile_row_bytes / tile_width;
+
+		// determine bounding boxes for each tile by exhaustively querying
+		// TIFFComputeTile.
+		for (unsigned r = 0; r < height; r += 1)
+		for (unsigned c = 0; c < width; c += 1)
+		{
+			auto tile_idx = TIFFComputeTile(tiff, c, r, 0, {});
+			auto itr = tile_bounds.find(tile_idx);
+
+			if (itr == tile_bounds.end())
+			{
+				tile_bounds[tile_idx] = {{r, c}, {r, c}};
+			}
+			else
+			{
+				auto& bounds = itr->second;
+				auto ul = std::get<0>(bounds);
+				auto lr = std::get<1>(bounds);
+				tile_bounds[tile_idx] = std::make_tuple(ul.take_min({r, c}), lr.take_max({r, c}));
+			}
+		}
+
+		// TODO: remove
+		for (auto& kvp : tile_bounds)
+		{
+			auto tile = kvp.first;
+			auto& bounds = kvp.second; 
+			auto ul = std::get<0>(bounds);
+			auto lr = std::get<1>(bounds);
+			std::cerr << tile << ": (" << ul.to_string() << ", " << lr.to_string() << ")" << "dims: " << (lr - ul).to_string() << std::endl;
+		}
+
+		auto dst_row_ptr = [&](unsigned r, unsigned c) -> uint8_t*
+		{
+			return &data[r * row_bytes + c * sample_bytes];
+		};
+
+		for (auto& kvp : tile_bounds)
+		{
+			auto tile_idx = kvp.first;
+			auto& tile_bounds = kvp.second;
+			auto ul = std::get<0>(tile_bounds);
+			auto lr = std::get<1>(tile_bounds);
+			auto tile_itr = tiles.find(tile_idx);
+
+			auto tile_bytes = [&]() -> unsigned
+			{
+				return (tile_width * tile_height) * pixel_bytes;
+			};
+
+			auto tile_row_bytes = [&]() -> unsigned
+			{
+				return (lr[1] - ul[1]) * pixel_bytes;
+			};
+
+			auto tile_row_ptr = [&](unsigned r, unsigned c) -> uint32_t*
+			{
+				auto tile_cols = lr[1] - ul[1];
+				r -= ul[0]; c -= ul[1];
+
+				return &tile_itr->second[r * tile_cols + c];
+			};
+
+			auto row_bytes = tile_row_bytes();
+			if (tile_itr == tiles.end())
+			{
+				auto tile_raster = (uint32_t*)_TIFFmalloc(tile_bytes());
+				auto bytes_read = TIFFReadTile(tiff, tile_raster, ul[1], ul[0], 0, {});
+				if(bytes_read != tile_bytes())
+				{
+					std::cerr << "TIFF: reading tile " << tile_idx << " failed. Read " << bytes_read << "bytes , expected " << tile_bytes() << std::endl;
+				}
+				tiles.insert({tile_idx, tile_raster});
+				tile_itr = tiles.find(tile_idx);
+			}
+
+			{
+				for (unsigned tr = ul[0]; tr <= lr[0]; tr++)
+				{
+					memcpy(dst_row_ptr(tr, ul[1]), tile_row_ptr(tr, ul[1]), row_bytes);
+					// memset(dst_row_ptr(tr, ul[1]), 255, row_bytes);
+				}
+			}
+
+			// break;
+		}
+
+		// free tiles
+		for (auto& kvp : tiles)
+		{
+			delete[] kvp.second;
+		}
+	}
+	else
+	{
+		auto tile_size_bytes = TIFFTileSize(tiff);
+		auto tile_row_bytes = TIFFTileRowSize(tiff);
+		auto line_bytes = TIFFScanlineSize(tiff);
+		uint32_t* raster = (uint32_t*)_TIFFmalloc(height * line_bytes);
+		
+		for (unsigned r = 0; r < height; r++)
+		{
+			if (TIFFReadScanline(tiff, raster + (r * line_bytes), r, {}) == -1)
+			{
+				std::cout << G_TERM_RED "[libtiff::TIFFReadScanline] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
+				TIFFClose(tiff);
+				exit(-1);
+			}
+		}		
+	}
+
+
+
+
+	// if (TIFFReadRGBAImage(tiff, width, height, (uint32_t*)data, 0))
+	// {
+	// 	std::cout << G_TERM_RED "[libtiff::TIFFReadRGBAImage] '" << path << "' failed" << G_TERM_COLOR_OFF << std::endl;
+	// 	TIFFClose(tiff);
+	// 	exit(-1);
+	// }
+
+	texture_type = GL_TEXTURE_2D;
+
+	switch(bits)
+	{
+		case 8:
+			storage_type = GL_UNSIGNED_BYTE;		
+			break;
+		case 16:
+			storage_type = GL_UNSIGNED_SHORT;
+			break;
+		case 32:
+			storage_type = GL_UNSIGNED_INT;
+			break;
+	}
+
+	switch(depth)
+	{
+		case 1:
+			color_type = GL_RED;
+			break;
+		case 2:
+			color_type = GL_RG;
+			break;
+		case 3:
+			color_type = GL_RGB;
+			break;
+		case 4:
+			color_type = GL_RGBA;
+			break;
+		default:
+			std::cout << G_TERM_RED "Creating texture '" << path << "' failed. Unsupported depth: " << depth << G_TERM_COLOR_OFF << std::endl;
+			exit(-1);
+	}
+
+	std::cerr << G_TERM_GREEN "OK" G_TERM_COLOR_OFF << std::endl;
+
+	TIFFClose(tiff);
 
 	return *this;
 }
@@ -495,7 +713,7 @@ texture_factory& texture_factory::components(unsigned count)
 	switch(component_count = count)
 	{
 		case 1:
-			color_type = GL_R;
+			color_type = GL_RED;
 			break;
 		case 2:
 			color_type = GL_RG;
