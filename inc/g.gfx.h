@@ -115,6 +115,28 @@ extern std::unique_ptr<interface> instance;
 
 } // namespace api
 
+static const char* gl_error_to_str(GLenum err)
+{
+	const static char* msg_table[] = {
+		"GL_INVALID_ENUM",
+		"GL_INVALID_VALUE",
+		"GL_INVALID_OPERATION",
+		"GL_STACK_OVERFLOW",
+		"GL_STACK_UNDERFLOW",
+		"GL_OUT_OF_MEMORY",
+		"GL_INVALID_FRAMEBUFFER_OPERATION",
+		"GL_CONTEXT_LOST",
+	};
+
+	if (err >= GL_INVALID_ENUM && err <= GL_CONTEXT_LOST)
+	{
+		return (char*)msg_table[err - GL_INVALID_ENUM];
+	}
+
+	const static char* unknown = "UNKNOWN";
+	return unknown;
+}
+
 static bool gl_get_error()
 {
 	GLenum err = GL_NO_ERROR;
@@ -122,7 +144,7 @@ static bool gl_get_error()
 
 	while((err = glGetError()) != GL_NO_ERROR)
 	{
-		std::cerr << "GL_ERROR: 0x" << std::hex << err << std::endl;
+		std::cerr << "GL_ERROR: " << std::hex << gl_error_to_str(err) << std::endl;
 		good = false;
 	}
 
@@ -150,7 +172,9 @@ float value(const vec<3>& p, const std::vector<int8_t>& entropy);
 
 struct texture
 {
-	GLenum type;
+	GLenum type = 0;
+	GLenum color_type = 0;
+	GLenum storage_type = 0;
 	unsigned component_count = 0;
 	unsigned bytes_per_component = 0;
 	unsigned size[3] = { 1, 1, 1 };
@@ -165,7 +189,7 @@ struct texture
 
 	void destroy();
 
-	void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE);
+	void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type=GL_RGBA, GLenum storage_type=GL_UNSIGNED_BYTE);
 
 	unsigned char* sample(unsigned x, unsigned y=0, unsigned z=0) const
 	{
@@ -191,6 +215,11 @@ struct texture
 	void bind() const;
 
 	void unbind() const;
+
+	float aspect() const
+	{
+		return size[0] / (float)size[1];
+	}
 };
 
 
@@ -366,6 +395,11 @@ struct framebuffer
 		glViewport(0, 0, g::gfx::width(), g::gfx::height());
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
+
+	float aspect() const
+	{
+		return size[0] / (float)size[1];
+	}
 };
 
 
@@ -426,7 +460,7 @@ struct shader
 			return *this;
 		}
 
-		usage set_camera(g::game::camera& cam);
+		usage set_camera(const g::game::camera& cam);
 
 		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
@@ -765,6 +799,7 @@ struct mesh
 		glBindTexture(GL_TEXTURE_1D, 0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindTexture(GL_TEXTURE_3D, 0);
+		assert(gl_get_error());
 
 		return usage;
 	}

@@ -12,7 +12,7 @@ g::gfx::api::opengl::opengl()
 
 g::gfx::api::opengl::~opengl()
 {
-	// TODO: teardown
+	glfwTerminate();
 }
 
 static void error_callback(int error, const char* description)
