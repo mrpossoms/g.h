@@ -352,7 +352,7 @@ struct framebuffer
 	{
 		glViewport(0, 0, size[0], size[1]);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 	}
 
 	void unbind_as_target()
@@ -420,9 +420,9 @@ struct shader
 		template<typename MV>
 		usage attach_attributes(const shader& shader)
 		{
-			//assert(gl_get_error());
+			assert(gl_get_error());
 			MV::attributes(shader.program);
-			//assert(gl_get_error());
+			assert(gl_get_error());
 			return *this;
 		}
 
@@ -437,16 +437,16 @@ struct shader
 		template<GLenum PRIM>
 		usage& draw()
 		{
-			//assert(gl_get_error());
+			assert(gl_get_error());
 			if (indices > 0)
 			{
 				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
-				//assert(gl_get_error());
+				assert(gl_get_error());
 			}
 			else
 			{
 				glDrawArrays(PRIM, 0, vertices);
-				//assert(gl_get_error());
+				assert(gl_get_error());
 			}
 
 			return *this;
@@ -708,16 +708,16 @@ struct mesh
 	mesh& set_vertices(const V* verts, size_t count)
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 		vertex_count = count;
-		//assert(gl_get_error());
+		assert(gl_get_error());
 		glBufferData(
 			GL_ARRAY_BUFFER,
 			count * sizeof(V),
 			verts,
 			GL_STATIC_DRAW
 		);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 
 		return *this;
 	}
@@ -730,7 +730,7 @@ struct mesh
 	mesh& set_indices(const uint32_t* inds, size_t count)
 	{
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 		assert(GL_TRUE == glIsBuffer(ibo));
 		index_count = count;
 		glBufferData(
@@ -739,21 +739,21 @@ struct mesh
 			inds,
 			GL_STATIC_DRAW
 		);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 
 		return *this;
 	}
 
 	shader::usage using_shader (shader& shader) const
 	{
-		//assert(gl_get_error());
+		assert(gl_get_error());
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 
 		if (index_count > 0)
 		{
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-			//assert(gl_get_error());
+			assert(gl_get_error());
 		}
 
 		shader.bind();

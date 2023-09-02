@@ -177,7 +177,14 @@ struct fps_camera : public camera_perspective, updateable, ray_collider
 	{
 		if (on_input) on_input(*this, dt);
 
-		auto up = -gravity.unit();
+		auto up = vec<3>{0, 1, 0};
+		auto grav_mag = gravity.magnitude();
+
+		if (grav_mag > std::numeric_limits<float>::epsilon())
+		{
+			up = -gravity / grav_mag;
+		}
+
 		auto d = up.dot({ 0, 1, 0 });
 		auto a = acos(d);
 		auto axis = vec<3>::cross(up, { 0, 1, 0 });
