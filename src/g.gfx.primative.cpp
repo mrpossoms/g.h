@@ -6,7 +6,7 @@ using namespace g::gfx::primative;
 g::gfx::mesh<vertex::pos_uv_norm> g::gfx::primative::text::plane;
 
 
-text::it::it(const std::string &str, g::gfx::font& f, size_t pos) : _font(f), _str(str)
+text::it::it(const std::string &str, g::gfx::font& f, size_t pos) : _str(str), _font(f)
 {
 	_pos = pos;
 	_ctx.c = _str[_pos];

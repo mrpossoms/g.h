@@ -116,7 +116,7 @@ void g::snd::source::update()
             alSourceRewind(handle);
             last_t = 0;
         }
-        else if (queued < source_track->handles.size())
+        else if (queued < (ALint)source_track->handles.size())
         {
             auto next = source_track->next(last_t);
             alSourceQueueBuffers(handle, 1, &next);
@@ -226,7 +226,6 @@ void set_observer(const vec<3>& position,
     alListenerfv(AL_VELOCITY, velocity.v);
 
     auto forward = orientation.rotate({0, 0, -1});
-    auto up = orientation.rotate({0, 1, 0});
 
     alListenerfv(AL_ORIENTATION, forward.v);
 }
