@@ -80,16 +80,25 @@ private:
 
 struct camera_perspective : public camera
 {
-	float field_of_view = M_PI / 2;
 	float near = 0.01f, far = 1000.f;
-	float aspect = 1;
+	float fov_horizontal = M_PI / 2;
+	float fov_vertical = M_PI / 2;
 
 	virtual mat<4, 4> projection() const
 	{
-		return mat<4, 4>::perspective(near, far, field_of_view, aspect);
+		return mat<4, 4>::perspective(near, far, fov_horizontal, fov_vertical);
 	}
 
-	virtual void aspect_ratio(float aspect) { this->aspect = aspect; }
+	virtual void aspect_ratio(float aspect) 
+	{ 
+		fov_vertical = fov_horizontal / aspect;
+	}
+
+	virtual void field_of_view(float fov)
+	{
+		fov_horizontal = fov;
+		fov_vertical = fov;
+	}
 };
 
 struct camera_orthographic : public camera

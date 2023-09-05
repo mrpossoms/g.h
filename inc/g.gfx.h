@@ -369,17 +369,39 @@ struct framebuffer
 		framebuffer& fb_ref;
 
 		scoped_draw(framebuffer& fb) : fb_ref(fb) { fb_ref.bind_as_target(); }
+		
+		scoped_draw(framebuffer& fb, 
+		            const vec<2, unsigned>& upper_left,
+		            const vec<2, unsigned>& lower_right) : fb_ref(fb) 
+		{ 
+			fb_ref.bind_as_target(upper_left, lower_right); 
+		}
+
 		~scoped_draw() { fb_ref.unbind_as_target(); }
+
+		scoped_draw(const scoped_draw&) = delete;
+		scoped_draw(scoped_draw&&) = delete;
+		scoped_draw& operator=(const scoped_draw&) = delete;
+		scoped_draw& operator=(scoped_draw&&) = delete;
 	};
 
 	GLuint fbo;
 	unsigned size[3];
+	vec<2> draw_region[2];
 	texture color;
 	texture depth;
 
 	void bind_as_target()
 	{
 		glViewport(0, 0, size[0], size[1]);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		assert(gl_get_error());
+	}
+
+	void bind_as_target(const vec<2, unsigned>& upper_left, const vec<2, unsigned>& lower_right)
+	{
+		auto w = lower_right[0] - upper_left[0], h = lower_right[1] - upper_left[1];
+		glViewport(upper_left[0], upper_left[1], w, h);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 		assert(gl_get_error());
 	}

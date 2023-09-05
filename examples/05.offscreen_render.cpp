@@ -45,7 +45,7 @@ struct my_core : public g::core
 		fb = g::gfx::framebuffer_factory{512, 512}.color().create();
 		grid_tex = g::gfx::texture_factory{}.from_png("data/tex/brick.color.png").create();
 
-		cam.field_of_view = M_PI / 3;
+		cam.field_of_view(M_PI / 3);
 
 		glDisable(GL_CULL_FACE);
 
