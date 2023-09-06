@@ -27,8 +27,7 @@ jobs:
       run: pip3 install gitman jinja2
 
     - name: Install Deps
-      # TODO: using libglew-dev is a cheat
-      run: sudo apt update && sudo apt install build-essential libffi-dev libreadline-dev zlib1g-dev libssl-dev libglu1-mesa-dev xorg-dev libglew-dev libopenal-dev --fix-missing && gitman install
+      run: sudo apt update && sudo apt install build-essential libffi-dev libreadline-dev zlib1g-dev libssl-dev libglu1-mesa-dev xorg-dev libopenal-dev --fix-missing && gitman install
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -76,12 +75,6 @@ jobs:
       run: |
         gitman install;
 
-    - name: GLEW build step
-      run: |
-        ls ${{github.workspace}}/gitman_sources;
-        ls ${{github.workspace}}/gitman_sources/glew;
-        msys2 -c "make -C gitman_sources/glew/auto";
-
     - name: Configure CMake
       shell: powershell
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -112,7 +105,6 @@ jobs:
         run: pip3 install gitman jinja2
 
       - name: Install Deps
-        # TODO: using libglew-dev is a cheat
         run: gitman install
 
       - name: Configure CMake
