@@ -64,6 +64,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gi
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
 
+message(INFO "   ___ _      _   ___  ")
+message(INFO "  / __| |    /_\\ |   \\")
+message(INFO " | (_ | |__ / _ \\| |) |")
+message(INFO "  \\___|____/_/ \\_\\___/ ")
+                       
 set(GLAD_SOURCES_DIR "${PROJECT_SOURCE_DIR}/gitman_sources/glad/") # Path to glad directory
 add_subdirectory("${GLAD_SOURCES_DIR}/cmake" glad_cmake) # Path to glad cmake files
 glad_add_library(glad_gl_core_33 REPRODUCIBLE API gl:core=3.3) # Specify glad settings
@@ -97,41 +102,6 @@ set(tiff-docs OFF)
 set(tiff-tests OFF)
 set(tiff-deprecated OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/libtiff)
-
-
-message(INFO "   ___ _    _____      __")
-message(INFO "  / __| |  | __\\ \\    / /")
-message(INFO " | (_ | |__| _| \\ \\/\\/ / ")
-message(INFO "  \\___|____|___| \\_/\\_/  ")                         
-if(EMSCRIPTEN)
-message(INFO "Nothing to do...")
-else()
-
-if (WIN32)
-message(STATUS "Trying to build glew for windows using mingw64")
-
-execute_process(COMMAND msys2_shell.cmd -mingw64 -c "make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto")
-
-else()
-execute_process(COMMAND make -C ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/auto)
-endif()
-# execute_process(COMMAND msys2_shell.cmd -mingw64 -c "${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/cmake-testbuild.sh")
-
-execute_process(COMMAND cmake -H${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake
-                   -B${CMAKE_BINARY_DIR}/out/build/glew
-                   -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/out
-                  )
-execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/glew --target install --config Debug)
-execute_process(COMMAND cmake --build ${CMAKE_BINARY_DIR}/out/build/glew --target install --config Release)
-
-# set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/out/build/glew, ${CMAKE_PREFIX_PATH})
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/glew/build/cmake)
-set(CMAKE_MODULE_PATH "${CMAKE_BINARY_DIR}/out/lib/cmake;${CMAKE_MODULE_PATH}")
-set(GLEW_DIR "${CMAKE_BINARY_DIR}/out/lib/cmake/glew")
-find_package(GLEW REQUIRED CONFIG)
-target_link_libraries(${PROJECT_NAME} GLEW::glew_s)
-endif()
-
 
 message(INFO "   ___ _    _____      __")
 message(INFO "  / __| |  | __\\ \\    / /")

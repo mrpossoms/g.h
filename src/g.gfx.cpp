@@ -495,7 +495,7 @@ texture_factory& texture_factory::components(unsigned count)
 	switch(component_count = count)
 	{
 		case 1:
-			color_type = GL_R;
+			color_type = GL_RED;
 			break;
 		case 2:
 			color_type = GL_RG;

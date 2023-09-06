@@ -17,7 +17,7 @@ g::gfx::api::opengl::~opengl()
 
 static void error_callback(int error, const char* description)
 {
-    std::cerr << description << std::endl;
+	std::cerr << description << std::endl;
 }
 
 void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
@@ -59,6 +59,14 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 	// TODO: this is a vile hack. I need to find a good way to decouple graphics from input
 	g::gfx::GLFW_WIN = win;
 
+	GLuint vao;
+	int version = gladLoadGL(glfwGetProcAddress);
+	if (version == 0)
+	{
+		std::cerr << "Failed to initialize OpenGL context" << std::endl;
+		throw std::runtime_error("glad runtime error");
+	}
+
 	auto glsl_ver_str = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 	std::cerr << "GL renderer: " << glGetString(GL_VERSION) << std::endl;
 	std::cerr << "GLSL version: " << glsl_ver_str << std::endl;
@@ -66,7 +74,7 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 	// set the correct glsl shader header based on the version we found
 	std::cmatch m;
 	std::regex re("[0-9]+[.][0-9]+");
-	if(std::regex_search (glsl_ver_str, m, re))
+	if (std::regex_search(glsl_ver_str, m, re))
 	{
 		std::string version = m[0];
 		version.erase(version.find("."), 1);
@@ -76,16 +84,7 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 	}
 	else
 	{
-		std::cerr << "Couldn't identify glsl version" << std::endl;	
-	}
-
-	GLuint vao;
-	GLenum err = glewInit();
-	if (GLEW_OK != err)
-	{
-		std::cerr << "glew Error: " << glewGetErrorString(err) << std::endl;
-		/* Problem: glewInit failed, something is seriously wrong. */
-		throw std::runtime_error("glew runtime error");
+		std::cerr << "Couldn't identify glsl version" << std::endl;
 	}
 
 	// Hack, webgl related IIRC
