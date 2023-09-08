@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(g VERSION 0.0.1 LANGUAGES CXX)
+project(g VERSION 0.0.1 LANGUAGES CXX C)
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -Wall -g -O0")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -Wall -g -O0")
@@ -200,21 +200,21 @@ set(BUILD_TESTS OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/json)
 target_link_libraries(${PROJECT_NAME} nlohmann_json::nlohmann_json)
 
+if (G_BUILD_EXAMPLES)
 message(INFO "   ___   ___                     _        ")
 message(INFO "  / __| | __|_ ____ _ _ __  _ __| |___ ___")
 message(INFO " | (_ | | _|\\ \\ / _` | '  \\| '_ \\ / -_|_-<")
 message(INFO "  \\___| |___/_\\_\\__,_|_|_|_| .__/_\\___/__/")
 message(INFO "                           |_|            ")
-if (G_BUILD_EXAMPLES)
 add_subdirectory(examples)
 endif()
 
 
+if (G_BUILD_TESTS)
 message(INFO "   ___   _____       _      ")
 message(INFO "  / __| |_   _|__ __| |_ ___")
 message(INFO " | (_ |   | |/ -_|_-<  _(_-<")
 message(INFO "  \\___|   |_|\\___/__/\\__/__/")
                             
-if (G_BUILD_TESTS)
 add_subdirectory(tests)
 endif()
