@@ -94,7 +94,7 @@ jobs:
       - uses: actions/checkout@v2
       
       - name: Setup Gitman
-        run: pip install gitman jinja2
+        run: pip3 install gitman jinja2
 
       - name: Install Deps
         run: gitman install
