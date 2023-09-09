@@ -87,12 +87,12 @@ mesh<vertex::pos_uv_norm> mesh_factory::cube()
 
     glGenBuffers(1, &c.ibo);
     c.set_indices({
-        (0) + 2, (0) + 3, (0) + 0, (0) + 1, (0) + 2, (0) + 0,
-        (4) + 0, (4) + 3, (4) + 2, (4) + 0, (4) + 2, (4) + 1,
-        (8) + 0, (8) + 3, (8) + 2, (8) + 0, (8) + 2, (8) + 1,
-        (12) + 2, (12) + 3, (12) + 0, (12) + 1, (12) + 2, (12) + 0,
-        (16) + 2, (16) + 3, (16) + 0, (16) + 1, (16) + 2, (16) + 0,
-        (20) + 0, (20) + 3, (20) + 2, (20) + 0, (20) + 2, (20) + 1,
+        (0) + 0, (0) + 3, (0) + 2, (0) + 0, (0) + 2, (0) + 1,
+        (4) + 2, (4) + 3, (4) + 0, (4) + 1, (4) + 2, (4) + 0,
+        (8) + 2, (8) + 3, (8) + 0, (8) + 1, (8) + 2, (8) + 0,
+        (12) + 0, (12) + 3, (12) + 2, (12) + 0, (12) + 2, (12) + 1,
+        (16) + 0, (16) + 3, (16) + 2, (16) + 0, (16) + 2, (16) + 1,
+        (20) + 2, (20) + 3, (20) + 0, (20) + 1, (20) + 2, (20) + 0,
     });
 
     return c;
@@ -102,13 +102,13 @@ mesh<vertex::pos_uv_norm> mesh_factory::cube()
 mesh<vertex::pos_uv_norm> mesh_factory::plane(const vec<3>& normal, const vec<2>& size)
 {
     mesh<vertex::pos_uv_norm> p;
-    glGenBuffers(2, &p.vbo);
+    glGenBuffers(1, &p.vbo);
 
-    auto y_basis = vec<3>{0, 1, 0};
+    auto y_basis = vec<3>{0, 0, 1};
 
     if (normal.dot(y_basis) >= 0.999)
     {
-        y_basis = {0, 0, 1};
+        y_basis = {0, 1, 0};
     }
 
     auto x_basis = vec<3>::cross(normal, y_basis);

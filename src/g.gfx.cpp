@@ -214,7 +214,7 @@ void texture::create(GLenum texture_type)
 {
 	type = texture_type;
 	glGenTextures(1, &this->hnd);
-	//assert(gl_get_error());
+	assert(gl_get_error());
 }
 
 void texture::destroy()
@@ -223,14 +223,17 @@ void texture::destroy()
 	release_bitmap();
 }
 
-void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type, GLenum storage)
+void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type, GLenum storage_type)
 {
 	size[0] = w;
 	size[1] = h;
 	size[2] = d;
 	this->data = data;
 
-	switch(storage)
+	this->color_type = color_type;
+	this->storage_type = storage_type;
+
+	switch(storage_type)
 	{
 		case GL_UNSIGNED_BYTE:
 		case GL_BYTE:
@@ -268,18 +271,18 @@ void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLen
 	if (h > 1 && d > 1)
 	{
 		type = GL_TEXTURE_3D;
-		glTexImage3D(GL_TEXTURE_3D, 0, color_type, size[0], size[1], size[2], 0, color_type, storage, data);
+		glTexImage3D(GL_TEXTURE_3D, 0, color_type, size[0], size[1], size[2], 0, color_type, storage_type, data);
 	}
 	else if (h >= 1)
 	{
 		type = GL_TEXTURE_2D;
-		if (storage == GL_FLOAT && color_type == GL_RGBA)
+		if (storage_type == GL_FLOAT && color_type == GL_RGBA)
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage, data);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage_type, data);
 		}
 		else
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage, data);
+			glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage_type, data);
 		}
 	}
 }
@@ -293,27 +296,34 @@ size_t texture::bytes() const
 
 void texture::get_pixels(unsigned char** data_out, size_t& data_out_size) const
 {
-	data_out_size = size[0] * size[1] * size[2];
-	*data_out = new unsigned char[data_out_size];
+	static GLuint pbo = 0;
 
-	GLenum storage_map[] = {
-		GL_FALSE,
-		GL_UNSIGNED_BYTE,
-		GL_UNSIGNED_BYTE,
-		GL_FALSE,
-		GL_UNSIGNED_BYTE
-	};
+	if (pbo == 0)
+	{
+		glGenBuffers(1, &pbo);
+	}
 
-	GLenum color_map[] = {
-		GL_FALSE,
-		GL_RED,
-		GL_RG,
-		GL_RGB,
-		GL_RGBA
-	};
+	assert(gl_get_error());
+	glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+	assert(gl_get_error());
+
+	auto new_data_out_size = size[0] * size[1] * size[2] * component_count * bytes_per_component;
+
+	if (data_out_size != new_data_out_size)
+	{
+		if (*data_out)
+		{
+			delete *data_out;
+		}
+
+		data_out_size = new_data_out_size;
+		*data_out = new unsigned char[data_out_size];
+	}
 
 	this->bind();
-
+	assert(gl_get_error());
+	glGetTexImage(type, 0, color_type, storage_type, *data_out);
+	assert(gl_get_error());
 }
 
 
@@ -603,9 +613,9 @@ texture texture_factory::create()
 
 	out.bind();
 
-	//assert(gl_get_error());
+	assert(gl_get_error());
 	out.set_pixels(size[0], size[1], size[2], data, color_type, storage_type);
-	//assert(gl_get_error());
+	assert(gl_get_error());
 
 
 	glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
@@ -613,9 +623,9 @@ texture texture_factory::create()
 	glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
 	glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
 	glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
-	//assert(gl_get_error());
+	assert(gl_get_error());
 	// glGenerateMipmap(GL_TEXTURE_2D);
-	//assert(gl_get_error());
+	assert(gl_get_error());
 
 	return out;
 }
@@ -661,7 +671,7 @@ framebuffer framebuffer_factory::create()
 	fb.depth = depth_tex;
 	glGenFramebuffers(1, &fb.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-	//assert(gl_get_error());
+	assert(gl_get_error());
 
 	if (color_tex.hnd != (GLuint)-1)
 	{
@@ -732,12 +742,12 @@ shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 }
 
 
-shader::usage shader::usage::set_camera(g::game::camera& cam)
+shader::usage shader::usage::set_camera(const g::game::camera& cam)
 {
-	//assert(gl_get_error());
+	assert(gl_get_error());
 	this->set_uniform("u_view").mat4(cam.view());
 	this->set_uniform("u_proj").mat4(cam.projection().transpose());
-	//assert(gl_get_error());
+	assert(gl_get_error());
 	return *this;
 }
 
@@ -879,7 +889,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 	glShaderSource(shader, 1, &src, &len);
 	glCompileShader(shader);
 
-	//assert(gl_get_error());
+	assert(gl_get_error());
 
 	// Check the compilation status
 	GLint status;
@@ -889,7 +899,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 		std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
 		std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
 	}
-	//assert(gl_get_error());
+	assert(gl_get_error());
 
 	// Print the compilation log if there's anything in there
 	GLint log_length;
@@ -901,7 +911,7 @@ GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei l
 		std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
 		free(log_str);
 	}
-	//assert(gl_get_error());
+	assert(gl_get_error());
 
 	// treat all shader compilation failure as fatal
 	if (status == GL_FALSE)
@@ -927,7 +937,7 @@ shader shader_factory::create()
 		glAttachShader(out.program, shader.second);
 	}
 
-	//assert(gl_get_error());
+	assert(gl_get_error());
 	glLinkProgram(out.program);
 
 	glGetProgramiv(out.program, GL_LINK_STATUS, &status);
@@ -946,7 +956,7 @@ shader shader_factory::create()
 		exit(-1);
 	}
 
-	//assert(gl_get_error());
+	assert(gl_get_error());
 
 	// Detach all
 	for (auto shader : shaders)

@@ -104,7 +104,7 @@ track track_factory::from_ogg(const std::string& path)
         int current_section = 0;
         v.reserve(bytes);
 
-        long pos = 0;
+        unsigned long pos = 0;
 
         ov_time_seek_lap((OggVorbis_File*)&vf, t_0);
         while (pos < v.size())

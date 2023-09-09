@@ -116,6 +116,28 @@ extern std::unique_ptr<interface> instance;
 
 } // namespace api
 
+static const char* gl_error_to_str(GLenum err)
+{
+	const static char* msg_table[] = {
+		"GL_INVALID_ENUM",
+		"GL_INVALID_VALUE",
+		"GL_INVALID_OPERATION",
+		"GL_STACK_OVERFLOW",
+		"GL_STACK_UNDERFLOW",
+		"GL_OUT_OF_MEMORY",
+		"GL_INVALID_FRAMEBUFFER_OPERATION",
+		"GL_CONTEXT_LOST",
+	};
+
+	if (err >= GL_INVALID_ENUM && err <= GL_CONTEXT_LOST)
+	{
+		return (char*)msg_table[err - GL_INVALID_ENUM];
+	}
+
+	const static char* unknown = "UNKNOWN";
+	return unknown;
+}
+
 static bool gl_get_error()
 {
 	GLenum err = GL_NO_ERROR;
@@ -123,7 +145,7 @@ static bool gl_get_error()
 
 	while((err = glGetError()) != GL_NO_ERROR)
 	{
-		std::cerr << "GL_ERROR: 0x" << std::hex << err << std::endl;
+		std::cerr << "GL_ERROR: " << std::hex << gl_error_to_str(err) << std::endl;
 		good = false;
 	}
 
@@ -151,7 +173,9 @@ float value(const vec<3>& p, const std::vector<int8_t>& entropy);
 
 struct texture
 {
-	GLenum type;
+	GLenum type = 0;
+	GLenum color_type = 0;
+	GLenum storage_type = 0;
 	unsigned component_count = 0;
 	unsigned bytes_per_component = 0;
 	unsigned size[3] = { 1, 1, 1 };
@@ -166,7 +190,7 @@ struct texture
 
 	void destroy();
 
-	void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type=GL_RGBA, GLenum storage=GL_UNSIGNED_BYTE);
+	void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type=GL_RGBA, GLenum storage_type=GL_UNSIGNED_BYTE);
 
 	unsigned char* sample(unsigned x, unsigned y=0, unsigned z=0) const
 	{
@@ -192,6 +216,11 @@ struct texture
 	void bind() const;
 
 	void unbind() const;
+
+	float aspect() const
+	{
+		return size[0] / (float)size[1];
+	}
 };
 
 
@@ -341,11 +370,25 @@ struct framebuffer
 		framebuffer& fb_ref;
 
 		scoped_draw(framebuffer& fb) : fb_ref(fb) { fb_ref.bind_as_target(); }
+		
+		scoped_draw(framebuffer& fb, 
+		            const vec<2, unsigned>& upper_left,
+		            const vec<2, unsigned>& lower_right) : fb_ref(fb) 
+		{ 
+			fb_ref.bind_as_target(upper_left, lower_right); 
+		}
+
 		~scoped_draw() { fb_ref.unbind_as_target(); }
+
+		scoped_draw(const scoped_draw&) = delete;
+		scoped_draw(scoped_draw&&) = delete;
+		scoped_draw& operator=(const scoped_draw&) = delete;
+		scoped_draw& operator=(scoped_draw&&) = delete;
 	};
 
 	GLuint fbo;
 	unsigned size[3];
+	vec<2> draw_region[2];
 	texture color;
 	texture depth;
 
@@ -353,7 +396,15 @@ struct framebuffer
 	{
 		glViewport(0, 0, size[0], size[1]);
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		//assert(gl_get_error());
+		assert(gl_get_error());
+	}
+
+	void bind_as_target(const vec<2, unsigned>& upper_left, const vec<2, unsigned>& lower_right)
+	{
+		auto w = lower_right[0] - upper_left[0], h = lower_right[1] - upper_left[1];
+		glViewport(upper_left[0], upper_left[1], w, h);
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		assert(gl_get_error());
 	}
 
 	void unbind_as_target()
@@ -366,6 +417,11 @@ struct framebuffer
 
 		glViewport(0, 0, g::gfx::width(), g::gfx::height());
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	float aspect() const
+	{
+		return size[0] / (float)size[1];
 	}
 };
 
@@ -421,13 +477,13 @@ struct shader
 		template<typename MV>
 		usage attach_attributes(const shader& shader)
 		{
-			//assert(gl_get_error());
+			assert(gl_get_error());
 			MV::attributes(shader.program);
-			//assert(gl_get_error());
+			assert(gl_get_error());
 			return *this;
 		}
 
-		usage set_camera(g::game::camera& cam);
+		usage set_camera(const g::game::camera& cam);
 
 		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
@@ -438,16 +494,16 @@ struct shader
 		template<GLenum PRIM>
 		usage& draw()
 		{
-			//assert(gl_get_error());
+			assert(gl_get_error());
 			if (indices > 0)
 			{
 				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
-				//assert(gl_get_error());
+				assert(gl_get_error());
 			}
 			else
 			{
 				glDrawArrays(PRIM, 0, vertices);
-				//assert(gl_get_error());
+				assert(gl_get_error());
 			}
 
 			return *this;
@@ -709,16 +765,16 @@ struct mesh
 	mesh& set_vertices(const V* verts, size_t count)
 	{
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 		vertex_count = count;
-		//assert(gl_get_error());
+		assert(gl_get_error());
 		glBufferData(
 			GL_ARRAY_BUFFER,
 			count * sizeof(V),
 			verts,
 			GL_STATIC_DRAW
 		);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 
 		return *this;
 	}
@@ -731,7 +787,7 @@ struct mesh
 	mesh& set_indices(const uint32_t* inds, size_t count)
 	{
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 		assert(GL_TRUE == glIsBuffer(ibo));
 		index_count = count;
 		glBufferData(
@@ -740,21 +796,21 @@ struct mesh
 			inds,
 			GL_STATIC_DRAW
 		);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 
 		return *this;
 	}
 
 	shader::usage using_shader (shader& shader) const
 	{
-		//assert(gl_get_error());
+		assert(gl_get_error());
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		//assert(gl_get_error());
+		assert(gl_get_error());
 
 		if (index_count > 0)
 		{
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-			//assert(gl_get_error());
+			assert(gl_get_error());
 		}
 
 		shader.bind();
@@ -766,6 +822,7 @@ struct mesh
 		glBindTexture(GL_TEXTURE_1D, 0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindTexture(GL_TEXTURE_3D, 0);
+		assert(gl_get_error());
 
 		return usage;
 	}
