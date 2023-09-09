@@ -28,16 +28,16 @@ add_executable(thread-pool thread-pool.cpp)
 add_executable(game-object game-object.cpp)
 add_executable(screen_space_shadows screen_space_shadows.cpp)
 
-if (WIN32)
+if (WIN32 AND NOT GITHUB_ACTION)
 message(STATUS "NOTE: Windows requires elevated permissions to create symlinks. Please run visual studio as an administrator.")
-add_custom_command(TARGET game-object PRE_BUILD
+add_custom_command(TARGET game-object POST_BUILD
                    COMMAND cmake -E create_symlink
                    ${CMAKE_SOURCE_DIR}/tests/data
                    $<TARGET_FILE_DIR:game-object>/../data
                   )
 endif ()
 
-add_custom_command(TARGET game-object PRE_BUILD
+add_custom_command(TARGET game-object POST_BUILD
                    COMMAND cmake -E create_symlink
                    ${CMAKE_SOURCE_DIR}/tests/data
                    $<TARGET_FILE_DIR:game-object>/data

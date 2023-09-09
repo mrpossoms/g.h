@@ -64,16 +64,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gi
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/opengametools/src)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/gitman_sources/lodepng)
 
-message(INFO "   ___ _      _   ___  ")
-message(INFO "  / __| |    /_\\ |   \\")
-message(INFO " | (_ | |__ / _ \\| |) |")
-message(INFO "  \\___|____/_/ \\_\\___/ ")
-                       
-set(GLAD_SOURCES_DIR "${PROJECT_SOURCE_DIR}/gitman_sources/glad/") # Path to glad directory
-add_subdirectory("${GLAD_SOURCES_DIR}/cmake" glad_cmake) # Path to glad cmake files
-glad_add_library(glad_gl_core_33 REPRODUCIBLE API gl:core=3.3) # Specify glad settings
-target_link_libraries(${PROJECT_NAME} glad_gl_core_33)
-
 # find OpenGL
 find_package(OpenGL REQUIRED)
 
@@ -87,6 +77,16 @@ message("Using static OPENAL_LIBRARY: ${OPENAL_LIBRARY}")
 else()
 find_package(OpenAL REQUIRED)
 endif ()
+
+message(INFO "   ___ _      _   ___  ")
+message(INFO "  / __| |    /_\\ |   \\")
+message(INFO " | (_ | |__ / _ \\| |) |")
+message(INFO "  \\___|____/_/ \\_\\___/ ")
+                       
+set(GLAD_SOURCES_DIR "${PROJECT_SOURCE_DIR}/gitman_sources/glad/") # Path to glad directory
+add_subdirectory("${GLAD_SOURCES_DIR}/cmake" glad_cmake) # Path to glad cmake files
+glad_add_library(glad_gl_core_33 REPRODUCIBLE API gl:core=3.3) # Specify glad settings
+target_link_libraries(${PROJECT_NAME} glad_gl_core_33)
 
 # specify includes for libg
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)

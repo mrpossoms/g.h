@@ -30,16 +30,16 @@ add_executable(11.genetic_agent 11.genetic_agent.cpp)
 add_executable(115.genetic_flight_controller 115.genetic_flight_controller.cpp)
 add_executable(12.game_objects 12.game_objects.cpp)
 
-if (WIN32)
+if (WIN32 AND NOT GITHUB_ACTION)
 message(STATUS "NOTE: Windows requires elevated permissions to create symlinks. Please run visual studio as an administrator.")
-add_custom_command(TARGET 01.core PRE_BUILD
+add_custom_command(TARGET 01.core POST_BUILD
                    COMMAND cmake -E create_symlink
                    ${CMAKE_SOURCE_DIR}/examples/data
                    $<TARGET_FILE_DIR:01.core>/../data
                   )
 endif ()
 
-add_custom_command(TARGET 01.core PRE_BUILD
+add_custom_command(TARGET 01.core POST_BUILD
                    COMMAND cmake -E create_symlink
                    ${CMAKE_SOURCE_DIR}/examples/data
                    $<TARGET_FILE_DIR:01.core>/data
