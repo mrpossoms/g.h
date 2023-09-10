@@ -5,6 +5,43 @@
 
 using namespace g::gfx;
 
+
+static const char* gl_error_to_str(GLenum err)
+{
+	const static char* msg_table[] = {
+		"GL_INVALID_ENUM",
+		"GL_INVALID_VALUE",
+		"GL_INVALID_OPERATION",
+		"GL_STACK_OVERFLOW",
+		"GL_STACK_UNDERFLOW",
+		"GL_OUT_OF_MEMORY",
+		"GL_INVALID_FRAMEBUFFER_OPERATION",
+		"GL_CONTEXT_LOST",
+	};
+
+	if (err >= GL_INVALID_ENUM && err <= GL_CONTEXT_LOST)
+	{
+		return (char*)msg_table[err - GL_INVALID_ENUM];
+	}
+
+	const static char* unknown = "UNKNOWN";
+	return unknown;
+}
+
+static bool gl_get_error()
+{
+	GLenum err = GL_NO_ERROR;
+	bool good = true;
+
+	while((err = glGetError()) != GL_NO_ERROR)
+	{
+		std::cerr << "GL_ERROR: " << std::hex << gl_error_to_str(err) << std::endl;
+		good = false;
+	}
+
+	return good;
+}
+
 g::gfx::api::opengl::opengl()
 {
 	// NOP

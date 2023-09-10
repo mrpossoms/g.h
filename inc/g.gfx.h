@@ -62,6 +62,209 @@ using namespace xmath;
 namespace g {
 namespace gfx {
 
+struct texture
+{
+	unsigned component_count = 0;
+	unsigned bytes_per_component = 0;
+	unsigned size[3] = { 1, 1, 1 };
+	unsigned char* data = nullptr;
+
+	enum class pixel_type
+	{
+		uint8,
+		int8,
+		uint16,
+		int16,
+		uint32,
+		int32,
+		float16,
+		float32,
+	};
+
+	unsigned char* sample(unsigned x, unsigned y=0, unsigned z=0) const
+	{
+		const unsigned textel_stride = bytes_per_component * component_count;
+
+		const unsigned x_stride = 1;
+		const unsigned y_stride = size[0];
+		const unsigned z_stride = size[0] * size[1];
+
+		return &data[(x * x_stride + y * y_stride + z * z_stride) * textel_stride];
+	}
+
+	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
+	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
+	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
+	inline float aspect_ratio() const { return size[0] / (float)size[1]; }
+
+	virtual inline bool is_initialized() const = 0;
+
+	virtual void release_bitmap() = 0;
+
+	// void create(GLenum texture_type);
+
+	// void destroy();
+
+
+	virtual void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, texture::pixel_type storage_type=pixel_type::uint8);
+
+	virtual void get_pixels(unsigned char** data_out, size_t& data_out_size) const = 0;
+
+	virtual void to_disk(const std::string& path) const = 0;
+
+	virtual size_t bytes() const = 0;
+	
+	virtual void bind() const = 0;
+
+	virtual void unbind() const = 0;
+};
+
+struct framebuffer
+{
+	struct scoped_draw
+	{
+		framebuffer& fb_ref;
+
+		scoped_draw(framebuffer& fb) : fb_ref(fb) { fb_ref.bind_as_target(); }
+		
+		scoped_draw(framebuffer& fb, 
+		            const vec<2, unsigned>& upper_left,
+		            const vec<2, unsigned>& lower_right) : fb_ref(fb) 
+		{ 
+			fb_ref.bind_as_target(upper_left, lower_right); 
+		}
+
+		~scoped_draw() { fb_ref.unbind_as_target(); }
+
+		scoped_draw(const scoped_draw&) = delete;
+		scoped_draw(scoped_draw&&) = delete;
+		scoped_draw& operator=(const scoped_draw&) = delete;
+		scoped_draw& operator=(scoped_draw&&) = delete;
+	};
+
+	unsigned size[3];
+	vec<2> draw_region[2];
+	texture color;
+	texture depth;
+
+	inline float aspect() const { return size[0] / (float)size[1]; }
+
+	virtual void bind_as_target() = 0;
+
+	virtual void bind_as_target(const vec<2, unsigned>& upper_left, const vec<2, unsigned>& lower_right) = 0;
+
+	virtual void unbind_as_target() = 0;
+};
+
+struct uniform_usage;
+/**
+ * @brief      shader::usage type represents the start of some invocation
+ * of an interaction with a shader.
+ */
+struct usage
+{
+	shader* shader_ref = nullptr;
+	size_t vertices = 0, indices = 0;
+	
+	usage() = default;
+	usage (shader* ref, size_t verts, size_t inds);
+
+	template<typename MV>
+	usage attach_attributes(const shader& shader)
+	{
+		assert(gl_get_error());
+		MV::attributes(shader.program);
+		assert(gl_get_error());
+		return *this;
+	}
+
+	usage set_camera(const g::game::camera& cam);
+
+	usage set_sprite(const g::gfx::sprite::instance& sprite);
+
+	uniform_usage set_uniform(const std::string& name);
+
+	uniform_usage operator[](const std::string& name);
+
+	template<GLenum PRIM>
+	usage& draw()
+	{
+		assert(gl_get_error());
+		if (indices > 0)
+		{
+			glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
+			assert(gl_get_error());
+		}
+		else
+		{
+			glDrawArrays(PRIM, 0, vertices);
+			assert(gl_get_error());
+		}
+
+		return *this;
+	}
+
+	usage& draw_tri_fan()
+	{
+		return draw<GL_TRIANGLE_FAN>();
+	}
+};
+/**
+ * @brief      { struct_description }
+ */
+struct shader
+{
+	virtual bool is_initialized() const = 0;
+
+	// void destroy();
+
+	virtual shader& bind() = 0;
+
+	/**
+	 * @brief      Offers interaction with the uniforms defined for a given shader
+	 */
+	struct uniform_usage
+	{
+		usage& parent_usage;
+
+		uniform_usage(usage& parent, GLuint loc);
+
+		usage mat4 (const mat<4, 4>& m);
+
+		usage mat3 (const mat<3, 3>& m);
+
+		usage vec2 (const vec<2>& v);
+		usage vec2n (const vec<2>* v, size_t count);
+
+		usage vec3 (const vec<3>& v);
+		usage vec3n (const vec<3>* v, size_t count);
+
+		usage vec4(const vec<4>& v);
+
+		usage flt(float f);
+		usage fltn(float* f, size_t count);
+
+		usage int1(const int i);
+
+		usage texture(const texture& tex);
+
+		virtual operator() (const mat<4, 4>& m) = 0;
+		virtual operator() (const mat<3, 3>& m) = 0;
+		virtual operator() (const vec<2>& v) = 0;
+		virtual operator() (const std::vector<vec<2>>& v) = 0;
+		virtual operator() (const vec<3>& v) = 0;
+		virtual operator() (const std::vector<vec<3>>& v) = 0;
+		virtual operator() (const vec<4>& v) = 0;
+		virtual operator() (const std::vector<vec<4>>& v) = 0;
+		virtual operator() (float f) = 0;
+		virtual operator() (const std::vector<float>& f) = 0;
+		virtual operator() (int32_t i) = 0;
+		virtual operator() (const std::vector<int32_t>& i) = 0;
+		virtual operator() (const texture& tex) = 0;
+
+	};
+};
+
 namespace api {
 
 enum class render_api
@@ -104,6 +307,9 @@ struct opengl final : public interface
 	size_t width() override;
 	size_t height() override;
 	float aspect() override;
+
+
+
 private:
 	GLFWwindow* win;
 	struct {
@@ -115,42 +321,6 @@ private:
 extern std::unique_ptr<interface> instance;
 
 } // namespace api
-
-static const char* gl_error_to_str(GLenum err)
-{
-	const static char* msg_table[] = {
-		"GL_INVALID_ENUM",
-		"GL_INVALID_VALUE",
-		"GL_INVALID_OPERATION",
-		"GL_STACK_OVERFLOW",
-		"GL_STACK_UNDERFLOW",
-		"GL_OUT_OF_MEMORY",
-		"GL_INVALID_FRAMEBUFFER_OPERATION",
-		"GL_CONTEXT_LOST",
-	};
-
-	if (err >= GL_INVALID_ENUM && err <= GL_CONTEXT_LOST)
-	{
-		return (char*)msg_table[err - GL_INVALID_ENUM];
-	}
-
-	const static char* unknown = "UNKNOWN";
-	return unknown;
-}
-
-static bool gl_get_error()
-{
-	GLenum err = GL_NO_ERROR;
-	bool good = true;
-
-	while((err = glGetError()) != GL_NO_ERROR)
-	{
-		std::cerr << "GL_ERROR: " << std::hex << gl_error_to_str(err) << std::endl;
-		good = false;
-	}
-
-	return good;
-}
 
 extern GLFWwindow* GLFW_WIN;
 
@@ -170,58 +340,6 @@ float perlin(const vec<3>& p, const std::vector<int8_t>& entropy);
 float value(const vec<3>& p, const std::vector<int8_t>& entropy);
 
 } // namespace noise
-
-struct texture
-{
-	GLenum type = 0;
-	GLenum color_type = 0;
-	GLenum storage_type = 0;
-	unsigned component_count = 0;
-	unsigned bytes_per_component = 0;
-	unsigned size[3] = { 1, 1, 1 };
-	GLuint hnd = -1;
-	unsigned char* data = nullptr;
-
-	inline bool is_initialized() const { return hnd != (unsigned)-1; }
-
-	void release_bitmap();
-
-	void create(GLenum texture_type);
-
-	void destroy();
-
-	void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type=GL_RGBA, GLenum storage_type=GL_UNSIGNED_BYTE);
-
-	unsigned char* sample(unsigned x, unsigned y=0, unsigned z=0) const
-	{
-		const unsigned textel_stride = bytes_per_component * component_count;
-
-		const unsigned x_stride = 1;
-		const unsigned y_stride = size[0];
-		const unsigned z_stride = size[0] * size[1];
-
-		return &data[(x * x_stride + y * y_stride + z * z_stride) * textel_stride];
-	}
-
-	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
-	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
-	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
-
-	void to_disk(const std::string& path) const;
-
-	size_t bytes() const;
-
-	void get_pixels(unsigned char** data_out, size_t& data_out_size) const;
-
-	void bind() const;
-
-	void unbind() const;
-
-	float aspect() const
-	{
-		return size[0] / (float)size[1];
-	}
-};
 
 
 struct texture_factory
@@ -363,68 +481,6 @@ struct sprite
 	}
 };
 
-struct framebuffer
-{
-	struct scoped_draw
-	{
-		framebuffer& fb_ref;
-
-		scoped_draw(framebuffer& fb) : fb_ref(fb) { fb_ref.bind_as_target(); }
-		
-		scoped_draw(framebuffer& fb, 
-		            const vec<2, unsigned>& upper_left,
-		            const vec<2, unsigned>& lower_right) : fb_ref(fb) 
-		{ 
-			fb_ref.bind_as_target(upper_left, lower_right); 
-		}
-
-		~scoped_draw() { fb_ref.unbind_as_target(); }
-
-		scoped_draw(const scoped_draw&) = delete;
-		scoped_draw(scoped_draw&&) = delete;
-		scoped_draw& operator=(const scoped_draw&) = delete;
-		scoped_draw& operator=(scoped_draw&&) = delete;
-	};
-
-	GLuint fbo;
-	unsigned size[3];
-	vec<2> draw_region[2];
-	texture color;
-	texture depth;
-
-	void bind_as_target()
-	{
-		glViewport(0, 0, size[0], size[1]);
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		assert(gl_get_error());
-	}
-
-	void bind_as_target(const vec<2, unsigned>& upper_left, const vec<2, unsigned>& lower_right)
-	{
-		auto w = lower_right[0] - upper_left[0], h = lower_right[1] - upper_left[1];
-		glViewport(upper_left[0], upper_left[1], w, h);
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		assert(gl_get_error());
-	}
-
-	void unbind_as_target()
-	{
-		if (color.hnd != (GLuint)-1)
-		{
-			color.bind();
-			glGenerateMipmap(GL_TEXTURE_2D);
-		}
-
-		glViewport(0, 0, g::gfx::width(), g::gfx::height());
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
-
-	float aspect() const
-	{
-		return size[0] / (float)size[1];
-	}
-};
-
 
 struct framebuffer_factory
 {
@@ -445,107 +501,6 @@ struct framebuffer_factory
 
 	framebuffer create();
 };
-
-/**
- * @brief      { struct_description }
- */
-struct shader
-{
-	GLuint program = 0;
-	std::unordered_map<std::string, GLint> uni_locs;
-
-	inline bool is_initialized() const { return program != 0; }
-
-	void destroy();
-
-	shader& bind();
-
-	struct uniform_usage;
-	/**
-	 * @brief      shader::usage type represents the start of some invocation
-	 * of an interaction with a shader.
-	 */
-	struct usage
-	{
-		shader* shader_ref = nullptr;
-		size_t vertices = 0, indices = 0;
-		int texture_unit = 0;
-
-		usage() = default;
-		usage (shader* ref, size_t verts, size_t inds);
-
-		template<typename MV>
-		usage attach_attributes(const shader& shader)
-		{
-			assert(gl_get_error());
-			MV::attributes(shader.program);
-			assert(gl_get_error());
-			return *this;
-		}
-
-		usage set_camera(const g::game::camera& cam);
-
-		usage set_sprite(const g::gfx::sprite::instance& sprite);
-
-		uniform_usage set_uniform(const std::string& name);
-
-		uniform_usage operator[](const std::string& name);
-
-		template<GLenum PRIM>
-		usage& draw()
-		{
-			assert(gl_get_error());
-			if (indices > 0)
-			{
-				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
-				assert(gl_get_error());
-			}
-			else
-			{
-				glDrawArrays(PRIM, 0, vertices);
-				assert(gl_get_error());
-			}
-
-			return *this;
-		}
-
-		usage& draw_tri_fan()
-		{
-			return draw<GL_TRIANGLE_FAN>();
-		}
-	};
-
-	/**
-	 * @brief      Offers interaction with the uniforms defined for a given shader
-	 */
-	struct uniform_usage
-	{
-		GLuint uni_loc;
-		usage& parent_usage;
-
-		uniform_usage(usage& parent, GLuint loc);
-
-		usage mat4 (const mat<4, 4>& m);
-
-		usage mat3 (const mat<3, 3>& m);
-
-		usage vec2 (const vec<2>& v);
-		usage vec2n (const vec<2>* v, size_t count);
-
-		usage vec3 (const vec<3>& v);
-		usage vec3n (const vec<3>* v, size_t count);
-
-		usage vec4(const vec<4>& v);
-
-		usage flt(float f);
-		usage fltn(float* f, size_t count);
-
-		usage int1(const int i);
-
-		usage texture(const texture& tex);
-	};
-};
-
 
 struct shader_factory
 {
