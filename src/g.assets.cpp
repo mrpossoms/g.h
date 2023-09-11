@@ -15,6 +15,8 @@
 
 #include <nlohmann/json.hpp>
 
+using namespace g::gfx;
+
 g::asset::store::~store()
 {
 	// tear down assets
@@ -53,7 +55,7 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 			// TODO:
 			auto tex = g::gfx::texture_factory(8, 8)
 			.components(3)
-			.type(GL_UNSIGNED_BYTE)
+			.type(texture::pixel_type::uint8)
 			.fill([](int x, int y, int z, unsigned char* pixel){
 				bool on_line = (x + y) & 0x1;
 				pixel[0] = !on_line * 255;
@@ -95,7 +97,7 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 		{
 			std::cerr << partial_path << " has been updated, reloading" << std::endl;
 
-			itr->second.get().destroy();
+			delete itr->second.get();
 			textures.erase(itr);
 
 			return this->tex(partial_path);
