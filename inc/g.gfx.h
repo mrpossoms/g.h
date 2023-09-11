@@ -128,7 +128,7 @@ struct texture
 		return &data[(x * x_stride + y * y_stride + z * z_stride) * textel_stride];
 	}
 
-	inline size_t dimensions() const { return size[0] > 1 + size[1] > 1 + size[2] > 1; }
+	inline size_t dimensions() const { return static_cast<size_t>(size[0] > 1) + static_cast<size_t>(size[1] > 1) + static_cast<size_t>(size[2] > 1); }
 
 	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
 	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
