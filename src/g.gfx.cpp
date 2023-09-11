@@ -339,7 +339,6 @@ void texture::unbind() const { glBindTexture(type, 0); }
 texture_factory::texture_factory(unsigned w, unsigned h)
 {
 	data = nullptr;
-	texture_type = GL_TEXTURE_2D;
 	size[0] = w;
 	size[1] = h;
 	size[2] = 1;
@@ -348,7 +347,6 @@ texture_factory::texture_factory(unsigned w, unsigned h)
 texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)
 {
 	data = nullptr;
-	texture_type = GL_TEXTURE_3D;
 	size[0] = w;
 	size[1] = h;
 	size[2] = d;
@@ -358,7 +356,6 @@ texture_factory::texture_factory(texture* existing_texture)
 {
 	existing = existing_texture;
 	data = existing->data;
-	texture_type = existing->type;
 	size[0] = existing->size[0];
 	size[1] = existing->size[1];
 	size[2] = existing->size[2];
@@ -396,9 +393,8 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	}
 
 	// a png is a 2D matrix of pixels
-	texture_type = GL_TEXTURE_2D;
-	color_type = GL_RGBA;
-	storage_type = GL_UNSIGNED_BYTE;
+	component_count = 4
+	pixel_storage_type = texture::pixel_type::uint8;
 
 	// switch(colortype)
 	// {
@@ -467,57 +463,46 @@ texture_factory& texture_factory::to_png(const std::string& path)
 	return *this;
 }
 
-texture_factory& texture_factory::type(GLenum t)
+texture_factory& texture_factory::type(texture::pixel_type t)
 {
-	storage_type = t;
+	pixel_storage_type = t;
 
-	switch(t)
-	{
-		case GL_UNSIGNED_BYTE:
-		case GL_BYTE:
-			bytes_per_component = 1;
-			break;
+	// switch(t)
+	// {
+	// 	case GL_UNSIGNED_BYTE:
+	// 	case GL_BYTE:
+	// 		bytes_per_component = 1;
+	// 		break;
 
-		case GL_UNSIGNED_SHORT:
-		case GL_SHORT:
-			bytes_per_component = 2;
-			break;
+	// 	case GL_UNSIGNED_SHORT:
+	// 	case GL_SHORT:
+	// 		bytes_per_component = 2;
+	// 		break;
 
-		case GL_UNSIGNED_INT:
-		case GL_INT:
-		case GL_FLOAT:
-			bytes_per_component = 4;
-			break;
-	}
+	// 	case GL_UNSIGNED_INT:
+	// 	case GL_INT:
+	// 	case GL_FLOAT:
+	// 		bytes_per_component = 4;
+	// 		break;
+	// }
 
 	return *this;
 }
 
 texture_factory& texture_factory::color()
 {
-	color_type = GL_RGBA;
-	storage_type = GL_UNSIGNED_BYTE;
+	pixel_storage_type = texture::pixel_type::uint8;
+	component_count = 4;
 	return *this;
 }
 
 texture_factory& texture_factory::components(unsigned count)
 {
-	switch(component_count = count)
+	component_count = count;
+
+	if (component_count < 1 || component_count > 4)
 	{
-		case 1:
-			color_type = GL_RED;
-			break;
-		case 2:
-			color_type = GL_RG;
-			break;
-		case 3:
-			color_type = GL_RGB;
-			break;
-		case 4:
-			color_type = GL_RGBA;
-			break;
-		default:
-			std::cerr << "Invalid number of components: " << count << std::endl;
+		std::cerr << "Invalid number of components: " << count << std::endl;
 	}
 
 	return *this;
@@ -532,13 +517,15 @@ texture_factory& texture_factory::depth()
 
 texture_factory& texture_factory::pixelated()
 {
-	min_filter = mag_filter = GL_NEAREST;
+	filter = texture::filter::nearest;
+
 	return *this;
 }
 
 texture_factory& texture_factory::smooth()
 {
-	min_filter = mag_filter = GL_LINEAR;
+	filter = texture::filter::linear;
+
 	return *this;
 }
 

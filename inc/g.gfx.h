@@ -117,6 +117,20 @@ struct texture
 		float32,
 	};
 
+	enum filter
+	{
+		nearest = 0,
+		linear,
+	};
+
+	enum wrap
+	{
+		clamp_to_edge = 0,
+		clamp_to_border,
+		repeat,
+		repeat_mirrored,
+	};
+
 	unsigned char* sample(unsigned x, unsigned y=0, unsigned z=0) const
 	{
 		const unsigned textel_stride = bytes_per_component * component_count;
@@ -139,16 +153,15 @@ struct texture
 
 	virtual void release_bitmap() = 0;
 
-	// void create(GLenum texture_type);
-
-	// void destroy();
-
-
 	virtual void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, texture::pixel_type storage_type=pixel_type::uint8);
 
 	virtual void get_pixels(unsigned char** data_out, size_t& data_out_size) const = 0;
 
 	virtual void to_disk(const std::string& path) const = 0;
+
+	virtual void set_filtering(texture::filter filter) = 0;
+
+	virtual void set_wrapping(texture::wrap wrap) = 0;
 
 	virtual size_t bytes() const = 0;
 	
@@ -490,8 +503,6 @@ struct opengl final : public interface
 	size_t height() override;
 	float aspect() override;
 
-
-
 private:
 	GLFWwindow* win;
 	struct {
@@ -530,12 +541,10 @@ struct texture_factory
 	unsigned size[3] = {1, 1, 1};
 	unsigned char* data = nullptr;
 	GLenum texture_type;
-	GLenum min_filter = GL_LINEAR, mag_filter = GL_LINEAR;
-	GLenum wrap_s = GL_CLAMP_TO_EDGE, wrap_t = GL_CLAMP_TO_EDGE, wrap_r = GL_CLAMP_TO_EDGE;
-	GLenum color_type = GL_RGBA;
-	GLenum storage_type = GL_UNSIGNED_BYTE;
+	texture::filter filter = texture::filter::linear;
+	texture::wrap wrap = texture::wrap::repeat;
+	texture::pixel_type pixel_storage_type = texture::pixel_type::uint8;
 	unsigned component_count = 0;
-	unsigned bytes_per_component = 0;
 
 	explicit texture_factory() = default;
 
@@ -551,7 +560,7 @@ struct texture_factory
 
 	texture_factory& to_png(const std::string& path);
 
-	texture_factory& type(GLenum t);
+	texture_factory& type(texture::pixel_type t);
 
 	texture_factory& components(unsigned count);
 
@@ -573,7 +582,7 @@ struct texture_factory
 
 	texture_factory& fill(unsigned char* buffer);
 
-	texture create();
+	texture* create();
 };
 
 struct framebuffer_factory

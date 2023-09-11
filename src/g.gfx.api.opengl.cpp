@@ -173,6 +173,32 @@ struct opengl_texture : public g::gfx::texture
 		glBindTexture(this->texture_type(), 0); 
 	}
 
+	void set_filtering(texture::filter filter) override
+	{		
+		const static GLenum filter_map[] = {
+			GL_NEAREST,
+			GL_LINEAR,
+		};
+
+		auto type = this->texture_type();
+		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, filter_map[filter]);
+		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, filter_map[filter]);
+	}
+
+	void set_wrapping(texture::wrap wrap) override
+	{
+		const static GLenum wrap_map[] = {
+			GL_CLAMP_TO_EDGE,
+			GL_CLAMP_TO_BORDER,
+			GL_REPEAT,
+			GL_MIRRORED_REPEAT,
+		};
+
+		auto type = this->texture_type();
+		glTexParameteri(type, GL_TEXTURE_WRAP_S, wrap_map[wrap]);
+		glTexParameteri(type, GL_TEXTURE_WRAP_T, wrap_map[wrap]);
+		glTexParameteri(type, GL_TEXTURE_WRAP_R, wrap_map[wrap]);
+	}
 };
 
 g::gfx::api::opengl::opengl()
