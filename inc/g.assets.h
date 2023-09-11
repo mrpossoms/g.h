@@ -41,7 +41,7 @@ struct store
 {
 	private: std::string root;
 	private: bool hot_reload;
-	private: std::unordered_map<std::string, kind<g::gfx::texture>> textures;
+	private: std::unordered_map<std::string, kind<g::gfx::texture*>> textures;
 	private: std::unordered_map<std::string, kind<g::gfx::sprite>> sprites;
 	private: std::unordered_map<std::string, kind<g::game::vox_scene>> voxels;
 	private: std::unordered_map<std::string, kind<g::gfx::shader>> shaders;

@@ -21,7 +21,7 @@ g::asset::store::~store()
 
 	for (auto& t : textures)
 	{
-		t.second.get().destroy();
+		delete t.second.get();
 	}
 
 	for (auto& s : shaders)
@@ -31,7 +31,7 @@ g::asset::store::~store()
 
 	for (auto& f : fonts)
 	{
-		f.second.get().face.destroy();
+		delete f.second.get().face;
 	}
 
 	for (auto& g : geos)
@@ -102,7 +102,7 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 		}
 	}
 
-	return textures[partial_path].get();
+	return *textures[partial_path].get();
 }
 
 // TODO: this all needs serious cleanup

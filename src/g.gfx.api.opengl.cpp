@@ -6,41 +6,174 @@
 using namespace g::gfx;
 
 
-static const char* gl_error_to_str(GLenum err)
+struct opengl_texture : public g::gfx::texture
 {
-	const static char* msg_table[] = {
-		"GL_INVALID_ENUM",
-		"GL_INVALID_VALUE",
-		"GL_INVALID_OPERATION",
-		"GL_STACK_OVERFLOW",
-		"GL_STACK_UNDERFLOW",
-		"GL_OUT_OF_MEMORY",
-		"GL_INVALID_FRAMEBUFFER_OPERATION",
-		"GL_CONTEXT_LOST",
-	};
+	GLuint id = 0;
 
-	if (err >= GL_INVALID_ENUM && err <= GL_CONTEXT_LOST)
+	GLenum texture_type()
 	{
-		return (char*)msg_table[err - GL_INVALID_ENUM];
+		auto d = this->dimensions();
+		
+		if (d == 0 || d > 3) throw std::runtime_error("texture dimensions invalid");
+
+		return { GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D }[d - 1];
 	}
 
-	const static char* unknown = "UNKNOWN";
-	return unknown;
-}
-
-static bool gl_get_error()
-{
-	GLenum err = GL_NO_ERROR;
-	bool good = true;
-
-	while((err = glGetError()) != GL_NO_ERROR)
+	opengl_texture(size_t w, size_t h, size_t d, g::gfx::texture::format f, g::gfx::texture::type t)
+		: size(w, h, d), format(f), type(t)
 	{
-		std::cerr << "GL_ERROR: " << std::hex << gl_error_to_str(err) << std::endl;
-		good = false;
+		glGenTextures(1, &id);
 	}
 
-	return good;
-}
+	~opengl_texture()
+	{
+		if (id != 0) 
+		{
+			glDeleteTextures(1, &id);
+		}
+	}
+
+	opengl_texture(opengl_texture&& other)
+	{
+		id = other.id;
+		other.id = 0;
+	}
+
+	opengl_texture& operator=(opengl_texture&& other)
+	{
+		id = other.id;
+		other.id = 0;
+		return *this;
+	}
+
+	opengl_texture(const opengl_texture& other) = delete;
+
+	opengl_texture& operator=(const opengl_texture& other) = delete;
+
+	inline bool is_initialized() const override
+	{
+		return id != 0;
+	}
+
+	void release_bitmap() override
+	{
+		if (data != nullptr)
+		{
+			free(data);
+			data = nullptr;
+		}
+	}
+
+	void set_pixels(
+		size_t w, size_t h, size_t d, 
+		unsigned char* data, 
+		texture::pixel_type storage_type=pixel_type::uint8) override
+	{
+		size[0] = w;
+		size[1] = h;
+		size[2] = d;
+		this->data = data;
+
+		switch(storage)
+		{
+			case GL_UNSIGNED_BYTE:
+			case GL_BYTE:
+				this->bytes_per_component = 1;
+				break;
+
+			case GL_UNSIGNED_SHORT:
+			case GL_SHORT:
+				this->bytes_per_component = 2;
+				break;
+
+			case GL_UNSIGNED_INT:
+			case GL_INT:
+			case GL_FLOAT:
+				this->bytes_per_component = 4;
+				break;
+		}
+
+		switch(color_type)
+		{
+			case GL_RED:
+				this->component_count = 1;
+				break;
+			case GL_RG:
+				this->component_count = 2;
+				break;
+			case GL_RGB:
+				this->component_count = 3;
+				break;
+			case GL_RGBA:
+				this->component_count = 4;
+				break;
+		}
+
+		if (h > 1 && d > 1)
+		{
+			type = GL_TEXTURE_3D;
+			glTexImage3D(GL_TEXTURE_3D, 0, color_type, size[0], size[1], size[2], 0, color_type, storage, data);
+		}
+		else if (h >= 1)
+		{
+			type = GL_TEXTURE_2D;
+			if (storage == GL_FLOAT && color_type == GL_RGBA)
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage, data);
+			}
+			else
+			{
+				glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage, data);
+			}
+		}
+	}
+
+	void get_pixels(unsigned char** data_out, size_t& data_out_size) const override
+	{
+		data_out_size = size[0] * size[1] * size[2];
+		*data_out = new unsigned char[data_out_size];
+
+		GLenum storage_map[] = {
+			GL_FALSE,
+			GL_UNSIGNED_BYTE,
+			GL_UNSIGNED_BYTE,
+			GL_FALSE,
+			GL_UNSIGNED_BYTE
+		};
+
+		GLenum color_map[] = {
+			GL_FALSE,
+			GL_RED,
+			GL_RG,
+			GL_RGB,
+			GL_RGBA
+		};
+
+		this->bind();	
+	}
+
+	void to_disk(const std::string& path) const override
+	{
+
+	}
+
+	size_t bytes() const override
+	{
+		auto pixels = size[0] * size[1] * size[2];
+		return pixels * bytes_per_component * component_count;
+	}
+	
+	void bind() const override
+	{
+		glBindTexture(this->texture_type(), id); 
+	}
+
+	void unbind() const override
+	{
+		glBindTexture(this->texture_type(), 0); 
+	}
+
+};
 
 g::gfx::api::opengl::opengl()
 {

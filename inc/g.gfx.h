@@ -62,6 +62,42 @@ using namespace xmath;
 namespace g {
 namespace gfx {
 
+static const char* gl_error_to_str(GLenum err)
+{
+	const static char* msg_table[] = {
+		"GL_INVALID_ENUM",
+		"GL_INVALID_VALUE",
+		"GL_INVALID_OPERATION",
+		"GL_STACK_OVERFLOW",
+		"GL_STACK_UNDERFLOW",
+		"GL_OUT_OF_MEMORY",
+		"GL_INVALID_FRAMEBUFFER_OPERATION",
+		"GL_CONTEXT_LOST",
+	};
+
+	if (err >= GL_INVALID_ENUM && err <= GL_CONTEXT_LOST)
+	{
+		return (char*)msg_table[err - GL_INVALID_ENUM];
+	}
+
+	const static char* unknown = "UNKNOWN";
+	return unknown;
+}
+
+static bool gl_get_error()
+{
+	GLenum err = GL_NO_ERROR;
+	bool good = true;
+
+	while((err = glGetError()) != GL_NO_ERROR)
+	{
+		std::cerr << "GL_ERROR: " << std::hex << gl_error_to_str(err) << std::endl;
+		good = false;
+	}
+
+	return good;
+}
+
 struct texture
 {
 	unsigned component_count = 0;
@@ -91,6 +127,8 @@ struct texture
 
 		return &data[(x * x_stride + y * y_stride + z * z_stride) * textel_stride];
 	}
+
+	inline size_t dimensions() const { return size[0] > 1 + size[1] > 1 + size[2] > 1; }
 
 	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
 	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
@@ -144,8 +182,8 @@ struct framebuffer
 
 	unsigned size[3];
 	vec<2> draw_region[2];
-	texture color;
-	texture depth;
+	texture& color;
+	texture& depth;
 
 	inline float aspect() const { return size[0] / (float)size[1]; }
 
@@ -156,75 +194,220 @@ struct framebuffer
 	virtual void unbind_as_target() = 0;
 };
 
-struct uniform_usage;
-/**
- * @brief      shader::usage type represents the start of some invocation
- * of an interaction with a shader.
- */
-struct usage
-{
-	shader* shader_ref = nullptr;
-	size_t vertices = 0, indices = 0;
+// struct uniform_usage;
+// /**
+//  * @brief      shader::usage type represents the start of some invocation
+//  * of an interaction with a shader.
+//  */
+// struct usage
+// {
+// 	shader* shader_ref = nullptr;
+// 	size_t vertices = 0, indices = 0;
 	
-	usage() = default;
-	usage (shader* ref, size_t verts, size_t inds);
+// 	usage() = default;
+// 	usage (shader* ref, size_t verts, size_t inds);
 
-	template<typename MV>
-	usage attach_attributes(const shader& shader)
+// 	template<typename MV>
+// 	usage attach_attributes(const shader& shader)
+// 	{
+// 		assert(gl_get_error());
+// 		MV::attributes(shader);
+// 		assert(gl_get_error());
+// 		return *this;
+// 	}
+
+// 	usage set_camera(const g::game::camera& cam);
+
+// 	usage set_sprite(const g::gfx::sprite::instance& sprite);
+
+// 	uniform_usage set_uniform(const std::string& name);
+
+// 	uniform_usage operator[](const std::string& name);
+
+// 	template<GLenum PRIM>
+// 	usage& draw()
+// 	{
+// 		assert(gl_get_error());
+// 		if (indices > 0)
+// 		{
+// 			glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
+// 			assert(gl_get_error());
+// 		}
+// 		else
+// 		{
+// 			glDrawArrays(PRIM, 0, vertices);
+// 			assert(gl_get_error());
+// 		}
+
+// 		return *this;
+// 	}
+
+// 	usage& draw_tri_fan()
+// 	{
+// 		return draw<GL_TRIANGLE_FAN>();
+// 	}
+// };
+
+struct sprite
+{
+	struct frame
 	{
-		assert(gl_get_error());
-		MV::attributes(shader.program);
-		assert(gl_get_error());
-		return *this;
-	}
+		vec<2> position;
+		vec<2> size;
+		float duration_s;
+	};
 
-	usage set_camera(const g::game::camera& cam);
-
-	usage set_sprite(const g::gfx::sprite::instance& sprite);
-
-	uniform_usage set_uniform(const std::string& name);
-
-	uniform_usage operator[](const std::string& name);
-
-	template<GLenum PRIM>
-	usage& draw()
+	struct animation_track
 	{
-		assert(gl_get_error());
-		if (indices > 0)
+		std::vector<frame*> frames;
+	};
+
+	g::gfx::texture* texture;
+	std::vector<frame> frames;
+	std::unordered_map<std::string, animation_track> animation;
+	vec<2> sheet_size;
+	float scale = 1;
+
+	struct instance : public g::game::updateable
+	{
+		const sprite* sheet;
+		const animation_track* animation;
+		unsigned frame_idx;
+		float frame_time_s;
+		bool loop;
+
+		void track(const std::string& track_name)
 		{
-			glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
-			assert(gl_get_error());
+			auto itr = sheet->animation.find(track_name);
+
+			if (itr != sheet->animation.end())
+			{
+				if (animation != &(*itr).second)
+				{
+					animation = &(*itr).second;
+					frame_idx = 0;
+					frame_time_s = 0;
+				}
+			}
 		}
-		else
+
+		const g::gfx::texture& texture()
 		{
-			glDrawArrays(PRIM, 0, vertices);
-			assert(gl_get_error());
+			return *sheet->texture;
 		}
 
-		return *this;
-	}
+		void update(float dt, float time) override
+		{
+			frame_time_s += dt;
+			auto& current = current_frame();
 
-	usage& draw_tri_fan()
+			if (frame_time_s >= current.duration_s)
+			{
+				auto residual = frame_time_s - current.duration_s;
+				frame_time_s = residual;
+				frame_idx++;
+			}
+
+			if (frame_idx >= animation->frames.size())
+			{
+				if (loop) { frame_idx = 0; }
+				else
+				{
+					frame_idx = animation->frames.size() - 1;
+				}
+			}
+		}
+
+		const frame& current_frame() const
+		{ return *animation->frames[frame_idx]; }
+	};
+
+	instance make_instance()
 	{
-		return draw<GL_TRIANGLE_FAN>();
+		instance i;
+
+		i.sheet = this;
+		i.animation = &(*animation.begin()).second;
+		i.frame_idx = 0;
+		i.frame_time_s = 0;
+		i.loop = true;
+		return i; 
 	}
 };
-/**
- * @brief      { struct_description }
- */
+
+
 struct shader
 {
-	virtual bool is_initialized() const = 0;
+	GLuint program = 0;
+	std::unordered_map<std::string, GLint> uni_locs;
 
-	// void destroy();
+	inline bool is_initialized() const { return program != 0; }
 
-	virtual shader& bind() = 0;
+	void destroy();
+
+	shader& bind();
+
+	struct uniform_usage;
+	/**
+	 * @brief      shader::usage type represents the start of some invocation
+	 * of an interaction with a shader.
+	 */
+	struct usage
+	{
+		shader* shader_ref = nullptr;
+		size_t vertices = 0, indices = 0;
+		int texture_unit = 0;
+
+		usage() = default;
+		usage (shader* ref, size_t verts, size_t inds);
+
+		template<typename MV>
+		usage attach_attributes(const shader& shader)
+		{
+			//assert(gl_get_error());
+			MV::attributes(shader);
+			//assert(gl_get_error());
+			return *this;
+		}
+
+		usage set_camera(g::game::camera& cam);
+
+		usage set_sprite(const g::gfx::sprite::instance& sprite);
+
+		uniform_usage set_uniform(const std::string& name);
+
+		uniform_usage operator[](const std::string& name);
+
+		template<GLenum PRIM>
+		usage& draw()
+		{
+			//assert(gl_get_error());
+			if (indices > 0)
+			{
+				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
+				//assert(gl_get_error());
+			}
+			else
+			{
+				glDrawArrays(PRIM, 0, vertices);
+				//assert(gl_get_error());
+			}
+
+			return *this;
+		}
+
+		usage& draw_tri_fan()
+		{
+			return draw<GL_TRIANGLE_FAN>();
+		}
+	};
 
 	/**
 	 * @brief      Offers interaction with the uniforms defined for a given shader
 	 */
 	struct uniform_usage
 	{
+		GLuint uni_loc;
 		usage& parent_usage;
 
 		uniform_usage(usage& parent, GLuint loc);
@@ -248,20 +431,19 @@ struct shader
 
 		usage texture(const texture& tex);
 
-		virtual operator() (const mat<4, 4>& m) = 0;
-		virtual operator() (const mat<3, 3>& m) = 0;
-		virtual operator() (const vec<2>& v) = 0;
-		virtual operator() (const std::vector<vec<2>>& v) = 0;
-		virtual operator() (const vec<3>& v) = 0;
-		virtual operator() (const std::vector<vec<3>>& v) = 0;
-		virtual operator() (const vec<4>& v) = 0;
-		virtual operator() (const std::vector<vec<4>>& v) = 0;
-		virtual operator() (float f) = 0;
-		virtual operator() (const std::vector<float>& f) = 0;
-		virtual operator() (int32_t i) = 0;
-		virtual operator() (const std::vector<int32_t>& i) = 0;
-		virtual operator() (const texture& tex) = 0;
-
+		// virtual operator() (const mat<4, 4>& m) = 0;
+		// virtual operator() (const mat<3, 3>& m) = 0;
+		// virtual operator() (const vec<2>& v) = 0;
+		// virtual operator() (const std::vector<vec<2>>& v) = 0;
+		// virtual operator() (const vec<3>& v) = 0;
+		// virtual operator() (const std::vector<vec<3>>& v) = 0;
+		// virtual operator() (const vec<4>& v) = 0;
+		// virtual operator() (const std::vector<vec<4>>& v) = 0;
+		// virtual operator() (float f) = 0;
+		// virtual operator() (const std::vector<float>& f) = 0;
+		// virtual operator() (int32_t i) = 0;
+		// virtual operator() (const std::vector<int32_t>& i) = 0;
+		// virtual operator() (const texture& tex) = 0;
 	};
 };
 
@@ -394,98 +576,11 @@ struct texture_factory
 	texture create();
 };
 
-struct sprite
-{
-	struct frame
-	{
-		vec<2> position;
-		vec<2> size;
-		float duration_s;
-	};
-
-	struct animation_track
-	{
-		std::vector<frame*> frames;
-	};
-
-	g::gfx::texture* texture;
-	std::vector<frame> frames;
-	std::unordered_map<std::string, animation_track> animation;
-	vec<2> sheet_size;
-	float scale = 1;
-
-	struct instance : public g::game::updateable
-	{
-		const sprite* sheet;
-		const animation_track* animation;
-		unsigned frame_idx;
-		float frame_time_s;
-		bool loop;
-
-		void track(const std::string& track_name)
-		{
-			auto itr = sheet->animation.find(track_name);
-
-			if (itr != sheet->animation.end())
-			{
-				if (animation != &(*itr).second)
-				{
-					animation = &(*itr).second;
-					frame_idx = 0;
-					frame_time_s = 0;
-				}
-			}
-		}
-
-		const g::gfx::texture& texture()
-		{
-			return *sheet->texture;
-		}
-
-		void update(float dt, float time) override
-		{
-			frame_time_s += dt;
-			auto& current = current_frame();
-
-			if (frame_time_s >= current.duration_s)
-			{
-				auto residual = frame_time_s - current.duration_s;
-				frame_time_s = residual;
-				frame_idx++;
-			}
-
-			if (frame_idx >= animation->frames.size())
-			{
-				if (loop) { frame_idx = 0; }
-				else
-				{
-					frame_idx = animation->frames.size() - 1;
-				}
-			}
-		}
-
-		const frame& current_frame() const
-		{ return *animation->frames[frame_idx]; }
-	};
-
-	instance make_instance()
-	{
-		instance i;
-
-		i.sheet = this;
-		i.animation = &(*animation.begin()).second;
-		i.frame_idx = 0;
-		i.frame_time_s = 0;
-		i.loop = true;
-		return i; 
-	}
-};
-
-
 struct framebuffer_factory
 {
 	unsigned size[2] = {1, 1};
-	texture color_tex, depth_tex;
+	texture& color_tex;
+	texture& depth_tex;
 
 	framebuffer_factory(unsigned w, unsigned h);
 
@@ -561,9 +656,9 @@ namespace vertex
 	{
 		vec<3> position;
 
-		static void attributes(GLuint prog)
+		static void attributes(g::gfx::shader& shader)
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
+			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
 
 			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
 			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
@@ -575,10 +670,10 @@ namespace vertex
 		vec<3> position;
 		vec<2> uv;
 
-		static void attributes(GLuint prog)
+		static void attributes(g::gfx::shader& shader)
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto uv_loc = glGetAttribLocation(prog, "a_uv");
+			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+			auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
 
 			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
 			if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
@@ -595,10 +690,10 @@ namespace vertex
 		vec<3> position;
 		vec<3> normal;
 
-		static void attributes(GLuint prog)
+		static void attributes(g::gfx::shader& shader)
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto norm_loc = glGetAttribLocation(prog, "a_normal");
+			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
 
 			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
 			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
@@ -616,11 +711,11 @@ namespace vertex
 		vec<2> uv;
 		vec<3> normal;
 
-		static void attributes(GLuint prog)
+		static void attributes(g::gfx::shader& shader)
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto uv_loc = glGetAttribLocation(prog, "a_uv");
-			auto norm_loc = glGetAttribLocation(prog, "a_normal");
+			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+			auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
+			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
 
 			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
 			if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
@@ -641,11 +736,11 @@ namespace vertex
 		vec<3> normal;
 		vec<3> tangent;
 
-		static void attributes(GLuint prog)
+		static void attributes(g::gfx::shader& shader)
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto norm_loc = glGetAttribLocation(prog, "a_normal");
-			auto tan_loc = glGetAttribLocation(prog, "a_tangent");
+			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
+			auto tan_loc = glGetAttribLocation(shader.program, "a_tangent");
 
 			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
 			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
@@ -666,11 +761,11 @@ namespace vertex
 		vec<3> normal;
 		vec<4, uint8_t> color;
 
-		static void attributes(GLuint prog)
+		static void attributes(g::gfx::shader& shader)
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto norm_loc = glGetAttribLocation(prog, "a_normal");
-			auto color_loc = glGetAttribLocation(prog, "a_color");
+			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
+			auto color_loc = glGetAttribLocation(shader.program, "a_color");
 
 			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
 			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
@@ -1270,7 +1365,7 @@ struct font
 		vec<2> advance;
 	};
 	unsigned point;
-	texture face; /**< Texture containing all characters of the font face */
+	texture* face; /**< Texture containing all characters of the font face */
 	std::unordered_map<unsigned char, glyph> char_map; /**< associates string characters with their corresponding glyph */
 	std::unordered_map<unsigned char, std::unordered_map<unsigned char, vec<2>>> kerning_map;
 };
