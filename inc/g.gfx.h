@@ -667,7 +667,7 @@ namespace vertex
 	{
 		vec<3> position;
 
-		static void attributes(g::gfx::shader& shader)
+		static void attributes(const g::gfx::shader& shader)
 		{
 			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
 
@@ -681,7 +681,7 @@ namespace vertex
 		vec<3> position;
 		vec<2> uv;
 
-		static void attributes(g::gfx::shader& shader)
+		static void attributes(const g::gfx::shader& shader)
 		{
 			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
 			auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
@@ -701,7 +701,7 @@ namespace vertex
 		vec<3> position;
 		vec<3> normal;
 
-		static void attributes(g::gfx::shader& shader)
+		static void attributes(const g::gfx::shader& shader)
 		{
 			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
 			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
@@ -722,7 +722,7 @@ namespace vertex
 		vec<2> uv;
 		vec<3> normal;
 
-		static void attributes(g::gfx::shader& shader)
+		static void attributes(const g::gfx::shader& shader)
 		{
 			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
 			auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
@@ -747,7 +747,7 @@ namespace vertex
 		vec<3> normal;
 		vec<3> tangent;
 
-		static void attributes(g::gfx::shader& shader)
+		static void attributes(const g::gfx::shader& shader)
 		{
 			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
 			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
@@ -772,7 +772,7 @@ namespace vertex
 		vec<3> normal;
 		vec<4, uint8_t> color;
 
-		static void attributes(g::gfx::shader& shader)
+		static void attributes(const g::gfx::shader& shader)
 		{
 			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
 			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
