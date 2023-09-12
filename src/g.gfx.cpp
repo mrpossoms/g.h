@@ -201,164 +201,29 @@ float g::gfx::noise::value(const vec<3>& p, const std::vector<int8_t>& entropy)
 	return ya0 * (1 - w[0]) + yb0 * w[0];
 }
 
-void texture::release_bitmap()
-{
-	if (data)
-	{
-		free(data);
-		data = nullptr;
-	}
-}
-
-void texture::create(GLenum texture_type)
-{
-	type = texture_type;
-	glGenTextures(1, &this->hnd);
-	assert(gl_get_error());
-}
-
-void texture::destroy()
-{
-	glDeleteTextures(1, &hnd);
-	release_bitmap();
-}
-
-void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type, GLenum storage_type)
-{
-	size[0] = w;
-	size[1] = h;
-	size[2] = d;
-	this->data = data;
-
-	this->color_type = color_type;
-	this->storage_type = storage_type;
-
-	switch(storage_type)
-	{
-		case GL_UNSIGNED_BYTE:
-		case GL_BYTE:
-			this->bytes_per_component = 1;
-			break;
-
-		case GL_UNSIGNED_SHORT:
-		case GL_SHORT:
-			this->bytes_per_component = 2;
-			break;
-
-		case GL_UNSIGNED_INT:
-		case GL_INT:
-		case GL_FLOAT:
-			this->bytes_per_component = 4;
-			break;
-	}
-
-	switch(color_type)
-	{
-		case GL_RED:
-			this->component_count = 1;
-			break;
-		case GL_RG:
-			this->component_count = 2;
-			break;
-		case GL_RGB:
-			this->component_count = 3;
-			break;
-		case GL_RGBA:
-			this->component_count = 4;
-			break;
-	}
-
-	if (h > 1 && d > 1)
-	{
-		type = GL_TEXTURE_3D;
-		glTexImage3D(GL_TEXTURE_3D, 0, color_type, size[0], size[1], size[2], 0, color_type, storage_type, data);
-	}
-	else if (h >= 1)
-	{
-		type = GL_TEXTURE_2D;
-		if (storage_type == GL_FLOAT && color_type == GL_RGBA)
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage_type, data);
-		}
-		else
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage_type, data);
-		}
-	}
-}
-
-size_t texture::bytes() const
-{
-	auto pixels = size[0] * size[1] * size[2];
-	return pixels * bytes_per_component * component_count;
-}
-
-
-void texture::get_pixels(unsigned char** data_out, size_t& data_out_size) const
-{
-	static GLuint pbo = 0;
-
-	if (pbo == 0)
-	{
-		glGenBuffers(1, &pbo);
-	}
-
-	assert(gl_get_error());
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-	assert(gl_get_error());
-
-	auto new_data_out_size = size[0] * size[1] * size[2] * component_count * bytes_per_component;
-
-	if (data_out_size != new_data_out_size)
-	{
-		if (*data_out)
-		{
-			delete *data_out;
-		}
-
-		data_out_size = new_data_out_size;
-		*data_out = new unsigned char[data_out_size];
-	}
-
-	this->bind();
-	assert(gl_get_error());
-	glGetTexImage(type, 0, color_type, storage_type, *data_out);
-	assert(gl_get_error());
-}
-
-
-void texture::to_disk(const std::string& path) const
-{
-
-}
-
-void texture::bind() const { glBindTexture(type, hnd); }
-
-void texture::unbind() const { glBindTexture(type, 0); }
-
 texture_factory::texture_factory(unsigned w, unsigned h)
 {
 	data = nullptr;
-	size[0] = w;
-	size[1] = h;
-	size[2] = 1;
+	desc.size[0] = w;
+	desc.size[1] = h;
+	desc.size[2] = 1;
 }
 
 texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)
 {
 	data = nullptr;
-	size[0] = w;
-	size[1] = h;
-	size[2] = d;
+	desc.size[0] = w;
+	desc.size[1] = h;
+	desc.size[2] = d;
 }
 
 texture_factory::texture_factory(texture* existing_texture)
 {
 	existing = existing_texture;
 	data = existing->data;
-	size[0] = existing->size[0];
-	size[1] = existing->size[1];
-	size[2] = existing->size[2];
+	desc.size[0] = existing->desc.size[0];
+	desc.size[1] = existing->desc.size[1];
+	desc.size[2] = existing->desc.size[2];
 }
 
 void texture_factory::abort(std::string message)
@@ -392,9 +257,9 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	  exit(-1);
 	}
 
-	// a png is a 2D matrix of pixels
-	component_count = 4
-	pixel_storage_type = texture::pixel_type::uint8;
+	// TODO: this is stupid and naive
+	desc.usage = {.red=1, .green=1, .blue=1, .alpha=1};
+	desc.pixel_storage_type = texture::pixel_type::uint8;
 
 	// switch(colortype)
 	// {
@@ -424,23 +289,28 @@ texture_factory& texture_factory::to_png(const std::string& path)
 	std::cerr << "writing texture '" <<  path << "'... ";
 
 	LodePNGColorType color_type = LCT_RGB;
+	size_t bits_per_pixel = 0;
 
 	switch(component_count)
 	{
 		case 1:
 			color_type = LCT_GREY;
+			bits_per_pixel = 8;
 			break;
 		case 2:
 			color_type = LCT_GREY_ALPHA;
+			bits_per_pixel = 16;
 			break;
 		case 3:
 			color_type = LCT_RGB;
+			bits_per_pixel = 24;
 			break;
 		case 4:
 			color_type = LCT_RGBA;
+			bits_per_pixel = 32;
 			break;
 		default:
-			std::cerr << G_TERM_RED << "Invalid component count: '" <<  component_count << G_TERM_COLOR_OFF << std::endl;
+			std::cerr << G_TERM_RED << "Unsupported component count: '" <<  component_count << G_TERM_COLOR_OFF << std::endl;
 	}
 
 	auto error = lodepng_encode_file(
@@ -448,7 +318,7 @@ texture_factory& texture_factory::to_png(const std::string& path)
 		(const unsigned char*)data,
 		size[0], size[1],
 		color_type,
-		bytes_per_component * 8
+		bits_per_pixel
 	);
 
 	// If there's an error, display it.
@@ -465,44 +335,35 @@ texture_factory& texture_factory::to_png(const std::string& path)
 
 texture_factory& texture_factory::type(texture::pixel_type t)
 {
-	pixel_storage_type = t;
-
-	// switch(t)
-	// {
-	// 	case GL_UNSIGNED_BYTE:
-	// 	case GL_BYTE:
-	// 		bytes_per_component = 1;
-	// 		break;
-
-	// 	case GL_UNSIGNED_SHORT:
-	// 	case GL_SHORT:
-	// 		bytes_per_component = 2;
-	// 		break;
-
-	// 	case GL_UNSIGNED_INT:
-	// 	case GL_INT:
-	// 	case GL_FLOAT:
-	// 		bytes_per_component = 4;
-	// 		break;
-	// }
-
+	desc.pixel_storage_type = t;
 	return *this;
 }
 
 texture_factory& texture_factory::color()
 {
-	pixel_storage_type = texture::pixel_type::uint8;
-	component_count = 4;
+	desc.pixel_storage_type = texture::pixel_type::uint8;
+	desc.usage = {.red=1, .green=1, .blue=1, .alpha=1};
 	return *this;
 }
 
 texture_factory& texture_factory::components(unsigned count)
 {
-	component_count = count;
-
-	if (component_count < 1 || component_count > 4)
+	switch(count)
 	{
-		std::cerr << "Invalid number of components: " << count << std::endl;
+		case 1:
+			desc.usage = {.red=1, .green=0, .blue=0, .alpha=0};
+			break;
+		case 2:
+			desc.usage = {.red=1, .green=1, .blue=0, .alpha=0};
+			break;
+		case 3:
+			desc.usage = {.red=1, .green=1, .blue=1, .alpha=0};
+			break;
+		case 4:
+			desc.usage = {.red=1, .green=1, .blue=1, .alpha=1};
+			break;
+		default:
+			std::cerr << "Invalid number of components: " << count << std::endl;
 	}
 
 	return *this;
@@ -510,40 +371,40 @@ texture_factory& texture_factory::components(unsigned count)
 
 texture_factory& texture_factory::depth()
 {
-	color_type = GL_DEPTH_COMPONENT;
-	storage_type = GL_UNSIGNED_SHORT;
+	usage = { .depth = true };
+	pixel_storage_type = texture::pixel_type::uint16;
 	return *this;
 }
 
 texture_factory& texture_factory::pixelated()
 {
-	filter = texture::filter::nearest;
+	desc.filter = texture::filter::nearest;
 
 	return *this;
 }
 
 texture_factory& texture_factory::smooth()
 {
-	filter = texture::filter::linear;
+	desc.filter = texture::filter::linear;
 
 	return *this;
 }
 
 texture_factory& texture_factory::clamped()
 {
-	wrap_s = wrap_t = wrap_r = GL_CLAMP_TO_EDGE;
+	desc.wrap = texture::wrap::clamp_to_edge;
 	return *this;
 }
 
 texture_factory& texture_factory::clamped_to_border()
 {
-	wrap_s = wrap_t = wrap_r = GL_CLAMP_TO_BORDER;
+	desc.wrap = texture::wrap::clamp_to_border;
 	return *this;
 }
 
 texture_factory& texture_factory::repeating()
 {
-	wrap_s = wrap_t = wrap_r = GL_REPEAT;
+	desc.wrap = texture::wrap::repeat;
 	return *this;
 }
 
@@ -552,7 +413,7 @@ texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, u
 {
 	// void* pixels;
 
-	auto bytes_per_textel = bytes_per_component * component_count;
+	auto bytes_per_textel = desc.bytes_per_pixel();
 	auto textels_per_row = size[2];
 	auto textels_per_plane = size[1] * size[2];
 	data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
@@ -580,36 +441,36 @@ texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, u
 texture_factory& texture_factory::fill(unsigned char* buffer)
 {
 	data = buffer;
-
 	return *this;
 }
 
 
-texture texture_factory::create()
+texture* texture_factory::create()
 {
-	texture out;
+	texture* out;
 
 	if (existing)
 	{
-		out = *existing;
+		out = existing;
 	}
 	else
 	{
-		out.create(texture_type);		
+		out = g::gfx::api::instance->make_texture(desc);
 	}
 
 	out.bind();
 
 	assert(gl_get_error());
-	out.set_pixels(size[0], size[1], size[2], data, color_type, storage_type);
+	out->set_pixels(desc, data);
+
 	assert(gl_get_error());
 
 
-	glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
-	glTexParameteri(texture_type, GL_TEXTURE_WRAP_T, wrap_t);
-	glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
-	glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
-	glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
+	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
+	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_T, wrap_t);
+	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
+	// glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
+	// glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
 	assert(gl_get_error());
 	// glGenerateMipmap(GL_TEXTURE_2D);
 	assert(gl_get_error());
@@ -627,8 +488,8 @@ framebuffer_factory::framebuffer_factory(unsigned w, unsigned h)
 framebuffer_factory::framebuffer_factory(texture& dst)
 {
 	color_tex = dst;
-	size[0] = color_tex.size[0];
-	size[1] = color_tex.size[1];
+	size[0] = color_tex.desc.size[0];
+	size[1] = color_tex.desc.size[1];
 }
 
 framebuffer_factory& framebuffer_factory::color()

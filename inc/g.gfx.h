@@ -100,13 +100,19 @@ static bool gl_get_error()
 
 struct texture
 {
-	unsigned component_count = 0;
-	unsigned bytes_per_component = 0;
-	unsigned size[3] = { 1, 1, 1 };
-	unsigned char* data = nullptr;
 
-	enum class pixel_type
+	struct usage
 	{
+		int red : 1;
+		int green : 1;
+		int blue : 1;
+		int alpha : 1;
+		int depth : 1;
+	};
+
+	enum pixel_type
+	{
+		unspecified = 0,
 		uint8,
 		int8,
 		uint16,
@@ -117,6 +123,9 @@ struct texture
 		float32,
 	};
 
+	// TODO: think, even though opengl associates
+	// filtering and wrapping with the texture, it's not
+	// really a property of the texture, but of the sampling technique
 	enum filter
 	{
 		nearest = 0,
@@ -124,38 +133,70 @@ struct texture
 	};
 
 	enum wrap
-	{
+	{				
 		clamp_to_edge = 0,
 		clamp_to_border,
 		repeat,
 		repeat_mirrored,
 	};
 
+	struct description
+	{
+		unsigned size[3] = { 1, 1, 1 };
+		texture::pixel_type pixel_storage_type = pixel_type::uint8;
+		texture::usage usage = { .red=1, .green=1, .blue=1, .alpha=1 };
+		texture::filter filter = texture::filter::linear;
+		texture::wrap wrap = texture::wrap::repeat;
+
+		unsigned components() const { return usage.red + usage.green + usage.blue + usage.alpha + usage.depth; }
+		size_t bytes_per_component() const
+		{
+			static const size_t size_map[] = {
+				0, // unspecified
+				1, // uint8
+				1, // int8
+				2, // uint16
+				2, // int16
+				4, // uint32
+				4, // int32
+				2, // float16
+				4, // float32
+			};
+
+			return size_map[static_cast<size_t>(pixel_storage_type)];
+		}
+		size_t bytes_per_pixel() const { return bytes_per_component() * components(); }
+		size_t bytes() const { return size[0] * size[1] * size[2] * bytes_per_pixel(); }
+	};
+
+	unsigned char* data = nullptr;
+	texture::description desc;
+
 	unsigned char* sample(unsigned x, unsigned y=0, unsigned z=0) const
 	{
-		const unsigned textel_stride = bytes_per_component * component_count;
+		const unsigned textel_stride = desc.bytes_per_pixel();
 
 		const unsigned x_stride = 1;
-		const unsigned y_stride = size[0];
-		const unsigned z_stride = size[0] * size[1];
+		const unsigned y_stride = desc.size[0];
+		const unsigned z_stride = desc.size[0] * desc.size[1];
 
 		return &data[(x * x_stride + y * y_stride + z * z_stride) * textel_stride];
 	}
 
 	virtual ~texture() {}
 
-	inline size_t dimensions() const { return static_cast<size_t>(size[0] > 1) + static_cast<size_t>(size[1] > 1) + static_cast<size_t>(size[2] > 1); }
-
-	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
-	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
-	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
-	inline float aspect_ratio() const { return size[0] / (float)size[1]; }
+	inline size_t dimensions() const { return static_cast<size_t>(desc.size[0] > 1) + static_cast<size_t>(desc.size[1] > 1) + static_cast<size_t>(desc.size[2] > 1); }
+	size_t bytes() const { return desc.bytes(); }
+	inline bool is_1D() const { return desc.size[0] > 1 && desc.size[1] == 1 && desc.size[2] == 1; }
+	inline bool is_2D() const { return desc.size[0] > 1 && desc.size[1] > 1 && desc.size[2] == 1; }
+	inline bool is_3D() const { return desc.size[0] > 1 && desc.size[1] > 1 && desc.size[2] > 1; }
+	inline float aspect_ratio() const { return desc.size[0] / (float)desc.size[1]; }
 
 	virtual inline bool is_initialized() const = 0;
 
 	virtual void release_bitmap() = 0;
 
-	virtual void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, texture::pixel_type storage_type=pixel_type::uint8);
+	virtual void set_pixels(const texture::description& description, unsigned char* data);
 
 	virtual void get_pixels(unsigned char** data_out, size_t& data_out_size) const = 0;
 
@@ -165,8 +206,6 @@ struct texture
 
 	virtual void set_wrapping(texture::wrap wrap) = 0;
 
-	virtual size_t bytes() const = 0;
-	
 	virtual void bind() const = 0;
 
 	virtual void unbind() const = 0;
@@ -195,12 +234,15 @@ struct framebuffer
 		scoped_draw& operator=(scoped_draw&&) = delete;
 	};
 
-	unsigned size[3];
 	vec<2> draw_region[2];
 	texture& color;
 	texture& depth;
 
 	inline float aspect() const { return size[0] / (float)size[1]; }
+
+	framebuffer
+
+	virtual ~framebuffer() = 0;
 
 	virtual void bind_as_target() = 0;
 
@@ -490,6 +532,8 @@ struct interface {
 	virtual size_t width() = 0;
 	virtual size_t height() = 0;
 	virtual float aspect() = 0;
+
+	virtual texture* make_texture(const texture::description& desc) = 0;
 };
 
 struct opengl final : public interface
@@ -504,6 +548,8 @@ struct opengl final : public interface
 	size_t width() override;
 	size_t height() override;
 	float aspect() override;
+
+	texture* make_texture(const texture::description& desc) override;
 
 private:
 	GLFWwindow* win;
@@ -540,13 +586,8 @@ float value(const vec<3>& p, const std::vector<int8_t>& entropy);
 struct texture_factory
 {
 	texture* existing = nullptr;
-	unsigned size[3] = {1, 1, 1};
 	unsigned char* data = nullptr;
-	GLenum texture_type;
-	texture::filter filter = texture::filter::linear;
-	texture::wrap wrap = texture::wrap::repeat;
-	texture::pixel_type pixel_storage_type = texture::pixel_type::uint8;
-	unsigned component_count = 0;
+	texture::description desc;
 
 	explicit texture_factory() = default;
 
@@ -1289,17 +1330,17 @@ struct mesh_factory
 		std::vector<VERT> vertices;
 		std::vector<uint32_t> indices;
 
-		for (unsigned i = 0; i < tex.size[0]; i++)
-		for (unsigned j = 0; j < tex.size[1]; j++)
+		for (unsigned i = 0; i < tex.desc.size[0]; i++)
+		for (unsigned j = 0; j < tex.desc.size[1]; j++)
 		{
 			vertices.push_back(generator(tex, i, j));
 		}
 
-		for (unsigned y = 0; y < tex.size[0] - 1; y++)
-		for (unsigned x = 0; x < tex.size[1] - 1; x++)
+		for (unsigned y = 0; y < tex.desc.size[0] - 1; y++)
+		for (unsigned x = 0; x < tex.desc.size[1] - 1; x++)
 		{
-			unsigned i = x + y * (tex.size[0]);
-			unsigned j = x + (y + 1) * (tex.size[0]);
+			unsigned i = x + y * (tex.desc.size[0]);
+			unsigned j = x + (y + 1) * (tex.desc.size[0]);
 			
 			indices.push_back(i);
 			indices.push_back(i + 1);
@@ -1325,14 +1366,14 @@ struct mesh_factory
 			return {
 				// position
 				{
-					x - tex.size[0] * 0.5f,
+					x - tex.desc.size[0] * 0.5f,
 					static_cast<float>(tex.sample(x, y)[0] * 0.25f),
-					y - tex.size[1] * 0.5f,
+					y - tex.desc.size[1] * 0.5f,
 				},
 				// uv
 				{
-					x / (float)tex.size[0],
-					y / (float)tex.size[1],
+					x / (float)tex.desc.size[0],
+					y / (float)tex.desc.size[1],
 				},
 				// normal
 				{ 0, 1, 0 }
@@ -1732,7 +1773,7 @@ struct volume_slicer : public renderer<texture>
         	{     0,     0,     0,              1 }
         };
 
-        const vec<3> delta = { 1.f/(float)vox.size[0], 1.f/(float)vox.size[1], 1.f/(float)vox.size[2] };
+        const vec<3> delta = { 1.f/(float)vox.desc.size[0], 1.f/(float)vox.desc.size[1], 1.f/(float)vox.desc.size[2] };
 
         return slices.using_shader(shader)
                .set_camera(cam)

@@ -10,7 +10,7 @@ struct opengl_texture : public g::gfx::texture
 {
 	GLuint id = 0;
 
-	GLenum texture_type()
+	GLenum type()
 	{
 		auto d = this->dimensions();
 		
@@ -19,14 +19,70 @@ struct opengl_texture : public g::gfx::texture
 		return { GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D }[d - 1];
 	}
 
-	opengl_texture(size_t w, size_t h, size_t d, g::gfx::texture::format f, g::gfx::texture::type t)
-		: size(w, h, d), format(f), type(t)
+	GLenum format()
+	{
+		const static GLenum color_map[] = {
+			GL_FALSE,
+			GL_RED,
+			GL_RG,
+			GL_RGB,
+			GL_RGBA
+		};
+
+		return color_map[desc.pixel_type];
+	}
+
+	GLenum internal_format()
+	{
+		if (desc.usage.depth)
+		{
+			const static GLenum color_map[] = {
+				GL_FALSE,
+				GL_DEPTH_COMPONENT16,
+				GL_DEPTH_COMPONENT24,
+				GL_DEPTH_COMPONENT32,
+				GL_DEPTH_COMPONENT32F,
+			};
+
+			return color_map[desc.pixel_type];
+		}
+		else
+		{
+			const static GLenum color_map[][4] = {
+				{ GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE, },
+				{ GL_R8UI, GL_RG8UI, GL_RGB8UI, GL_RBGA8UI, },
+				{ GL_R8I, GL_RG8I, GL_RGB8I, GL_RBGA8I, },
+				{ GL_R16UI, GL_RG16UI, GL_RGB16UI, GL_RBGA16UI, },
+				{ GL_R16I, GL_RG16I, GL_RGB16I, GL_RBGA16I, },
+				{ GL_R32UI, GL_RG32UI, GL_RGB32UI, GL_RBGA32UI, },
+				{ GL_R32I, GL_RG32I, GL_RGB32I, GL_RBGA32I, },
+				{ GL_R16F, GL_RG16F, GL_RGB16F, GL_RBGA16F, },
+				{ GL_R32F, GL_RG32F, GL_RGB32F, GL_RBGA32F, },
+			};
+
+			return color_map[desc.pixel_type];			
+		}
+	}
+
+	GLenum target()
+	{
+		auto d = this->dimensions();
+		
+		if (d == 0 || d > 3) throw std::runtime_error("texture dimensions invalid");
+
+		return { GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D }[d - 1];
+	}
+
+	opengl_texture(const texture::description& desc)
+		: data(nullptr), desc(desc)
 	{
 		glGenTextures(1, &id);
 	}
 
 	~opengl_texture()
 	{
+		this->release_bitmap();
+
 		if (id != 0) 
 		{
 			glDeleteTextures(1, &id);
@@ -65,112 +121,45 @@ struct opengl_texture : public g::gfx::texture
 	}
 
 	void set_pixels(
-		size_t w, size_t h, size_t d, 
-		unsigned char* data, 
-		texture::pixel_type storage_type=pixel_type::uint8) override
+		const texture::description& desc,
+		unsigned char* data) override
 	{
-		size[0] = w;
-		size[1] = h;
-		size[2] = d;
+		this->desc = desc;
 		this->data = data;
-
-		switch(storage)
-		{
-			case GL_UNSIGNED_BYTE:
-			case GL_BYTE:
-				this->bytes_per_component = 1;
-				break;
-
-			case GL_UNSIGNED_SHORT:
-			case GL_SHORT:
-				this->bytes_per_component = 2;
-				break;
-
-			case GL_UNSIGNED_INT:
-			case GL_INT:
-			case GL_FLOAT:
-				this->bytes_per_component = 4;
-				break;
-		}
-
-		switch(color_type)
-		{
-			case GL_RED:
-				this->component_count = 1;
-				break;
-			case GL_RG:
-				this->component_count = 2;
-				break;
-			case GL_RGB:
-				this->component_count = 3;
-				break;
-			case GL_RGBA:
-				this->component_count = 4;
-				break;
-		}
 
 		if (h > 1 && d > 1)
 		{
-			type = GL_TEXTURE_3D;
-			glTexImage3D(GL_TEXTURE_3D, 0, color_type, size[0], size[1], size[2], 0, color_type, storage, data);
+			glTexImage3D(GL_TEXTURE_3D, 0, internal_format(), size[0], size[1], size[2], 0, format(), type(), data);
 		}
 		else if (h >= 1)
 		{
-			type = GL_TEXTURE_2D;
-			if (storage == GL_FLOAT && color_type == GL_RGBA)
-			{
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage, data);
-			}
-			else
-			{
-				glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage, data);
-			}
+			glTexImage2D(GL_TEXTURE_2D, 0, internal_format(), size[0], size[1], 0, format(), type(), data);
 		}
 	}
 
 	void get_pixels(unsigned char** data_out, size_t& data_out_size) const override
 	{
-		data_out_size = size[0] * size[1] * size[2];
+		data_out_size = desc.bytes();
 		*data_out = new unsigned char[data_out_size];
 
-		GLenum storage_map[] = {
-			GL_FALSE,
-			GL_UNSIGNED_BYTE,
-			GL_UNSIGNED_BYTE,
-			GL_FALSE,
-			GL_UNSIGNED_BYTE
-		};
-
-		GLenum color_map[] = {
-			GL_FALSE,
-			GL_RED,
-			GL_RG,
-			GL_RGB,
-			GL_RGBA
-		};
-
 		this->bind();	
+
+		// TODO
 	}
 
 	void to_disk(const std::string& path) const override
 	{
 
 	}
-
-	size_t bytes() const override
-	{
-		auto pixels = size[0] * size[1] * size[2];
-		return pixels * bytes_per_component * component_count;
-	}
 	
 	void bind() const override
 	{
-		glBindTexture(this->texture_type(), id); 
+		glBindTexture(this->target(), id); 
 	}
 
 	void unbind() const override
 	{
-		glBindTexture(this->texture_type(), 0); 
+		glBindTexture(this->target(), 0); 
 	}
 
 	void set_filtering(texture::filter filter) override
@@ -180,7 +169,7 @@ struct opengl_texture : public g::gfx::texture
 			GL_LINEAR,
 		};
 
-		auto type = this->texture_type();
+		auto type = this->target();
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, filter_map[filter]);
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, filter_map[filter]);
 	}
@@ -194,7 +183,7 @@ struct opengl_texture : public g::gfx::texture
 			GL_MIRRORED_REPEAT,
 		};
 
-		auto type = this->texture_type();
+		auto type = this->target();
 		glTexParameteri(type, GL_TEXTURE_WRAP_S, wrap_map[wrap]);
 		glTexParameteri(type, GL_TEXTURE_WRAP_T, wrap_map[wrap]);
 		glTexParameteri(type, GL_TEXTURE_WRAP_R, wrap_map[wrap]);
@@ -320,4 +309,9 @@ size_t g::gfx::api::opengl::height()
 float g::gfx::api::opengl::aspect()
 {
 	return framebuffer.width / (float)framebuffer.height;
+}
+
+texture* g::gfx::api::opengl::make_texture(const texture::description& desc)
+{
+	return new opengl_texture(w, h, d, f, t);
 }
