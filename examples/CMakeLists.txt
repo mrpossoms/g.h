@@ -1,20 +1,16 @@
 find_package(OpenGL REQUIRED)
 find_package(Ogg REQUIRED)
-find_package(glew REQUIRED)
 
 link_libraries(g)
 link_libraries(glfw)
 link_libraries(${OPENAL_LIBRARY})
-# link_libraries(ogg)
 link_libraries(vorbis)
 
-# include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../gitman_sources/xmath.h/inc)
 include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../inc ${OPENAL_INCLUDE_DIR})
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-# add_subdirectory(../gitman_sources/glfw)
 
 add_executable(01.core 01.core.cpp)
 add_executable(02.net_host 02.net_host.cpp)
@@ -34,16 +30,16 @@ add_executable(11.genetic_agent 11.genetic_agent.cpp)
 add_executable(115.genetic_flight_controller 115.genetic_flight_controller.cpp)
 add_executable(12.game_objects 12.game_objects.cpp)
 
-if (WIN32)
+if (WIN32 AND NOT GITHUB_ACTION)
 message(STATUS "NOTE: Windows requires elevated permissions to create symlinks. Please run visual studio as an administrator.")
-add_custom_command(TARGET 01.core PRE_BUILD
+add_custom_command(TARGET 01.core POST_BUILD
                    COMMAND cmake -E create_symlink
                    ${CMAKE_SOURCE_DIR}/examples/data
                    $<TARGET_FILE_DIR:01.core>/../data
                   )
 endif ()
 
-add_custom_command(TARGET 01.core PRE_BUILD
+add_custom_command(TARGET 01.core POST_BUILD
                    COMMAND cmake -E create_symlink
                    ${CMAKE_SOURCE_DIR}/examples/data
                    $<TARGET_FILE_DIR:01.core>/data

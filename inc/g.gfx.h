@@ -21,7 +21,7 @@
 #include <fcntl.h>
 
 #ifdef _WIN32
-#include <gl/glew.h>
+#include <glad/gl.h>
 #include <gl/GL.h>
 #include <io.h>
 #define open _open
@@ -30,7 +30,8 @@
 
 #ifdef __linux__
 #include <unistd.h>
-#include <GL/glew.h>
+
+#include <glad/gl.h>
 #include <GL/glx.h>
 #include <GL/glext.h>
 #include <GL/gl.h>
@@ -41,14 +42,14 @@
 #include <unistd.h>
 #define GL_GLEXT_PROTOTYPES
 #define EGL_EGLEXT_PROTOTYPES
-#include <GL/glew.h>
+#include <glad/gl.h>
 #include <GL/glext.h>
 #include <GL/gl.h>
 #endif
 
 #ifdef __APPLE__
 #include <unistd.h>
-#include <GL/glew.h>
+#include <glad/gl.h>
 #endif
 
 #include <GLFW/glfw3.h>
