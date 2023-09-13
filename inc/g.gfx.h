@@ -235,12 +235,32 @@ struct framebuffer
 	};
 
 	vec<2> draw_region[2];
-	texture& color;
-	texture& depth;
+	texture* color;
+	texture* depth;
 
-	inline float aspect() const { return size[0] / (float)size[1]; }
+	inline float aspect() const
+	{
+		if (color)
+		{
+			return color->aspect_ratio();
+		}
+		else if (depth)
+		{
+			return depth->aspect_ratio();
+		}
+	}
 
-	framebuffer
+	void check_validity()
+	{
+		if (color && depth)
+		for (int i = 0; i < 3; i++)
+		{
+			if (color->desc.size[i] != depth->desc.size[i])
+			{
+				throw std::runtime_error("color and depth textures must have the same dimensions");
+			}
+		}
+	}
 
 	virtual ~framebuffer() = 0;
 
