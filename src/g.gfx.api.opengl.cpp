@@ -214,6 +214,7 @@ struct opengl_framebuffer : public g::gfx::framebuffer
 		: _color(color), _depth(depth)
 	{
 		glGenFramebuffers(1, &id);
+		glBindFramebuffer(GL_FRAMEBUFFER, id);
 
 		if (_color && _depth)
 		{
@@ -230,11 +231,13 @@ struct opengl_framebuffer : public g::gfx::framebuffer
 		if (_color)
 		{
 			glNamedFramebufferTexture(id, GL_COLOR_ATTACHMENT0, _color->id, 0);
+			assert(gl_get_error());
 		}
 
 		if (_depth)
 		{
 			glNamedFramebufferTexture(id, GL_DEPTH_ATTACHMENT, _depth->id, 0);
+			assert(gl_get_error());
 		}
 
 		auto fb_stat = glCheckNamedFramebufferStatus(id, GL_FRAMEBUFFER);
