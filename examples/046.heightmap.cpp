@@ -40,7 +40,7 @@ struct my_core : public g::core
     g::game::camera_perspective cam;
     g::gfx::mesh<g::gfx::vertex::pos_uv_norm> terrain;
 
-    std::function<vertex::pos_uv_norm(const texture& t, int x, int y)> vertex_generator;
+    std::function<vertex::pos_uv_norm(const texture* t, int x, int y)> vertex_generator;
 
     virtual bool initialize()
     {
@@ -50,18 +50,18 @@ struct my_core : public g::core
                                                .add_src<GL_FRAGMENT_SHADER>(fs_src)
                                                .create();
 
-        vertex_generator = [](const texture& tex, int x, int y) -> vertex::pos_uv_norm {
+        vertex_generator = [](const texture* tex, int x, int y) -> vertex::pos_uv_norm {
             return {
                 // position
                 {
-                    x - tex.size[0] * 0.5f,
-                    static_cast<float>(tex.sample(x, y)[0] * 0.25f),
-                    y - tex.size[1] * 0.5f,
+                    x - tex->desc.size[0] * 0.5f,
+                    static_cast<float>(tex->sample(x, y)[0] * 0.25f),
+                    y - tex->desc.size[1] * 0.5f,
                 },
                 // uv
                 {
-                    x / (float)tex.size[0],
-                    y / (float)tex.size[1],
+                    x / (float)tex->desc.size[0],
+                    y / (float)tex->desc.size[1],
                 },
                 // normal
                 { 0, 1, 0 }

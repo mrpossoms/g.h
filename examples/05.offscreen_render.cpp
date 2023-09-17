@@ -28,8 +28,8 @@ struct my_core : public g::core
 {
 	g::gfx::shader basic_shader;
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
-	g::gfx::texture grid_tex;
-	g::gfx::framebuffer fb;
+	g::gfx::texture* grid_tex;
+	g::gfx::framebuffer* fb;
 	g::game::camera_perspective cam;
 
 	virtual bool initialize()
@@ -77,7 +77,7 @@ struct my_core : public g::core
 		plane.using_shader(basic_shader)
 		.set_camera(cam)
 		["u_model"].mat4(model)
-		["u_tex"].texture(fb.color)
+		["u_tex"].texture(fb->color())
 		.draw<GL_TRIANGLE_FAN>();
 	}
 

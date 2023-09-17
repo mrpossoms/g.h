@@ -9,17 +9,25 @@ using namespace g::gfx;
 struct opengl_texture : public g::gfx::texture
 {
 	GLuint id = 0;
+	// uint8_t* data = nullptr;
+	// texture::description desc = {};
 
-	GLenum type()
+	GLenum type() const
 	{
-		auto d = this->dimensions();
-		
-		if (d == 0 || d > 3) throw std::runtime_error("texture dimensions invalid");
-
-		return { GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D }[d - 1];
+		return (GLenum[]){ 
+			GL_FALSE, 
+			GL_UNSIGNED_BYTE, 
+			GL_BYTE,
+			GL_UNSIGNED_SHORT,
+			GL_SHORT,
+			GL_UNSIGNED_INT,
+			GL_INT,
+			GL_HALF_FLOAT,
+			GL_FLOAT,
+		}[desc.pixel_storage_type];
 	}
 
-	GLenum format()
+	GLenum format() const
 	{
 		const static GLenum color_map[] = {
 			GL_FALSE,
@@ -29,57 +37,62 @@ struct opengl_texture : public g::gfx::texture
 			GL_RGBA
 		};
 
-		return color_map[desc.pixel_type];
+		return color_map[desc.components()];
 	}
 
-	GLenum internal_format()
+	GLenum internal_format() const
 	{
 		if (desc.usage.depth)
 		{
 			const static GLenum color_map[] = {
 				GL_FALSE,
+				GL_FALSE,
+				GL_FALSE,
 				GL_DEPTH_COMPONENT16,
-				GL_DEPTH_COMPONENT24,
+				GL_DEPTH_COMPONENT16,
 				GL_DEPTH_COMPONENT32,
+				GL_DEPTH_COMPONENT32,
+				GL_FALSE,
 				GL_DEPTH_COMPONENT32F,
 			};
 
-			return color_map[desc.pixel_type];
+			return color_map[desc.pixel_storage_type];
 		}
 		else
 		{
 			const static GLenum color_map[][4] = {
 				{ GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE, },
-				{ GL_R8UI, GL_RG8UI, GL_RGB8UI, GL_RBGA8UI, },
-				{ GL_R8I, GL_RG8I, GL_RGB8I, GL_RBGA8I, },
-				{ GL_R16UI, GL_RG16UI, GL_RGB16UI, GL_RBGA16UI, },
-				{ GL_R16I, GL_RG16I, GL_RGB16I, GL_RBGA16I, },
-				{ GL_R32UI, GL_RG32UI, GL_RGB32UI, GL_RBGA32UI, },
-				{ GL_R32I, GL_RG32I, GL_RGB32I, GL_RBGA32I, },
-				{ GL_R16F, GL_RG16F, GL_RGB16F, GL_RBGA16F, },
-				{ GL_R32F, GL_RG32F, GL_RGB32F, GL_RBGA32F, },
+				{ GL_R8UI, GL_RG8UI, GL_RGB8UI, GL_RGBA, },
+				{ GL_R8I, GL_RG8I, GL_RGB8I, GL_RGBA8I, },
+				{ GL_R16UI, GL_RG16UI, GL_RGB16UI, GL_RGBA16UI, },
+				{ GL_R16I, GL_RG16I, GL_RGB16I, GL_RGBA16I, },
+				{ GL_R32UI, GL_RG32UI, GL_RGB32UI, GL_RGBA32UI, },
+				{ GL_R32I, GL_RG32I, GL_RGB32I, GL_RGBA32I, },
+				{ GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F, },
+				{ GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F, },
 			};
 
-			return color_map[desc.pixel_type];			
+			return color_map[desc.pixel_storage_type][desc.components() - 1];			
 		}
 	}
 
-	GLenum target()
+	GLenum target() const
 	{
 		auto d = this->dimensions();
 		
 		if (d == 0 || d > 3) throw std::runtime_error("texture dimensions invalid");
 
-		return { GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D }[d - 1];
+		return (GLenum[3]){ GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D }[d - 1];
 	}
 
 	opengl_texture(const texture::description& desc)
-		: data(nullptr), desc(desc)
 	{
 		glGenTextures(1, &id);
+		data = nullptr;
+		this->desc = desc;
 	}
 
-	~opengl_texture()
+	~opengl_texture() override
 	{
 		this->release_bitmap();
 
@@ -127,13 +140,13 @@ struct opengl_texture : public g::gfx::texture
 		this->desc = desc;
 		this->data = data;
 
-		if (h > 1 && d > 1)
+		if (this->is_3D())
 		{
-			glTexImage3D(GL_TEXTURE_3D, 0, internal_format(), size[0], size[1], size[2], 0, format(), type(), data);
+			glTexImage3D(GL_TEXTURE_3D, 0, format(), desc.size[0], desc.size[1], desc.size[2], 0, internal_format(), type(), data);
 		}
-		else if (h >= 1)
+		else if (this->is_2D())
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, internal_format(), size[0], size[1], 0, format(), type(), data);
+			glTexImage2D(GL_TEXTURE_2D, 0, format(), desc.size[0], desc.size[1], 0, internal_format(), type(), data);
 		}
 	}
 
@@ -172,6 +185,7 @@ struct opengl_texture : public g::gfx::texture
 		auto type = this->target();
 		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, filter_map[filter]);
 		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, filter_map[filter]);
+		glGenerateMipmap(type);
 	}
 
 	void set_wrapping(texture::wrap wrap) override
@@ -187,6 +201,200 @@ struct opengl_texture : public g::gfx::texture
 		glTexParameteri(type, GL_TEXTURE_WRAP_S, wrap_map[wrap]);
 		glTexParameteri(type, GL_TEXTURE_WRAP_T, wrap_map[wrap]);
 		glTexParameteri(type, GL_TEXTURE_WRAP_R, wrap_map[wrap]);
+	}
+};
+
+struct opengl_framebuffer : public g::gfx::framebuffer
+{
+	GLuint id;
+	opengl_texture* _color;
+	opengl_texture* _depth;
+
+	opengl_framebuffer(opengl_texture* color, opengl_texture* depth)
+		: _color(color), _depth(depth)
+	{
+		glGenFramebuffers(1, &id);
+
+		if (_color && _depth)
+		{
+			constexpr auto dims = sizeof(texture::description::size) / sizeof(texture::description::size[0]);
+			for (unsigned i = 0; i < dims; i++)
+			{
+				if (_color->desc.size[i] != _depth->desc.size[i])
+				{
+					throw std::runtime_error("color and depth textures must have the same dimensions");
+				}
+			}
+		}
+
+		if (_color)
+		{
+			glNamedFramebufferTexture(id, GL_COLOR_ATTACHMENT0, _color->id, 0);
+		}
+
+		if (_depth)
+		{
+			glNamedFramebufferTexture(id, GL_DEPTH_ATTACHMENT, _depth->id, 0);
+		}
+
+		auto fb_stat = glCheckNamedFramebufferStatus(id, GL_FRAMEBUFFER);
+
+		switch(fb_stat)
+		{
+			case GL_FRAMEBUFFER_UNDEFINED:
+				std::cerr << "Target is the default framebuffer, but the default framebuffer does not exist.\n";
+				break;
+			case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+				std::cerr << "One or more of the framebuffer attachment points are framebuffer incomplete.\n";
+				break;
+			case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+				std::cerr << "The framebuffer does not have at least one image attached to it.\n";
+				break;
+			case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+				std::cerr << "the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for any color attachment point(s) named by GL_DRAWBUFFERi.\n";
+				break;
+			case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+				std::cerr << "GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.\n";
+				break;
+			case GL_FRAMEBUFFER_UNSUPPORTED:
+				std::cerr << "The combination of internal formats of the attached images violates an implementation-dependent set of restrictions.\n";
+				break;
+			case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+				std::cerr << "the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or, if the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.\n";
+				break;
+			case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+				std::cerr << "framebuffer attachment is layered, and any populated attachment is not layered, or if all populated color attachments are not from textures of the same target.\n";
+				break;
+			default:
+				std::cerr << "An unknown error ocurred.\n";
+				break;
+		}
+
+		assert(fb_stat == GL_FRAMEBUFFER_COMPLETE);
+	}
+
+	opengl_framebuffer(const opengl_framebuffer& other) = delete;
+
+	opengl_framebuffer& operator=(const opengl_framebuffer& other) = delete;
+
+	opengl_framebuffer(opengl_framebuffer&& other)
+	{
+		id = other.id;
+		other.id = 0;
+		_color = other._color;
+		_depth = other._depth;
+		other._color = other._depth = nullptr;
+	}
+
+	opengl_framebuffer& operator=(opengl_framebuffer&& other)
+	{
+		id = other.id;
+		other.id = 0;
+		_color = other._color;
+		_depth = other._depth;
+		other._color = other._depth = nullptr;
+		return *this;
+	}
+
+	~opengl_framebuffer() override
+	{
+		if (id != 0) { glDeleteFramebuffers(1, &id); }
+		if (_color) { delete _color; }
+		if (_depth) { delete _depth; }
+	}
+
+	texture* color(texture* tex) override
+	{
+		if (tex)
+		{
+			if (!tex->desc.usage.depth)
+			{
+				_color = (opengl_texture*)tex;
+				glNamedFramebufferTexture(id, GL_COLOR_ATTACHMENT0, _color->id, 0);
+			}
+			else
+			{
+				throw std::runtime_error("color texture must have color usage");
+			}
+		}
+
+		return _color;
+	}
+
+	texture* depth(texture* tex) override
+	{
+		if (tex)
+		{
+			if (tex->desc.usage.depth)
+			{
+				_depth = (opengl_texture*)tex;
+				glNamedFramebufferTexture(id, GL_DEPTH_ATTACHMENT, _depth->id, 0);
+			}
+			else
+			{
+				throw std::runtime_error("depth texture must have depth usage");
+			}
+		}
+
+		return _depth;
+	}
+
+	unsigned* size() override
+	{
+		if (_color)
+		{
+			return _color->desc.size;
+		}
+		else if (_depth)
+		{
+			return _depth->desc.size;
+		}
+		else
+		{
+			throw std::runtime_error("framebuffer::size() called on framebuffer with no associated textures");
+		}
+	}
+
+	float aspect() const override
+	{
+		if (_color)
+		{
+			return _color->desc.size[0] / (float)_color->desc.size[1];
+		}
+		else if (_depth)
+		{
+			return _depth->desc.size[0] / (float)_depth->desc.size[1];
+		}
+		else
+		{
+			throw std::runtime_error("framebuffer::aspect() called on framebuffer with no associated textures");
+		}
+	}	
+
+	void bind_as_target() override
+	{
+		auto s = this->size();
+		bind_as_target({ 0, 0 }, { s[0], s[1] });
+	}
+
+	void bind_as_target(const vec<2, unsigned>& upper_left, const vec<2, unsigned>& lower_right) override
+	{
+		auto w = lower_right[0] - upper_left[0], h = lower_right[1] - upper_left[1];
+		glViewport(upper_left[0], upper_left[1], w, h);
+		glBindFramebuffer(GL_FRAMEBUFFER, id);
+		assert(gl_get_error());
+	}
+
+	void unbind_as_target() override
+	{
+		if (_color)
+		{
+			_color->bind();
+			glGenerateMipmap(_color->target());
+		}
+
+		glViewport(0, 0, g::gfx::width(), g::gfx::height());
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 };
 
@@ -286,32 +494,37 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 
 void g::gfx::api::opengl::pre_draw()
 {
-	glfwGetFramebufferSize(win, &framebuffer.width, &framebuffer.height);
+	glfwGetFramebufferSize(win, &frame.width, &frame.height);
 }
 
 void g::gfx::api::opengl::post_draw()
 {
 	glfwSwapBuffers(g::gfx::GLFW_WIN);
 	glfwPollEvents();
-	glViewport(0, 0, framebuffer.width, framebuffer.height);
+	glViewport(0, 0, frame.width, frame.height);
 }
 
 size_t g::gfx::api::opengl::width()
 {
-	return framebuffer.width;
+	return frame.width;
 }
 
 size_t g::gfx::api::opengl::height()
 {
-	return framebuffer.height;
+	return frame.height;
 }
 
 float g::gfx::api::opengl::aspect()
 {
-	return framebuffer.width / (float)framebuffer.height;
+	return frame.width / (float)frame.height;
 }
 
 texture* g::gfx::api::opengl::make_texture(const texture::description& desc)
 {
-	return new opengl_texture(w, h, d, f, t);
+	return new opengl_texture(desc);
+}
+
+framebuffer* g::gfx::api::opengl::make_framebuffer(texture* color, texture* depth)
+{
+	return new opengl_framebuffer((opengl_texture*)color, (opengl_texture*)depth);
 }

@@ -42,7 +42,7 @@ g::asset::store::~store()
 	}
 }
 
-g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make_if_missing)
+g::gfx::texture* g::asset::store::tex(const std::string& partial_path, bool make_if_missing)
 {
 	auto itr = textures.find(partial_path);
 	if (itr == textures.end())
@@ -104,7 +104,7 @@ g::gfx::texture& g::asset::store::tex(const std::string& partial_path, bool make
 		}
 	}
 
-	return *textures[partial_path].get();
+	return textures[partial_path].get();
 }
 
 // TODO: this all needs serious cleanup
@@ -126,7 +126,7 @@ g::gfx::sprite& g::asset::store::sprite(const std::string& partial_path, bool ma
 
 		auto& sprite = sprites[partial_path].get();
 
-		sprite.texture = &tex(meta["image"]);
+		sprite.texture = tex(meta["image"]);
 		sprite.sheet_size = vec<2>{ meta["size"]["w"], meta["size"]["h"] };
 		//TODO: sprite.scale = meta.
 

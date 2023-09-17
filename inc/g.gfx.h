@@ -103,11 +103,11 @@ struct texture
 
 	struct usage
 	{
-		int red : 1;
-		int green : 1;
-		int blue : 1;
-		int alpha : 1;
-		int depth : 1;
+		unsigned red : 1;
+		unsigned green : 1;
+		unsigned blue : 1;
+		unsigned alpha : 1;
+		unsigned depth : 1;
 	};
 
 	enum pixel_type
@@ -183,20 +183,15 @@ struct texture
 		return &data[(x * x_stride + y * y_stride + z * z_stride) * textel_stride];
 	}
 
-	virtual ~texture() {}
+	// texture() = default;
 
-	inline size_t dimensions() const { return static_cast<size_t>(desc.size[0] > 1) + static_cast<size_t>(desc.size[1] > 1) + static_cast<size_t>(desc.size[2] > 1); }
-	size_t bytes() const { return desc.bytes(); }
-	inline bool is_1D() const { return desc.size[0] > 1 && desc.size[1] == 1 && desc.size[2] == 1; }
-	inline bool is_2D() const { return desc.size[0] > 1 && desc.size[1] > 1 && desc.size[2] == 1; }
-	inline bool is_3D() const { return desc.size[0] > 1 && desc.size[1] > 1 && desc.size[2] > 1; }
-	inline float aspect_ratio() const { return desc.size[0] / (float)desc.size[1]; }
+	virtual ~texture() {}
 
 	virtual inline bool is_initialized() const = 0;
 
 	virtual void release_bitmap() = 0;
 
-	virtual void set_pixels(const texture::description& description, unsigned char* data);
+	virtual void set_pixels(const texture::description& description, unsigned char* data) = 0;
 
 	virtual void get_pixels(unsigned char** data_out, size_t& data_out_size) const = 0;
 
@@ -209,24 +204,35 @@ struct texture
 	virtual void bind() const = 0;
 
 	virtual void unbind() const = 0;
+
+	size_t dimensions() const
+	{ 
+		auto d = static_cast<size_t>(desc.size[0] > 1) + static_cast<size_t>(desc.size[1] > 1) + static_cast<size_t>(desc.size[2] > 1);
+		return d;
+	}
+	size_t bytes() const { return desc.bytes(); }
+	inline bool is_1D() const { return desc.size[0] > 1 && desc.size[1] == 1 && desc.size[2] == 1; }
+	inline bool is_2D() const { return desc.size[0] > 1 && desc.size[1] > 1 && desc.size[2] == 1; }
+	inline bool is_3D() const { return desc.size[0] > 1 && desc.size[1] > 1 && desc.size[2] > 1; }
+	inline float aspect_ratio() const { return desc.size[0] / (float)desc.size[1]; }
 };
 
 struct framebuffer
 {
 	struct scoped_draw
 	{
-		framebuffer& fb_ref;
+		framebuffer* fb_ref;
 
-		scoped_draw(framebuffer& fb) : fb_ref(fb) { fb_ref.bind_as_target(); }
+		scoped_draw(framebuffer* fb) : fb_ref(fb) { fb_ref->bind_as_target(); }
 		
-		scoped_draw(framebuffer& fb, 
+		scoped_draw(framebuffer* fb, 
 		            const vec<2, unsigned>& upper_left,
 		            const vec<2, unsigned>& lower_right) : fb_ref(fb) 
 		{ 
-			fb_ref.bind_as_target(upper_left, lower_right); 
+			fb_ref->bind_as_target(upper_left, lower_right); 
 		}
 
-		~scoped_draw() { fb_ref.unbind_as_target(); }
+		~scoped_draw() { fb_ref->unbind_as_target(); }
 
 		scoped_draw(const scoped_draw&) = delete;
 		scoped_draw(scoped_draw&&) = delete;
@@ -235,14 +241,16 @@ struct framebuffer
 	};
 
 	vec<2> draw_region[2];
-	texture& color;
-	texture& depth;
 
-	inline float aspect() const { return size[0] / (float)size[1]; }
+	virtual ~framebuffer() {}
 
-	framebuffer
+	virtual unsigned* size() = 0;
 
-	virtual ~framebuffer() = 0;
+	virtual texture* color(texture* tex=nullptr) = 0;
+
+	virtual texture* depth(texture* tex=nullptr) = 0;
+
+	virtual float aspect() const = 0;
 
 	virtual void bind_as_target() = 0;
 
@@ -427,7 +435,7 @@ struct shader
 			return *this;
 		}
 
-		usage set_camera(g::game::camera& cam);
+		usage set_camera(const g::game::camera& cam);
 
 		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
@@ -486,7 +494,7 @@ struct shader
 
 		usage int1(const int i);
 
-		usage texture(const texture& tex);
+		usage texture(const texture* tex);
 
 		// virtual operator() (const mat<4, 4>& m) = 0;
 		// virtual operator() (const mat<3, 3>& m) = 0;
@@ -534,6 +542,7 @@ struct interface {
 	virtual float aspect() = 0;
 
 	virtual texture* make_texture(const texture::description& desc) = 0;
+	virtual framebuffer* make_framebuffer(texture* color, texture* depth) = 0;
 };
 
 struct opengl final : public interface
@@ -550,13 +559,14 @@ struct opengl final : public interface
 	float aspect() override;
 
 	texture* make_texture(const texture::description& desc) override;
+	framebuffer* make_framebuffer(texture* color, texture* depth) override;
 
 private:
 	GLFWwindow* win;
 	struct {
 		int width;
 		int height;
-	} framebuffer;
+	} frame;
 };
 
 extern std::unique_ptr<interface> instance;
@@ -631,12 +641,12 @@ struct texture_factory
 struct framebuffer_factory
 {
 	unsigned size[2] = {1, 1};
-	texture& color_tex;
-	texture& depth_tex;
+	texture* color_tex;
+	texture* depth_tex;
 
-	framebuffer_factory(unsigned w, unsigned h);
+	framebuffer_factory(unsigned w, unsigned h, unsigned d=1);
 
-	framebuffer_factory(texture& dst);
+	framebuffer_factory(texture* dst);
 
 	framebuffer_factory();
 
@@ -646,7 +656,7 @@ struct framebuffer_factory
 
 	framebuffer_factory& shadow_map();
 
-	framebuffer create();
+	framebuffer* create();
 };
 
 struct shader_factory
@@ -1319,7 +1329,7 @@ struct mesh_factory
 	}
 
 	template<typename VERT>
-	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, int x, int y)> generator)
+	static mesh<VERT> from_heightmap(const texture* tex, std::function<VERT(const texture* tex, int x, int y)> generator)
 	{
 		mesh<VERT> m;
 
@@ -1330,17 +1340,17 @@ struct mesh_factory
 		std::vector<VERT> vertices;
 		std::vector<uint32_t> indices;
 
-		for (unsigned i = 0; i < tex.desc.size[0]; i++)
-		for (unsigned j = 0; j < tex.desc.size[1]; j++)
+		for (unsigned i = 0; i < tex->desc.size[0]; i++)
+		for (unsigned j = 0; j < tex->desc.size[1]; j++)
 		{
 			vertices.push_back(generator(tex, i, j));
 		}
 
-		for (unsigned y = 0; y < tex.desc.size[0] - 1; y++)
-		for (unsigned x = 0; x < tex.desc.size[1] - 1; x++)
+		for (unsigned y = 0; y < tex->desc.size[0] - 1; y++)
+		for (unsigned x = 0; x < tex->desc.size[1] - 1; x++)
 		{
-			unsigned i = x + y * (tex.desc.size[0]);
-			unsigned j = x + (y + 1) * (tex.desc.size[0]);
+			unsigned i = x + y * (tex->desc.size[0]);
+			unsigned j = x + (y + 1) * (tex->desc.size[0]);
 			
 			indices.push_back(i);
 			indices.push_back(i + 1);
@@ -1358,22 +1368,22 @@ struct mesh_factory
 		return m;
 	}
 
-	static mesh<vertex::pos_uv_norm> from_heightmap(const texture& tex)
+	static mesh<vertex::pos_uv_norm> from_heightmap(const texture* tex)
 	{
 
 
-		return from_heightmap<vertex::pos_uv_norm>(tex, [](const texture& tex, int x, int y) -> vertex::pos_uv_norm {
+		return from_heightmap<vertex::pos_uv_norm>(tex, [](const texture* tex, int x, int y) -> vertex::pos_uv_norm {
 			return {
 				// position
 				{
-					x - tex.desc.size[0] * 0.5f,
-					static_cast<float>(tex.sample(x, y)[0] * 0.25f),
-					y - tex.desc.size[1] * 0.5f,
+					x - tex->desc.size[0] * 0.5f,
+					static_cast<float>(tex->sample(x, y)[0] * 0.25f),
+					y - tex->desc.size[1] * 0.5f,
 				},
 				// uv
 				{
-					x / (float)tex.desc.size[0],
-					y / (float)tex.desc.size[1],
+					x / (float)tex->desc.size[0],
+					y / (float)tex->desc.size[1],
 				},
 				// normal
 				{ 0, 1, 0 }
@@ -1634,7 +1644,7 @@ template<typename V>
 void shadow_0(const mesh<V>& m, const framebuffer& shadow_map, game::camera& light, game::camera& cam, std::function<void(g::gfx::shader::usage&)> draw_config=nullptr)
 {
     // TODO: the assumption that the appropriate textel in depth_map can be
-    // sampled to loop up a uv is not correct. I think the correct approach is
+    // sampled to look up a uv is not correct. I think the correct approach is
     // to involve the vertex shader like it has been done traditionally
 	static shader shadow_shader;
     static std::string shadow_map_vs_src =
@@ -1708,9 +1718,9 @@ void shadow_0(const mesh<V>& m, const framebuffer& shadow_map, game::camera& lig
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void shadow(const framebuffer& shadow_map, const framebuffer& camera_fb, game::camera& light, game::camera& cam);
+void shadow(framebuffer* shadow_map, framebuffer* camera_fb, game::camera& light, game::camera& cam);
 
-void blit(const framebuffer& fb);
+void blit(framebuffer* fb);
 
 } // end namespace effect
 
@@ -1737,11 +1747,11 @@ struct volume_slicer : public renderer<texture>
 	}
 
 	shader::usage using_shader(g::gfx::shader& shader,
-					  const g::gfx::texture& vox,
+					  const g::gfx::texture* vox,
 			          g::game::camera& cam,
 			          const mat<4, 4>& model)
 	{
-		assert(vox.is_3D());
+		assert(vox->is_3D());
 
         // rotate volume slices to align with camera view
         // create a rotation matrix to represente this
@@ -1773,7 +1783,7 @@ struct volume_slicer : public renderer<texture>
         	{     0,     0,     0,              1 }
         };
 
-        const vec<3> delta = { 1.f/(float)vox.desc.size[0], 1.f/(float)vox.desc.size[1], 1.f/(float)vox.desc.size[2] };
+        const vec<3> delta = { 1.f/(float)vox->desc.size[0], 1.f/(float)vox->desc.size[1], 1.f/(float)vox->desc.size[2] };
 
         return slices.using_shader(shader)
                .set_camera(cam)
@@ -1784,7 +1794,7 @@ struct volume_slicer : public renderer<texture>
 	}
 
 	void draw(g::gfx::shader& shader,
-		      const g::gfx::texture& vox,
+		      const g::gfx::texture* vox,
 			  g::game::camera& cam,
 			  const mat<4, 4>& model)
 	{

@@ -247,7 +247,7 @@ texture_factory& texture_factory::from_png(const std::string& path)
 
 	// TODO: use a more robust lodepng_decode call which can handle textures of various channels and bit depths
 	// unsigned error = lodepng_decode_file((unsigned char**)&data, size[0], size[1], path.c_str());
-	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
+	unsigned error = lodepng_decode32_file((unsigned char**)&data, desc.size + 0, desc.size + 1, path.c_str());
 
 
 	// If there's an error, display it.
@@ -291,7 +291,7 @@ texture_factory& texture_factory::to_png(const std::string& path)
 	LodePNGColorType color_type = LCT_RGB;
 	size_t bits_per_pixel = 0;
 
-	switch(component_count)
+	switch(desc.components())
 	{
 		case 1:
 			color_type = LCT_GREY;
@@ -310,13 +310,13 @@ texture_factory& texture_factory::to_png(const std::string& path)
 			bits_per_pixel = 32;
 			break;
 		default:
-			std::cerr << G_TERM_RED << "Unsupported component count: '" <<  component_count << G_TERM_COLOR_OFF << std::endl;
+			std::cerr << G_TERM_RED << "Unsupported component count: '" <<  desc.components() << G_TERM_COLOR_OFF << std::endl;
 	}
 
 	auto error = lodepng_encode_file(
 		path.c_str(),
 		(const unsigned char*)data,
-		size[0], size[1],
+		desc.size[0], desc.size[1],
 		color_type,
 		bits_per_pixel
 	);
@@ -371,8 +371,8 @@ texture_factory& texture_factory::components(unsigned count)
 
 texture_factory& texture_factory::depth()
 {
-	usage = { .depth = true };
-	pixel_storage_type = texture::pixel_type::uint16;
+	desc.usage = { .depth = true };
+	desc.pixel_storage_type = texture::pixel_type::uint16;
 	return *this;
 }
 
@@ -414,15 +414,15 @@ texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, u
 	// void* pixels;
 
 	auto bytes_per_textel = desc.bytes_per_pixel();
-	auto textels_per_row = size[2];
-	auto textels_per_plane = size[1] * size[2];
-	data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
+	auto textels_per_row = desc.size[2];
+	auto textels_per_plane = desc.size[1] * desc.size[2];
+	data = new unsigned char[desc.bytes()];
 
-	for (unsigned i = 0; i < size[0]; i++)
+	for (unsigned i = 0; i < desc.size[0]; i++)
 	{
-		for (unsigned j = 0; j < size[1]; j++)
+		for (unsigned j = 0; j < desc.size[1]; j++)
 		{
-			for (unsigned k = 0; k < size[2]; k++)
+			for (unsigned k = 0; k < desc.size[2]; k++)
 			{
 				// unsigned vi = i * textels_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
 				// unsigned vi = (i * textels_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
@@ -458,20 +458,20 @@ texture* texture_factory::create()
 		out = g::gfx::api::instance->make_texture(desc);
 	}
 
-	out.bind();
+	out->bind();
 
 	assert(gl_get_error());
 	out->set_pixels(desc, data);
-
 	assert(gl_get_error());
-
-
+	out->set_wrapping(desc.wrap);
+	assert(gl_get_error());
+	out->set_filtering(desc.filter);
 	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
 	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_T, wrap_t);
 	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
 	// glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
 	// glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
-	assert(gl_get_error());
+	
 	// glGenerateMipmap(GL_TEXTURE_2D);
 	assert(gl_get_error());
 
@@ -479,17 +479,17 @@ texture* texture_factory::create()
 }
 
 
-framebuffer_factory::framebuffer_factory(unsigned w, unsigned h)
+framebuffer_factory::framebuffer_factory(unsigned w, unsigned h, unsigned d)
 {
 	size[0] = w;
 	size[1] = h;
 }
 
-framebuffer_factory::framebuffer_factory(texture& dst)
+framebuffer_factory::framebuffer_factory(texture* dst)
 {
 	color_tex = dst;
-	size[0] = color_tex.desc.size[0];
-	size[1] = color_tex.desc.size[1];
+	size[0] = color_tex->desc.size[0];
+	size[1] = color_tex->desc.size[1];
 }
 
 framebuffer_factory& framebuffer_factory::color()
@@ -509,68 +509,9 @@ framebuffer_factory& framebuffer_factory::shadow_map()
 	return depth();
 }
 
-framebuffer framebuffer_factory::create()
+framebuffer* framebuffer_factory::create()
 {
-	framebuffer fb;
-
-	fb.size[0] = size[0];
-	fb.size[1] = size[1];
-	fb.color = color_tex;
-	fb.depth = depth_tex;
-	glGenFramebuffers(1, &fb.fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-	assert(gl_get_error());
-
-	if (color_tex.hnd != (GLuint)-1)
-	{
-		color_tex.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex.hnd, 0);
-	}
-
-	if (depth_tex.hnd != (GLuint)-1)
-	{
-		depth_tex.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tex.hnd, 0);
-	}
-
-	auto fb_stat = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-	switch(fb_stat)
-	{
-		case GL_FRAMEBUFFER_UNDEFINED:
-			std::cerr << "Target is the default framebuffer, but the default framebuffer does not exist.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-			std::cerr << "One or more of the framebuffer attachment points are framebuffer incomplete.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-			std::cerr << "The framebuffer does not have at least one image attached to it.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-			std::cerr << "the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for any color attachment point(s) named by GL_DRAWBUFFERi.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-			std::cerr << "GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.\n";
-			break;
-		case GL_FRAMEBUFFER_UNSUPPORTED:
-			std::cerr << "The combination of internal formats of the attached images violates an implementation-dependent set of restrictions.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-			std::cerr << "the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or, if the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-			std::cerr << "framebuffer attachment is layered, and any populated attachment is not layered, or if all populated color attachments are not from textures of the same target.\n";
-			break;
-		default:
-			std::cerr << "An unknown error ocurred.\n";
-			break;
-	}
-
-	assert(fb_stat == GL_FRAMEBUFFER_COMPLETE);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	return fb;
+	return g::gfx::api::instance->make_framebuffer(color_tex, depth_tex);
 }
 
 
@@ -602,7 +543,7 @@ shader::usage shader::usage::set_camera(const g::game::camera& cam)
 
 shader::usage shader::usage::set_sprite(const g::gfx::sprite::instance& sprite)
 {
-	this->set_uniform("u_sprite_sheet").texture(*sprite.sheet->texture);
+	this->set_uniform("u_sprite_sheet").texture(sprite.sheet->texture);
 	this->set_uniform("u_sprite_sheet_size").vec2(sprite.sheet->sheet_size);
 	this->set_uniform("u_sprite_sheet_frame_pos").vec2(sprite.current_frame().position);
 	this->set_uniform("u_sprite_sheet_frame_size").vec2(sprite.current_frame().size);
@@ -713,10 +654,10 @@ shader::usage shader::uniform_usage::int1(const int i)
 	return parent_usage;
 }
 
-shader::usage shader::uniform_usage::texture(const g::gfx::texture& tex)
+shader::usage shader::uniform_usage::texture(const g::gfx::texture* tex)
 {
 	glActiveTexture(GL_TEXTURE0 + parent_usage.texture_unit);
-	tex.bind();
+	tex->bind();
 	glUniform1i(uni_loc, parent_usage.texture_unit);
 	parent_usage.texture_unit++;
 	return parent_usage;
@@ -959,7 +900,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// using RGBA is totally excessive, but webgl
 	// seems to have issues with just GL_RED
 	font.face = texture_factory{col_pix, row_pix}
-	.type(GL_UNSIGNED_BYTE)
+	.type(g::gfx::texture::pixel_type::uint8)
 	.components(4)
 	.fill([&](int x, int y, int z, unsigned char* pixel){
 		pixel[0] = pixel[1] = pixel[2] = 0xff;

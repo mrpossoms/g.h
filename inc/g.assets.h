@@ -53,7 +53,7 @@ struct store
 
 	~store();
 
-	g::gfx::texture& tex(const std::string& partial_path, bool make_if_missing = false);
+	g::gfx::texture* tex(const std::string& partial_path, bool make_if_missing = false);
 
 	g::gfx::sprite& sprite(const std::string& partial_path, bool make_if_missing = false);
 
