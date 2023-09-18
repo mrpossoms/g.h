@@ -259,6 +259,114 @@ struct framebuffer
 	virtual void unbind_as_target() = 0;
 };
 
+enum primative
+{
+	points,
+	lines,
+	triangles,
+	triangle_fan,
+};
+
+struct shader
+{
+	virtual ~shader() {}
+
+	virtual bool is_initialized() const = 0;
+
+	shader& bind();
+
+	struct uniform_usage;
+	/**
+	 * @brief      shader::usage type represents the start of some invocation
+	 * of an interaction with a shader.
+	 */
+	struct usage
+	{
+		shader* shader_ref = nullptr;
+		size_t vertices = 0, indices = 0;
+		int texture_unit = 0;
+
+		usage() = default;
+		usage (shader* ref, size_t verts, size_t inds);
+
+		template<typename MV>
+		usage attach_attributes(const shader& shader)
+		{
+			//assert(gl_get_error());
+			MV::attributes(shader);
+			//assert(gl_get_error());
+			return *this;
+		}
+
+		usage set_camera(const g::game::camera& cam)
+		{
+			this->set_uniform("u_view").mat4(cam.view());
+			this->set_uniform("u_proj").mat4(cam.projection().transpose());
+			return *this;
+		}
+
+		usage set_sprite(const g::gfx::sprite::instance& sprite)
+		{
+			this->set_uniform("u_sprite_sheet").texture(sprite.sheet->texture);
+			this->set_uniform("u_sprite_sheet_size").vec2(sprite.sheet->sheet_size);
+			this->set_uniform("u_sprite_sheet_frame_pos").vec2(sprite.current_frame().position);
+			this->set_uniform("u_sprite_sheet_frame_size").vec2(sprite.current_frame().size);
+
+			return *this;
+		}
+
+		uniform_usage operator[](const std::string& name) { return set_uniform(name); }
+
+		virtual uniform_usage set_uniform(const std::string& name) = 0;
+
+		virtual usage& draw(g::gfx::primative prim) = 0;
+	};
+
+	/**
+	 * @brief      Offers interaction with the uniforms defined for a given shader
+	 */
+	struct uniform_usage
+	{
+		GLuint uni_loc;
+		usage& parent_usage;
+
+		uniform_usage(usage& parent, GLuint loc);
+
+		usage mat4 (const mat<4, 4>& m);
+
+		usage mat3 (const mat<3, 3>& m);
+
+		usage vec2 (const vec<2>& v);
+		usage vec2n (const vec<2>* v, size_t count);
+
+		usage vec3 (const vec<3>& v);
+		usage vec3n (const vec<3>* v, size_t count);
+
+		usage vec4(const vec<4>& v);
+
+		usage flt(float f);
+		usage fltn(float* f, size_t count);
+
+		usage int1(const int i);
+
+		usage texture(const texture* tex);
+
+		// virtual operator() (const mat<4, 4>& m) = 0;
+		// virtual operator() (const mat<3, 3>& m) = 0;
+		// virtual operator() (const vec<2>& v) = 0;
+		// virtual operator() (const std::vector<vec<2>>& v) = 0;
+		// virtual operator() (const vec<3>& v) = 0;
+		// virtual operator() (const std::vector<vec<3>>& v) = 0;
+		// virtual operator() (const vec<4>& v) = 0;
+		// virtual operator() (const std::vector<vec<4>>& v) = 0;
+		// virtual operator() (float f) = 0;
+		// virtual operator() (const std::vector<float>& f) = 0;
+		// virtual operator() (int32_t i) = 0;
+		// virtual operator() (const std::vector<int32_t>& i) = 0;
+		// virtual operator() (const texture& tex) = 0;
+	};
+};
+
 // struct uniform_usage;
 // /**
 //  * @brief      shader::usage type represents the start of some invocation
@@ -403,14 +511,10 @@ struct sprite
 
 struct shader
 {
-	GLuint program = 0;
-	std::unordered_map<std::string, GLint> uni_locs;
 
-	inline bool is_initialized() const { return program != 0; }
+	virtual bool is_initialized() const = 0;
 
-	void destroy();
-
-	shader& bind();
+	virtual shader& bind() = 0;
 
 	struct uniform_usage;
 	/**
@@ -543,6 +647,7 @@ struct interface {
 
 	virtual texture* make_texture(const texture::description& desc) = 0;
 	virtual framebuffer* make_framebuffer(texture* color, texture* depth) = 0;
+	virtual shader* make_shader(const std::string& shader_string) = 0;
 };
 
 struct opengl final : public interface
@@ -560,6 +665,7 @@ struct opengl final : public interface
 
 	texture* make_texture(const texture::description& desc) override;
 	framebuffer* make_framebuffer(texture* color, texture* depth) override;
+	shader* make_shader(const std::string& shader_string) override;
 
 private:
 	GLFWwindow* win;
