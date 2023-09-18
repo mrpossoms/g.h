@@ -14,7 +14,7 @@ struct voxel_world : public g::core
 
 	g::gfx::mesh<g::gfx::vertex::pos_norm_color> temple;
 	g::gfx::mesh<g::gfx::vertex::pos_norm_color> light_mesh;
-	g::gfx::framebuffer light_depth_map, camera_depth_map, render_target;
+	g::gfx::framebuffer *light_depth_map, *camera_depth_map, *render_target;
 
 	g::game::voxels_paletted light_vox;
 	g::game::camera_perspective cam;

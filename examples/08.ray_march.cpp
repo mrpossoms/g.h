@@ -10,7 +10,7 @@ float data[w][h][d];
 struct volumetric : public g::core
 {
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
-	g::gfx::framebuffer render_buffer;
+	g::gfx::framebuffer* render_buffer;
 	g::game::camera_perspective cam;
 	g::asset::store assets;
 
@@ -160,7 +160,7 @@ struct volumetric : public g::core
 		}
 
 		plane.using_shader(assets.shader("basic_post.vs+basic_texture.fs"))
-			["u_texture"].texture(render_buffer.color)
+			["u_texture"].texture(render_buffer->color())
 			.draw<GL_TRIANGLE_FAN>();
 
 		t += dt;
