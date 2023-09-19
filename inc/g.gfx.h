@@ -98,6 +98,19 @@ static bool gl_get_error()
 	return good;
 }
 
+enum type
+{
+	unspecified = 0,
+	uint8,
+	int8,
+	uint16,
+	int16,
+	uint32,
+	int32,
+	float16,
+	float32,
+};
+
 struct texture
 {
 
@@ -108,19 +121,6 @@ struct texture
 		unsigned blue : 1;
 		unsigned alpha : 1;
 		unsigned depth : 1;
-	};
-
-	enum pixel_type
-	{
-		unspecified = 0,
-		uint8,
-		int8,
-		uint16,
-		int16,
-		uint32,
-		int32,
-		float16,
-		float32,
 	};
 
 	// TODO: think, even though opengl associates
@@ -143,10 +143,10 @@ struct texture
 	struct description
 	{
 		unsigned size[3] = { 1, 1, 1 };
-		texture::pixel_type pixel_storage_type = pixel_type::uint8;
-		texture::usage usage = { .red=1, .green=1, .blue=1, .alpha=1 };
+		type            pixel_storage_type = type::uint8;
+		texture::usage  usage = { .red=1, .green=1, .blue=1, .alpha=1 };
 		texture::filter filter = texture::filter::linear;
-		texture::wrap wrap = texture::wrap::repeat;
+		texture::wrap   wrap = texture::wrap::repeat;
 
 		unsigned components() const { return usage.red + usage.green + usage.blue + usage.alpha + usage.depth; }
 		size_t bytes_per_component() const
@@ -267,11 +267,15 @@ enum primative
 	triangle_fan,
 };
 
+struct vertex { struct element{}; };
+struct sprite { struct instance{}; };
 struct shader
 {
 	virtual ~shader() {}
 
 	virtual bool is_initialized() const = 0;
+
+	virtual void attach_attributes(const vertex::element* elements) = 0;
 
 	shader& bind();
 
@@ -289,31 +293,17 @@ struct shader
 		usage() = default;
 		usage (shader* ref, size_t verts, size_t inds);
 
-		template<typename MV>
-		usage attach_attributes(const shader& shader)
+		usage attach_attributes(const vertex::element* elements)
 		{
 			//assert(gl_get_error());
-			MV::attributes(shader);
+			shader.attach_attributes(elements);
 			//assert(gl_get_error());
 			return *this;
 		}
 
-		usage set_camera(const g::game::camera& cam)
-		{
-			this->set_uniform("u_view").mat4(cam.view());
-			this->set_uniform("u_proj").mat4(cam.projection().transpose());
-			return *this;
-		}
+		usage set_camera(const g::game::camera& cam);
 
-		usage set_sprite(const g::gfx::sprite::instance& sprite)
-		{
-			this->set_uniform("u_sprite_sheet").texture(sprite.sheet->texture);
-			this->set_uniform("u_sprite_sheet_size").vec2(sprite.sheet->sheet_size);
-			this->set_uniform("u_sprite_sheet_frame_pos").vec2(sprite.current_frame().position);
-			this->set_uniform("u_sprite_sheet_frame_size").vec2(sprite.current_frame().size);
-
-			return *this;
-		}
+		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
 		uniform_usage operator[](const std::string& name) { return set_uniform(name); }
 
@@ -820,16 +810,34 @@ struct shader_factory
 
 namespace vertex
 {
+	struct element
+	{
+		const char* name = nullptr;
+		type        component_type = type::unspecified;
+		off_t       offset = 0;
+	};
+
 	struct pos
 	{
 		vec<3> position;
 
-		static void attributes(const g::gfx::shader& shader)
-		{
-			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+		// static void attributes(const g::gfx::shader& shader)
+		// {
+		// f	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
 
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
+		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
+		// }
+
+		static const element* layout()
+		{
+			constexpr pos v;
+			constexpr auto start = &v.position;
+			static constexpr element elements[] = {
+				{"a_position", type::float32, &v.position - start },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -838,18 +846,29 @@ namespace vertex
 		vec<3> position;
 		vec<2> uv;
 
-		static void attributes(const g::gfx::shader& shader)
+		// static void attributes(const g::gfx::shader& shader)
+		// {
+		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+		// 	auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
+
+		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+		// 	if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
+
+		// 	auto p_size = sizeof(position);
+
+		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv), (void*)0);
+		// 	if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv), (void*)p_size);
+		// }
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-			auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
-
-			auto p_size = sizeof(position);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv), (void*)0);
-			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv), (void*)p_size);
+			constexpr pos_uv v;
+			constexpr auto start = &v.position;
+			static constexpr element elements[] = {
+				{"a_position", type::float32, &v.position - start },
+				{"a_uv", type::float32, &v.uv - start },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -858,18 +877,30 @@ namespace vertex
 		vec<3> position;
 		vec<3> normal;
 
-		static void attributes(const g::gfx::shader& shader)
+		// static void attributes(const g::gfx::shader& shader)
+		// {
+		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+		// 	auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
+
+		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+		// 	if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
+
+		// 	auto p_size = sizeof(position);
+
+		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)0);
+		// 	if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)(p_size));
+		// }
+
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-
-			auto p_size = sizeof(position);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)0);
-			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)(p_size));
+			constexpr pos_norm v;
+			constexpr auto start = &v.position;
+			static constexpr element elements[] = {
+				{"a_position", type::float32, &v.position - start },
+				{"a_normal", type::float32, &v.normal - start },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -879,22 +910,35 @@ namespace vertex
 		vec<2> uv;
 		vec<3> normal;
 
-		static void attributes(const g::gfx::shader& shader)
+		// static void attributes(const g::gfx::shader& shader)
+		// {
+		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+		// 	auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
+		// 	auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
+
+		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+		// 	if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
+		// 	if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
+
+		// 	auto p_size = sizeof(position);
+		// 	auto uv_size = sizeof(uv);
+
+		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)0);
+		// 	if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)p_size);
+		// 	if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)(p_size + uv_size));
+		// }
+
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-			auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
-			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
-			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-
-			auto p_size = sizeof(position);
-			auto uv_size = sizeof(uv);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)0);
-			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)p_size);
-			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)(p_size + uv_size));
+			constexpr pos_uv_norm v;
+			constexpr auto start = &v.position;
+			static constexpr element elements[] = {
+				{"a_position", type::float32, &v.position - start },
+				{"a_uv", type::float32, &v.uv - start },
+				{"a_normal", type::float32, &v.normal - start },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -904,22 +948,34 @@ namespace vertex
 		vec<3> normal;
 		vec<3> tangent;
 
-		static void attributes(const g::gfx::shader& shader)
+		// static void attributes(const g::gfx::shader& shader)
+		// {
+		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+		// 	auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
+		// 	auto tan_loc = glGetAttribLocation(shader.program, "a_tangent");
+
+		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+		// 	if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
+		// 	if (tan_loc > -1) glEnableVertexAttribArray(tan_loc);
+
+		// 	auto p_size = sizeof(position);
+		// 	auto norm_size = sizeof(normal);
+
+		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)0);
+		// 	if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)p_size);
+		// 	if (tan_loc > -1) glVertexAttribPointer(tan_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)(p_size + norm_size));
+		// }
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
-			auto tan_loc = glGetAttribLocation(shader.program, "a_tangent");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-			if (tan_loc > -1) glEnableVertexAttribArray(tan_loc);
-
-			auto p_size = sizeof(position);
-			auto norm_size = sizeof(normal);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)0);
-			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)p_size);
-			if (tan_loc > -1) glVertexAttribPointer(tan_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)(p_size + norm_size));
+			constexpr pos_norm_tan v;
+			constexpr auto start = &v.position;
+			static constexpr element elements[] = {
+				{"a_position", type::float32, &v.position - start },
+				{"a_normal", type::float32, &v.normal - start },
+				{"a_tangent", type::float32, &v.tangent - start },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -929,22 +985,35 @@ namespace vertex
 		vec<3> normal;
 		vec<4, uint8_t> color;
 
-		static void attributes(const g::gfx::shader& shader)
+		// static void attributes(const g::gfx::shader& shader)
+		// {
+		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
+		// 	auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
+		// 	auto color_loc = glGetAttribLocation(shader.program, "a_color");
+
+		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
+		// 	if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
+		// 	if (color_loc > -1) glEnableVertexAttribArray(color_loc);
+
+		// 	auto p_size = sizeof(position);
+		// 	auto n_size = sizeof(normal);
+
+		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)0);
+		// 	if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)(p_size));
+		// 	if (color_loc > -1) glVertexAttribPointer(color_loc, 4, GL_UNSIGNED_BYTE, false, sizeof(pos_norm_color), (void*)(p_size + n_size));
+		// }
+
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-			auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
-			auto color_loc = glGetAttribLocation(shader.program, "a_color");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-			if (color_loc > -1) glEnableVertexAttribArray(color_loc);
-
-			auto p_size = sizeof(position);
-			auto n_size = sizeof(normal);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)0);
-			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)(p_size));
-			if (color_loc > -1) glVertexAttribPointer(color_loc, 4, GL_UNSIGNED_BYTE, false, sizeof(pos_norm_color), (void*)(p_size + n_size));
+			constexpr pos_norm_color v;
+			constexpr auto start = &v.position;
+			static constexpr element elements[] = {
+				{"a_position", type::float32, &v.position - start },
+				{"a_normal", type::float32, &v.normal - start },
+				{"a_color", type::uint8, &v.color - start },
+				{},
+			};
+			return elements;
 		}
 	};
 }

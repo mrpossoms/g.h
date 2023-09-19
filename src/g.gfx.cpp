@@ -531,25 +531,25 @@ shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 }
 
 
-// shader::usage shader::usage::set_camera(const g::game::camera& cam)
-// {
-// 	assert(gl_get_error());
-// 	this->set_uniform("u_view").mat4(cam.view());
-// 	this->set_uniform("u_proj").mat4(cam.projection().transpose());
-// 	assert(gl_get_error());
-// 	return *this;
-// }
+shader::usage shader::usage::set_camera(const g::game::camera& cam)
+{
+	assert(gl_get_error());
+	this->set_uniform("u_view").mat4(cam.view());
+	this->set_uniform("u_proj").mat4(cam.projection().transpose());
+	assert(gl_get_error());
+	return *this;
+}
 
 
-// shader::usage shader::usage::set_sprite(const g::gfx::sprite::instance& sprite)
-// {
-// 	this->set_uniform("u_sprite_sheet").texture(sprite.sheet->texture);
-// 	this->set_uniform("u_sprite_sheet_size").vec2(sprite.sheet->sheet_size);
-// 	this->set_uniform("u_sprite_sheet_frame_pos").vec2(sprite.current_frame().position);
-// 	this->set_uniform("u_sprite_sheet_frame_size").vec2(sprite.current_frame().size);
+shader::usage shader::usage::set_sprite(const g::gfx::sprite::instance& sprite)
+{
+	this->set_uniform("u_sprite_sheet").texture(sprite.sheet->texture);
+	this->set_uniform("u_sprite_sheet_size").vec2(sprite.sheet->sheet_size);
+	this->set_uniform("u_sprite_sheet_frame_pos").vec2(sprite.current_frame().position);
+	this->set_uniform("u_sprite_sheet_frame_size").vec2(sprite.current_frame().size);
 
-// 	return *this;
-// }
+	return *this;
+}
 
 
 shader::uniform_usage shader::usage::set_uniform(const std::string& name)
