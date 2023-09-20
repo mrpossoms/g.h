@@ -111,6 +111,14 @@ enum type
 	float32,
 };
 
+enum primative
+{
+	points,
+	lines,
+	triangles,
+	triangle_fan,
+};
+
 struct texture
 {
 
@@ -259,23 +267,102 @@ struct framebuffer
 	virtual void unbind_as_target() = 0;
 };
 
-enum primative
+namespace vertex { struct element; };
+
+struct sprite
 {
-	points,
-	lines,
-	triangles,
-	triangle_fan,
+	struct frame
+	{
+		vec<2> position;
+		vec<2> size;
+		float duration_s;
+	};
+
+	struct animation_track
+	{
+		std::vector<frame*> frames;
+	};
+
+	g::gfx::texture* texture;
+	std::vector<frame> frames;
+	std::unordered_map<std::string, animation_track> animation;
+	vec<2> sheet_size;
+	float scale = 1;
+
+	struct instance : public g::game::updateable
+	{
+		const sprite* sheet;
+		const animation_track* animation;
+		unsigned frame_idx;
+		float frame_time_s;
+		bool loop;
+
+		void track(const std::string& track_name)
+		{
+			auto itr = sheet->animation.find(track_name);
+
+			if (itr != sheet->animation.end())
+			{
+				if (animation != &(*itr).second)
+				{
+					animation = &(*itr).second;
+					frame_idx = 0;
+					frame_time_s = 0;
+				}
+			}
+		}
+
+		const g::gfx::texture& texture()
+		{
+			return *sheet->texture;
+		}
+
+		void update(float dt, float time) override
+		{
+			frame_time_s += dt;
+			auto& current = current_frame();
+
+			if (frame_time_s >= current.duration_s)
+			{
+				auto residual = frame_time_s - current.duration_s;
+				frame_time_s = residual;
+				frame_idx++;
+			}
+
+			if (frame_idx >= animation->frames.size())
+			{
+				if (loop) { frame_idx = 0; }
+				else
+				{
+					frame_idx = animation->frames.size() - 1;
+				}
+			}
+		}
+
+		const frame& current_frame() const
+		{ return *animation->frames[frame_idx]; }
+	};
+
+	instance make_instance()
+	{
+		instance i;
+
+		i.sheet = this;
+		i.animation = &(*animation.begin()).second;
+		i.frame_idx = 0;
+		i.frame_time_s = 0;
+		i.loop = true;
+		return i; 
+	}
 };
 
-struct vertex { struct element{}; };
-struct sprite { struct instance{}; };
 struct shader
 {
 	virtual ~shader() {}
 
 	virtual bool is_initialized() const = 0;
 
-	virtual void attach_attributes(const vertex::element* elements) = 0;
+	virtual void attach_attributes(const vertex::element* elements) {};
 
 	shader& bind();
 
@@ -296,7 +383,7 @@ struct shader
 		usage attach_attributes(const vertex::element* elements)
 		{
 			//assert(gl_get_error());
-			shader.attach_attributes(elements);
+			shader_ref->attach_attributes(elements);
 			//assert(gl_get_error());
 			return *this;
 		}
@@ -307,9 +394,9 @@ struct shader
 
 		uniform_usage operator[](const std::string& name) { return set_uniform(name); }
 
-		virtual uniform_usage set_uniform(const std::string& name) = 0;
+		virtual uniform_usage set_uniform(const std::string& name) {};
 
-		virtual usage& draw(g::gfx::primative prim) = 0;
+		virtual usage& draw(g::gfx::primative prim) {};
 	};
 
 	/**
@@ -411,200 +498,113 @@ struct shader
 // 	}
 // };
 
-struct sprite
-{
-	struct frame
-	{
-		vec<2> position;
-		vec<2> size;
-		float duration_s;
-	};
 
-	struct animation_track
-	{
-		std::vector<frame*> frames;
-	};
+// struct shader
+// {
 
-	g::gfx::texture* texture;
-	std::vector<frame> frames;
-	std::unordered_map<std::string, animation_track> animation;
-	vec<2> sheet_size;
-	float scale = 1;
+// 	virtual bool is_initialized() const = 0;
 
-	struct instance : public g::game::updateable
-	{
-		const sprite* sheet;
-		const animation_track* animation;
-		unsigned frame_idx;
-		float frame_time_s;
-		bool loop;
+// 	virtual shader& bind() = 0;
 
-		void track(const std::string& track_name)
-		{
-			auto itr = sheet->animation.find(track_name);
+// 	struct uniform_usage;
+// 	/**
+// 	 * @brief      shader::usage type represents the start of some invocation
+// 	 * of an interaction with a shader.
+// 	 */
+// 	struct usage
+// 	{
+// 		shader* shader_ref = nullptr;
+// 		size_t vertices = 0, indices = 0;
+// 		int texture_unit = 0;
 
-			if (itr != sheet->animation.end())
-			{
-				if (animation != &(*itr).second)
-				{
-					animation = &(*itr).second;
-					frame_idx = 0;
-					frame_time_s = 0;
-				}
-			}
-		}
+// 		usage() = default;
+// 		usage (shader* ref, size_t verts, size_t inds);
 
-		const g::gfx::texture& texture()
-		{
-			return *sheet->texture;
-		}
+// 		template<typename MV>
+// 		usage attach_attributes(const shader& shader)
+// 		{
+// 			//assert(gl_get_error());
+// 			MV::attributes(shader);
+// 			//assert(gl_get_error());
+// 			return *this;
+// 		}
 
-		void update(float dt, float time) override
-		{
-			frame_time_s += dt;
-			auto& current = current_frame();
+// 		usage set_camera(const g::game::camera& cam);
 
-			if (frame_time_s >= current.duration_s)
-			{
-				auto residual = frame_time_s - current.duration_s;
-				frame_time_s = residual;
-				frame_idx++;
-			}
+// 		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
-			if (frame_idx >= animation->frames.size())
-			{
-				if (loop) { frame_idx = 0; }
-				else
-				{
-					frame_idx = animation->frames.size() - 1;
-				}
-			}
-		}
+// 		uniform_usage set_uniform(const std::string& name);
 
-		const frame& current_frame() const
-		{ return *animation->frames[frame_idx]; }
-	};
+// 		uniform_usage operator[](const std::string& name);
 
-	instance make_instance()
-	{
-		instance i;
+// 		template<GLenum PRIM>
+// 		usage& draw()
+// 		{
+// 			//assert(gl_get_error());
+// 			if (indices > 0)
+// 			{
+// 				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
+// 				//assert(gl_get_error());
+// 			}
+// 			else
+// 			{
+// 				glDrawArrays(PRIM, 0, vertices);
+// 				//assert(gl_get_error());
+// 			}
 
-		i.sheet = this;
-		i.animation = &(*animation.begin()).second;
-		i.frame_idx = 0;
-		i.frame_time_s = 0;
-		i.loop = true;
-		return i; 
-	}
-};
+// 			return *this;
+// 		}
 
+// 		usage& draw_tri_fan()
+// 		{
+// 			return draw<GL_TRIANGLE_FAN>();
+// 		}
+// 	};
 
-struct shader
-{
+// 	/**
+// 	 * @brief      Offers interaction with the uniforms defined for a given shader
+// 	 */
+// 	struct uniform_usage
+// 	{
+// 		GLuint uni_loc;
+// 		usage& parent_usage;
 
-	virtual bool is_initialized() const = 0;
+// 		uniform_usage(usage& parent, GLuint loc);
 
-	virtual shader& bind() = 0;
+// 		usage mat4 (const mat<4, 4>& m);
 
-	struct uniform_usage;
-	/**
-	 * @brief      shader::usage type represents the start of some invocation
-	 * of an interaction with a shader.
-	 */
-	struct usage
-	{
-		shader* shader_ref = nullptr;
-		size_t vertices = 0, indices = 0;
-		int texture_unit = 0;
+// 		usage mat3 (const mat<3, 3>& m);
 
-		usage() = default;
-		usage (shader* ref, size_t verts, size_t inds);
+// 		usage vec2 (const vec<2>& v);
+// 		usage vec2n (const vec<2>* v, size_t count);
 
-		template<typename MV>
-		usage attach_attributes(const shader& shader)
-		{
-			//assert(gl_get_error());
-			MV::attributes(shader);
-			//assert(gl_get_error());
-			return *this;
-		}
+// 		usage vec3 (const vec<3>& v);
+// 		usage vec3n (const vec<3>* v, size_t count);
 
-		usage set_camera(const g::game::camera& cam);
+// 		usage vec4(const vec<4>& v);
 
-		usage set_sprite(const g::gfx::sprite::instance& sprite);
+// 		usage flt(float f);
+// 		usage fltn(float* f, size_t count);
 
-		uniform_usage set_uniform(const std::string& name);
+// 		usage int1(const int i);
 
-		uniform_usage operator[](const std::string& name);
+// 		usage texture(const texture* tex);
 
-		template<GLenum PRIM>
-		usage& draw()
-		{
-			//assert(gl_get_error());
-			if (indices > 0)
-			{
-				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
-				//assert(gl_get_error());
-			}
-			else
-			{
-				glDrawArrays(PRIM, 0, vertices);
-				//assert(gl_get_error());
-			}
-
-			return *this;
-		}
-
-		usage& draw_tri_fan()
-		{
-			return draw<GL_TRIANGLE_FAN>();
-		}
-	};
-
-	/**
-	 * @brief      Offers interaction with the uniforms defined for a given shader
-	 */
-	struct uniform_usage
-	{
-		GLuint uni_loc;
-		usage& parent_usage;
-
-		uniform_usage(usage& parent, GLuint loc);
-
-		usage mat4 (const mat<4, 4>& m);
-
-		usage mat3 (const mat<3, 3>& m);
-
-		usage vec2 (const vec<2>& v);
-		usage vec2n (const vec<2>* v, size_t count);
-
-		usage vec3 (const vec<3>& v);
-		usage vec3n (const vec<3>* v, size_t count);
-
-		usage vec4(const vec<4>& v);
-
-		usage flt(float f);
-		usage fltn(float* f, size_t count);
-
-		usage int1(const int i);
-
-		usage texture(const texture* tex);
-
-		// virtual operator() (const mat<4, 4>& m) = 0;
-		// virtual operator() (const mat<3, 3>& m) = 0;
-		// virtual operator() (const vec<2>& v) = 0;
-		// virtual operator() (const std::vector<vec<2>>& v) = 0;
-		// virtual operator() (const vec<3>& v) = 0;
-		// virtual operator() (const std::vector<vec<3>>& v) = 0;
-		// virtual operator() (const vec<4>& v) = 0;
-		// virtual operator() (const std::vector<vec<4>>& v) = 0;
-		// virtual operator() (float f) = 0;
-		// virtual operator() (const std::vector<float>& f) = 0;
-		// virtual operator() (int32_t i) = 0;
-		// virtual operator() (const std::vector<int32_t>& i) = 0;
-		// virtual operator() (const texture& tex) = 0;
-	};
-};
+// 		// virtual operator() (const mat<4, 4>& m) = 0;
+// 		// virtual operator() (const mat<3, 3>& m) = 0;
+// 		// virtual operator() (const vec<2>& v) = 0;
+// 		// virtual operator() (const std::vector<vec<2>>& v) = 0;
+// 		// virtual operator() (const vec<3>& v) = 0;
+// 		// virtual operator() (const std::vector<vec<3>>& v) = 0;
+// 		// virtual operator() (const vec<4>& v) = 0;
+// 		// virtual operator() (const std::vector<vec<4>>& v) = 0;
+// 		// virtual operator() (float f) = 0;
+// 		// virtual operator() (const std::vector<float>& f) = 0;
+// 		// virtual operator() (int32_t i) = 0;
+// 		// virtual operator() (const std::vector<int32_t>& i) = 0;
+// 		// virtual operator() (const texture& tex) = 0;
+// 	};
+// };
 
 namespace api {
 
@@ -709,7 +709,7 @@ struct texture_factory
 
 	texture_factory& to_png(const std::string& path);
 
-	texture_factory& type(texture::pixel_type t);
+	texture_factory& type(g::gfx::type t);
 
 	texture_factory& components(unsigned count);
 
@@ -831,10 +831,10 @@ namespace vertex
 
 		static const element* layout()
 		{
-			constexpr pos v;
-			constexpr auto start = &v.position;
-			static constexpr element elements[] = {
-				{"a_position", type::float32, &v.position - start },
+			const pos v;
+			const auto start = (uint8_t*)&v.position;
+			static const vertex::element elements[] = {
+				{"a_position", type::float32, ((uint8_t*)&v.position) - start },
 				{},
 			};
 			return elements;
@@ -861,11 +861,11 @@ namespace vertex
 		// }
 		static const element* layout()
 		{
-			constexpr pos_uv v;
-			constexpr auto start = &v.position;
-			static constexpr element elements[] = {
-				{"a_position", type::float32, &v.position - start },
-				{"a_uv", type::float32, &v.uv - start },
+			const pos_uv v;
+			const auto start = (uint8_t*)&v.position;
+			static const element elements[] = {
+				{"a_position", type::float32, (uint8_t*)&v.position - start },
+				{"a_uv", type::float32, (uint8_t*)&v.uv - start },
 				{},
 			};
 			return elements;
@@ -893,11 +893,11 @@ namespace vertex
 
 		static const element* layout()
 		{
-			constexpr pos_norm v;
-			constexpr auto start = &v.position;
-			static constexpr element elements[] = {
-				{"a_position", type::float32, &v.position - start },
-				{"a_normal", type::float32, &v.normal - start },
+			const pos_norm v;
+			const auto start = (uint8_t*)&v.position;
+			static const element elements[] = {
+				{"a_position", type::float32, (uint8_t*)&v.position - start },
+				{"a_normal", type::float32, (uint8_t*)&v.normal - start },
 				{},
 			};
 			return elements;
@@ -930,12 +930,12 @@ namespace vertex
 
 		static const element* layout()
 		{
-			constexpr pos_uv_norm v;
-			constexpr auto start = &v.position;
-			static constexpr element elements[] = {
-				{"a_position", type::float32, &v.position - start },
-				{"a_uv", type::float32, &v.uv - start },
-				{"a_normal", type::float32, &v.normal - start },
+			const pos_uv_norm v;
+			const auto start = (uint8_t*)&v.position;
+			static const element elements[] = {
+				{"a_position", type::float32, (uint8_t*)&v.position - start },
+				{"a_uv", type::float32, (uint8_t*)&v.uv - start },
+				{"a_normal", type::float32, (uint8_t*)&v.normal - start },
 				{},
 			};
 			return elements;
@@ -967,12 +967,12 @@ namespace vertex
 		// }
 		static const element* layout()
 		{
-			constexpr pos_norm_tan v;
-			constexpr auto start = &v.position;
-			static constexpr element elements[] = {
-				{"a_position", type::float32, &v.position - start },
-				{"a_normal", type::float32, &v.normal - start },
-				{"a_tangent", type::float32, &v.tangent - start },
+			const pos_norm_tan v;
+			const auto start = (uint8_t*)&v.position;
+			static const element elements[] = {
+				{"a_position", type::float32, (uint8_t*)&v.position - start },
+				{"a_normal", type::float32, (uint8_t*)&v.normal - start },
+				{"a_tangent", type::float32, (uint8_t*)&v.tangent - start },
 				{},
 			};
 			return elements;
@@ -1005,12 +1005,12 @@ namespace vertex
 
 		static const element* layout()
 		{
-			constexpr pos_norm_color v;
-			constexpr auto start = &v.position;
-			static constexpr element elements[] = {
-				{"a_position", type::float32, &v.position - start },
-				{"a_normal", type::float32, &v.normal - start },
-				{"a_color", type::uint8, &v.color - start },
+			const pos_norm_color v;
+			const auto start = (uint8_t*)&v.position;
+			static const element elements[] = {
+				{"a_position", type::float32, (uint8_t*)&v.position - start },
+				{"a_normal", type::float32, (uint8_t*)&v.normal - start },
+				{"a_color", type::uint8, (uint8_t*)&v.color - start },
 				{},
 			};
 			return elements;
@@ -1102,7 +1102,8 @@ struct mesh
 
 		shader.bind();
 		shader::usage usage = {&shader, vertex_count, index_count};
-		usage.attach_attributes<V>(shader);
+
+		usage.attach_attributes(V::layout());
 
 		// unbind any previously bound textures to prevent
 		// unexpected behavior
@@ -1899,7 +1900,7 @@ void blit(framebuffer* fb);
 
 } // end namespace effect
 
-namespace primative
+namespace rendering
 {
 
 template <typename D>
@@ -2029,6 +2030,6 @@ struct text : public renderer<std::string>
 	void measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out);
 };
 
-}; // end namespace primative
+}; // end namespace rendering
 }; // end namespace gfx
 }; // end namespace g
