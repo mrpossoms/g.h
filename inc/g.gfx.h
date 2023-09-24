@@ -366,24 +366,51 @@ struct shader
 
 	shader& bind();
 
-	struct uniform_usage;
+	struct usage;
+
+	struct parameter_usage_iface
+	{
+		virtual usage mat4n (const mat<4, 4>* m, size_t count) = 0;
+
+		virtual usage mat3n (const mat<3, 3>* m, size_t count) = 0;
+
+		virtual usage vec2n (const vec<2>* v, size_t count) = 0;
+
+		virtual usage vec3n (const vec<3>* v, size_t count) = 0;
+
+		virtual usage vec4n(const vec<4>* v, size_t count) = 0;
+
+		virtual usage fltn(const float* f, size_t count) = 0;
+
+		virtual usage intn(const int* i, size_t count) = 0;
+
+		virtual usage texture(const texture* tex) = 0;
+	};
+
+	struct usage_iface
+	{
+		virtual parameter_usage_iface* set_uniform(const std::string& name) = 0;
+
+		virtual usage_iface* draw(g::gfx::primative prim) = 0;
+	};
+
+	struct parameter_usage;
 	/**
 	 * @brief      shader::usage type represents the start of some invocation
 	 * of an interaction with a shader.
 	 */
 	struct usage
 	{
-		shader* shader_ref = nullptr;
-		size_t vertices = 0, indices = 0;
-		int texture_unit = 0;
+		usage_iface* usage_impl;
+		shader* shader_ptr;
 
 		usage() = default;
-		usage (shader* ref, size_t verts, size_t inds);
+		usage (shader* shader, size_t verts, size_t inds);
 
 		usage attach_attributes(const vertex::element* elements)
 		{
 			//assert(gl_get_error());
-			shader_ref->attach_attributes(elements);
+			shader_ptr->attach_attributes(elements);
 			//assert(gl_get_error());
 			return *this;
 		}
@@ -392,26 +419,31 @@ struct shader
 
 		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
-		uniform_usage operator[](const std::string& name) { return set_uniform(name); }
+		parameter_usage operator[](const std::string& name) { return set_uniform(name); }
 
-		virtual uniform_usage set_uniform(const std::string& name) {};
+		parameter_usage set_uniform(const std::string& name) 
+		{
+			return { *this, usage_impl->set_uniform(name) };
+		};
 
-		virtual usage& draw(g::gfx::primative prim) {};
+		usage& draw(g::gfx::primative prim);
 	};
 
 	/**
 	 * @brief      Offers interaction with the uniforms defined for a given shader
 	 */
-	struct uniform_usage
+	struct parameter_usage
 	{
-		GLuint uni_loc;
-		usage& parent_usage;
+		usage& usage_ref;
+		parameter_usage_iface* param_usage;
 
-		uniform_usage(usage& parent, GLuint loc);
+		parameter_usage(usage& parent, parameter_usage_iface* param_usage);
 
 		usage mat4 (const mat<4, 4>& m);
+		usage mat4n (const mat<4, 4>* m, size_t count);
 
 		usage mat3 (const mat<3, 3>& m);
+		usage mat3n (const mat<3, 3>* m, size_t count);
 
 		usage vec2 (const vec<2>& v);
 		usage vec2n (const vec<2>* v, size_t count);
@@ -420,31 +452,19 @@ struct shader
 		usage vec3n (const vec<3>* v, size_t count);
 
 		usage vec4(const vec<4>& v);
+		usage vec4n(vec<4>* v, size_t count);
 
 		usage flt(float f);
 		usage fltn(float* f, size_t count);
 
 		usage int1(const int i);
+		usage intn(const int* i, size_t count);
 
 		usage texture(const texture* tex);
-
-		// virtual operator() (const mat<4, 4>& m) = 0;
-		// virtual operator() (const mat<3, 3>& m) = 0;
-		// virtual operator() (const vec<2>& v) = 0;
-		// virtual operator() (const std::vector<vec<2>>& v) = 0;
-		// virtual operator() (const vec<3>& v) = 0;
-		// virtual operator() (const std::vector<vec<3>>& v) = 0;
-		// virtual operator() (const vec<4>& v) = 0;
-		// virtual operator() (const std::vector<vec<4>>& v) = 0;
-		// virtual operator() (float f) = 0;
-		// virtual operator() (const std::vector<float>& f) = 0;
-		// virtual operator() (int32_t i) = 0;
-		// virtual operator() (const std::vector<int32_t>& i) = 0;
-		// virtual operator() (const texture& tex) = 0;
 	};
 };
 
-// struct uniform_usage;
+// struct parameter_usage;
 // /**
 //  * @brief      shader::usage type represents the start of some invocation
 //  * of an interaction with a shader.
@@ -470,9 +490,9 @@ struct shader
 
 // 	usage set_sprite(const g::gfx::sprite::instance& sprite);
 
-// 	uniform_usage set_uniform(const std::string& name);
+// 	parameter_usage set_uniform(const std::string& name);
 
-// 	uniform_usage operator[](const std::string& name);
+// 	parameter_usage operator[](const std::string& name);
 
 // 	template<GLenum PRIM>
 // 	usage& draw()
@@ -506,7 +526,7 @@ struct shader
 
 // 	virtual shader& bind() = 0;
 
-// 	struct uniform_usage;
+// 	struct parameter_usage;
 // 	/**
 // 	 * @brief      shader::usage type represents the start of some invocation
 // 	 * of an interaction with a shader.
@@ -533,9 +553,9 @@ struct shader
 
 // 		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
-// 		uniform_usage set_uniform(const std::string& name);
+// 		parameter_usage set_uniform(const std::string& name);
 
-// 		uniform_usage operator[](const std::string& name);
+// 		parameter_usage operator[](const std::string& name);
 
 // 		template<GLenum PRIM>
 // 		usage& draw()
@@ -564,12 +584,12 @@ struct shader
 // 	/**
 // 	 * @brief      Offers interaction with the uniforms defined for a given shader
 // 	 */
-// 	struct uniform_usage
+// 	struct parameter_usage
 // 	{
 // 		GLuint uni_loc;
 // 		usage& parent_usage;
 
-// 		uniform_usage(usage& parent, GLuint loc);
+// 		parameter_usage(usage& parent, GLuint loc);
 
 // 		usage mat4 (const mat<4, 4>& m);
 

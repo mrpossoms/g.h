@@ -552,7 +552,7 @@ shader::usage shader::usage::set_sprite(const g::gfx::sprite::instance& sprite)
 }
 
 
-shader::uniform_usage shader::usage::set_uniform(const std::string& name)
+shader::parameter_usage shader::usage::set_uniform(const std::string& name)
 {
 	if (nullptr == shader_ref) { return {*this, 0xffffffff}; }
 
@@ -574,94 +574,157 @@ shader::uniform_usage shader::usage::set_uniform(const std::string& name)
 		loc = (*it).second;
 	}
 
-	return uniform_usage(*this, loc);
+	return parameter_usage(*this, loc);
 }
 
-shader::uniform_usage shader::usage::operator[](const std::string& name)
+shader::parameter_usage shader::usage::operator[](const std::string& name)
 {
 	return set_uniform(name);
 }
 
-
-shader::uniform_usage::uniform_usage(shader::usage& parent, GLuint loc) : parent_usage(parent) { uni_loc = loc; }
-
-shader::usage shader::uniform_usage::mat4 (const mat<4, 4>& m)
+shader::usage& shader::usage::draw(g::gfx::primative prim)
 {
-	glUniformMatrix4fv(uni_loc, 1, true, m.ptr());
-
-	return parent_usage;
+	usage_impl->draw(prim);
+	return *this;
 }
 
-shader::usage shader::uniform_usage::mat3 (const mat<3, 3>& m)
-{
-	glUniformMatrix3fv(uni_loc, 1, true, m.ptr());
+shader::parameter_usage::parameter_usage(shader::usage& parent, parameter_usage_iface* param_usage) : 
+parent_usage(parent), param_usage(param_usage) 
+{}
 
-	return parent_usage;
+
+shader::usage shader::parameter_usage::mat4 (const mat<4, 4>& m) { return mat4n(&m, 1); }
+shader::usage shader::parameter_usage::mat4n (const mat<4, 4>* m, size_t count)
+{
+	param_usage->mat4n(m, count);
+	return usage_ref;
 }
 
-shader::usage shader::uniform_usage::vec2 (const vec<2>& v)
+shader::usage shader::parameter_usage::mat3 (const mat<3, 3>& m) { return mat3n(&m, 1); }
+shader::usage shader::parameter_usage::mat3n (const mat<3, 3>* m, size_t count)
 {
-	glUniform2fv(uni_loc, 1, v.v);
-
-	return parent_usage;
+	param_usage->mat3n(m, count);
+	return usage_ref;
 }
 
-shader::usage shader::uniform_usage::vec2n (const vec<2>* v, size_t count)
+shader::usage shader::parameter_usage::vec2 (const vec<2>& v) { return vec2n(&v, 1); }
+shader::usage shader::parameter_usage::vec2n (const vec<2>* v, size_t count)
 {
-	glUniform2fv(uni_loc, count, (const float*)v);
-
-	return parent_usage;
+	param_usage->vec2n(v, count);
+	return usage_ref;
 }
 
-shader::usage shader::uniform_usage::vec3 (const vec<3>& v)
+shader::usage shader::parameter_usage::vec3 (const vec<3>& v) { return vec3n(&v, 1); }
+shader::usage shader::parameter_usage::vec3n (const vec<3>* v, size_t count)
 {
-	glUniform3fv(uni_loc, 1, v.v);
-
-	return parent_usage;
+	param_usage->vec3n(v, count);
+	return usage_ref;	
 }
 
-shader::usage shader::uniform_usage::vec3n (const vec<3>* v, size_t count)
+shader::usage shader::parameter_usage::vec4(const vec<4>& v) { return vec4n(&v, 1); }
+shader::usage shader::parameter_usage::vec4n(vec<4>* v, size_t count)
 {
-	glUniform3fv(uni_loc, count, (const float *)v);
-
-	return parent_usage;
+	param_usage->vec4n(v, 1);
+	return usage_ref;
 }
 
-shader::usage shader::uniform_usage::vec4(const vec<4>& v)
+shader::usage shader::parameter_usage::flt(float f) { return fltn(&f, 1); }
+shader::usage shader::parameter_usage::fltn(float* f, size_t count)
 {
-	glUniform4fv(uni_loc, 1, v.v);
-
-	return parent_usage;
+	param_usage->fltn(f, count);
+	return param_usage;
 }
 
-shader::usage shader::uniform_usage::flt (float f)
+shader::usage shader::parameter_usage::int1(const int i) { return intn(&i, 1); }
+shader::usage shader::parameter_usage::intn(const int* i, size_t count)
 {
-	glUniform1f(uni_loc, f);
-
-	return parent_usage;
+	param_usage->intn(i, count);
+	return usage_ref;
 }
 
-shader::usage shader::uniform_usage::fltn (float* f, size_t count)
+shader::usage shader::parameter_usage::texture(const g::gfx::texture* tex)
 {
-	glUniform1fv(uni_loc, count, (const float *)f);
-
-	return parent_usage;
+	param_usage->texture(tex);
+	return usage_ref;
 }
 
-shader::usage shader::uniform_usage::int1(const int i)
-{
-	glUniform1i(uni_loc, i);
-	return parent_usage;
-}
+// shader::usage shader::parameter_usage::mat4 (const mat<4, 4>& m)
+// {
+// 	glUniformMatrix4fv(uni_loc, 1, true, m.ptr());
 
-shader::usage shader::uniform_usage::texture(const g::gfx::texture* tex)
-{
-	glActiveTexture(GL_TEXTURE0 + parent_usage.texture_unit);
-	tex->bind();
-	glUniform1i(uni_loc, parent_usage.texture_unit);
-	parent_usage.texture_unit++;
-	return parent_usage;
-}
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::mat3 (const mat<3, 3>& m)
+// {
+// 	glUniformMatrix3fv(uni_loc, 1, true, m.ptr());
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec2 (const vec<2>& v)
+// {
+// 	glUniform2fv(uni_loc, 1, v.v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec2n (const vec<2>* v, size_t count)
+// {
+// 	glUniform2fv(uni_loc, count, (const float*)v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec3 (const vec<3>& v)
+// {
+// 	glUniform3fv(uni_loc, 1, v.v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec3n (const vec<3>* v, size_t count)
+// {
+// 	glUniform3fv(uni_loc, count, (const float *)v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec4(const vec<4>& v)
+// {
+// 	glUniform4fv(uni_loc, 1, v.v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::flt (float f)
+// {
+// 	glUniform1f(uni_loc, f);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::fltn (float* f, size_t count)
+// {
+// 	glUniform1fv(uni_loc, count, (const float *)f);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::int1(const int i)
+// {
+// 	glUniform1i(uni_loc, i);
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::texture(const g::gfx::texture* tex)
+// {
+// 	glActiveTexture(GL_TEXTURE0 + parent_usage.texture_unit);
+// 	tex->bind();
+// 	glUniform1i(uni_loc, parent_usage.texture_unit);
+// 	parent_usage.texture_unit++;
+// 	return parent_usage;
+// }
 
 #ifdef __EMSCRIPTEN__
 	std::string shader_factory::shader_header = "#version 300 es\n";
