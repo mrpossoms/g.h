@@ -111,6 +111,23 @@ enum type
 	float32,
 };
 
+static size_t type_to_bytes(type t)
+{
+	static const size_t size_map[] = {
+		0, // unspecified
+		1, // uint8
+		1, // int8
+		2, // uint16
+		2, // int16
+		4, // uint32
+		4, // int32
+		2, // float16
+		4, // float32
+	};
+
+	return size_map[static_cast<size_t>(t)];
+}
+
 enum primative
 {
 	points,
@@ -157,22 +174,7 @@ struct texture
 		texture::wrap   wrap = texture::wrap::repeat;
 
 		unsigned components() const { return usage.red + usage.green + usage.blue + usage.alpha + usage.depth; }
-		size_t bytes_per_component() const
-		{
-			static const size_t size_map[] = {
-				0, // unspecified
-				1, // uint8
-				1, // int8
-				2, // uint16
-				2, // int16
-				4, // uint32
-				4, // int32
-				2, // float16
-				4, // float32
-			};
-
-			return size_map[static_cast<size_t>(pixel_storage_type)];
-		}
+		size_t bytes_per_component() const { return type_to_bytes(pixel_storage_type); }
 		size_t bytes_per_pixel() const { return bytes_per_component() * components(); }
 		size_t bytes() const { return size[0] * size[1] * size[2] * bytes_per_pixel(); }
 	};
@@ -358,13 +360,33 @@ struct sprite
 
 struct shader
 {
+	struct program
+	{
+		enum type
+		{
+			unspecified = 0,
+			vertex,
+			fragment,
+			geometry,
+			compute,
+		};
+
+		std::string path;
+		std::string source;
+	};
+
+	struct description
+	{
+		std::unordered_map<program::type, shader::program> programs;
+	};
+
 	virtual ~shader() {}
 
 	virtual bool is_initialized() const = 0;
 
 	virtual void attach_attributes(const vertex::element* elements) {};
 
-	shader& bind();
+	virtual shader* bind() = 0;
 
 	struct usage;
 
@@ -657,7 +679,7 @@ struct interface {
 
 	virtual texture* make_texture(const texture::description& desc) = 0;
 	virtual framebuffer* make_framebuffer(texture* color, texture* depth) = 0;
-	virtual shader* make_shader(const std::string& shader_string) = 0;
+	virtual shader* make_shader(const shader::description& desc) = 0;
 };
 
 struct opengl final : public interface
@@ -675,7 +697,8 @@ struct opengl final : public interface
 
 	texture* make_texture(const texture::description& desc) override;
 	framebuffer* make_framebuffer(texture* color, texture* depth) override;
-	shader* make_shader(const std::string& shader_string) override;
+	shader* make_shader(const shader::description& desc) override;
+
 
 private:
 	GLFWwindow* win;
@@ -777,64 +800,25 @@ struct framebuffer_factory
 
 struct shader_factory
 {
-	std::unordered_map<GLenum, GLuint> shaders;
-
-	static std::string shader_header;
 	static std::string shader_path;
+	shader::description desc;
 
-	static GLuint compile_shader (GLenum type, const GLchar* src, GLsizei len);
+	shader_factory& add(const std::string& path, shader::program::type type);
 
-	template<GLenum ST>
-	shader_factory add(const std::string& path)
-	{
-		auto fd = ::open(path.c_str(), O_RDONLY);
-		auto size = ::lseek(fd, 0, SEEK_END);
+	shader_factory& add_src(const std::string& src, shader::program::type type);
 
-		if (fd < 0 || size <= 0)
-		{
-			std::cerr << G_TERM_RED << "Could not open: '" << path << "' file did not exist, or was empty" << std::endl;
-			return *this;
-		}
-
-		{ // read and compile the shader
-			GLchar* src = new GLchar[size];
-			::lseek(fd, 0, SEEK_SET);
-			size = ::read(fd, src, size);
-
-			std::cerr << "Compiling: " << path << "... ";
-
-			auto src_str = shader_header + std::string(src, size);
-			shaders[ST] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length() - 1);
-
-			::close(fd);
-			delete[] src;
-		}
-
-		return *this;
-	}
-
-	template<GLenum ST>
-	shader_factory add_src(const std::string& src)
-	{
-		{ // read and compile the shader
-			auto src_str = shader_header + src;
-			shaders[ST] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length());
-		}
-
-		return *this;
-	}
-
-	shader create();
+	shader* create();
 };
-
 
 namespace vertex
 {
+	#define COMPONENT_COUNT(e) (sizeof(e) / sizeof(e[0]))
+
 	struct element
 	{
 		const char* name = nullptr;
 		type        component_type = type::unspecified;
-		off_t       offset = 0;
+		unsigned    components;
 	};
 
 	struct pos
@@ -852,9 +836,8 @@ namespace vertex
 		static const element* layout()
 		{
 			const pos v;
-			const auto start = (uint8_t*)&v.position;
 			static const vertex::element elements[] = {
-				{"a_position", type::float32, ((uint8_t*)&v.position) - start },
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
 				{},
 			};
 			return elements;
@@ -882,10 +865,9 @@ namespace vertex
 		static const element* layout()
 		{
 			const pos_uv v;
-			const auto start = (uint8_t*)&v.position;
 			static const element elements[] = {
-				{"a_position", type::float32, (uint8_t*)&v.position - start },
-				{"a_uv", type::float32, (uint8_t*)&v.uv - start },
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_uv", type::float32, COMPONENT_COUNT(v.uv) },
 				{},
 			};
 			return elements;
@@ -914,10 +896,9 @@ namespace vertex
 		static const element* layout()
 		{
 			const pos_norm v;
-			const auto start = (uint8_t*)&v.position;
 			static const element elements[] = {
-				{"a_position", type::float32, (uint8_t*)&v.position - start },
-				{"a_normal", type::float32, (uint8_t*)&v.normal - start },
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_normal", type::float32, COMPONENT_COUNT(v.normal) },
 				{},
 			};
 			return elements;
@@ -951,11 +932,10 @@ namespace vertex
 		static const element* layout()
 		{
 			const pos_uv_norm v;
-			const auto start = (uint8_t*)&v.position;
 			static const element elements[] = {
-				{"a_position", type::float32, (uint8_t*)&v.position - start },
-				{"a_uv", type::float32, (uint8_t*)&v.uv - start },
-				{"a_normal", type::float32, (uint8_t*)&v.normal - start },
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_uv", type::float32, COMPONENT_COUNT(v.uv) },
+				{"a_normal", type::float32, COMPONENT_COUNT(v.normal) },
 				{},
 			};
 			return elements;
@@ -988,11 +968,10 @@ namespace vertex
 		static const element* layout()
 		{
 			const pos_norm_tan v;
-			const auto start = (uint8_t*)&v.position;
 			static const element elements[] = {
-				{"a_position", type::float32, (uint8_t*)&v.position - start },
-				{"a_normal", type::float32, (uint8_t*)&v.normal - start },
-				{"a_tangent", type::float32, (uint8_t*)&v.tangent - start },
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_normal", type::float32, COMPONENT_COUNT(v.normal) },
+				{"a_tangent", type::float32, COMPONENT_COUNT(v.tangent) },
 				{},
 			};
 			return elements;
@@ -1026,11 +1005,10 @@ namespace vertex
 		static const element* layout()
 		{
 			const pos_norm_color v;
-			const auto start = (uint8_t*)&v.position;
 			static const element elements[] = {
-				{"a_position", type::float32, (uint8_t*)&v.position - start },
-				{"a_normal", type::float32, (uint8_t*)&v.normal - start },
-				{"a_color", type::uint8, (uint8_t*)&v.color - start },
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_normal", type::float32, COMPONENT_COUNT(v.normal) },
+				{"a_color", type::uint8, COMPONENT_COUNT(v.color) },
 				{},
 			};
 			return elements;
@@ -1822,7 +1800,7 @@ struct density_volume
 
             if (draw_config) { draw_config(chain); }
 
-            chain.template draw<GL_TRIANGLES>();
+            chain.draw(g::gfx::primative::triangles);
 
 #ifdef G_GFX_DENSITY_VOLUME_DEBUG
            g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
@@ -1885,8 +1863,8 @@ void shadow_0(const mesh<V>& m, const framebuffer& shadow_map, game::camera& lig
     if (!shadow_shader.is_initialized())
     {
         shadow_shader = shader_factory{}
-            .add_src<GL_VERTEX_SHADER>(shadow_map_vs_src)
-            .add_src<GL_FRAGMENT_SHADER>(shadow_map_fs_src)
+            .add_src(shadow_map_vs_src, shader::program::type::vertex)
+            .add_src(shadow_map_fs_src, shader::program::type::fragment)
             .create();
     }
 
@@ -1908,7 +1886,7 @@ void shadow_0(const mesh<V>& m, const framebuffer& shadow_map, game::camera& lig
 
     if (draw_config) { draw_config(chain); }
 
-    chain.template draw<GL_TRIANGLES>();
+    chain.draw(g::gfx::primative::triangles);
 
 	glPolygonOffset( 0, 0 );
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1994,7 +1972,7 @@ struct volume_slicer : public renderer<texture>
 			  g::game::camera& cam,
 			  const mat<4, 4>& model)
 	{
-		using_shader(shader, vox, cam, model).draw<GL_TRIANGLES>();
+		using_shader(shader, vox, cam, model).draw(g::gfx::primative::triangles);
 	}
 };
 

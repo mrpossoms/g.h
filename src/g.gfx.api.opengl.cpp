@@ -5,6 +5,20 @@
 
 using namespace g::gfx;
 
+static GLenum gl_type(g::gfx::type t)
+{
+	return (GLenum[]){ 
+		GL_FALSE, 
+		GL_UNSIGNED_BYTE, 
+		GL_BYTE,
+		GL_UNSIGNED_SHORT,
+		GL_SHORT,
+		GL_UNSIGNED_INT,
+		GL_INT,
+		GL_HALF_FLOAT,
+		GL_FLOAT,
+	}[t];
+}
 
 struct opengl_texture : public g::gfx::texture
 {
@@ -12,20 +26,7 @@ struct opengl_texture : public g::gfx::texture
 	// uint8_t* data = nullptr;
 	// texture::description desc = {};
 
-	GLenum type() const
-	{
-		return (GLenum[]){ 
-			GL_FALSE, 
-			GL_UNSIGNED_BYTE, 
-			GL_BYTE,
-			GL_UNSIGNED_SHORT,
-			GL_SHORT,
-			GL_UNSIGNED_INT,
-			GL_INT,
-			GL_HALF_FLOAT,
-			GL_FLOAT,
-		}[desc.pixel_storage_type];
-	}
+	GLenum type() const { return gl_type(desc.pixel_storage_type); }
 
 	GLenum format() const
 	{
@@ -401,6 +402,187 @@ struct opengl_framebuffer : public g::gfx::framebuffer
 	}
 };
 
+struct opengl_shader : public g::gfx::shader
+{
+	static std::string shader_header;
+
+	GLuint id;
+	std::unordered_map<std::string, GLint> uni_locs;
+
+	static GLuint compile_shader (shader::program::type type, const GLchar* src, GLsizei len)
+	{
+		// Create the GL shader and attempt to compile it
+		auto shader = glCreateShader((GLenum){
+			GL_FALSE,
+			GL_VERTEX_SHADER,
+			GL_FRAGMENT_SHADER,
+			GL_GEOMETRY_SHADER,
+			GL_COMPUTE_SHADER,
+		}[type]);
+
+		glShaderSource(shader, 1, &src, &len);
+		glCompileShader(shader);
+
+		assert(gl_get_error());
+
+		// Check the compilation status
+		GLint status;
+		glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+		if (status == GL_FALSE)
+		{
+			std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
+			std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
+		}
+		assert(gl_get_error());
+
+		// Print the compilation log if there's anything in there
+		GLint log_length;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
+		if (log_length > 0)
+		{
+			GLchar *log_str = (GLchar *)malloc(log_length);
+			glGetShaderInfoLog(shader, log_length, &log_length, log_str);
+			std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
+			free(log_str);
+		}
+		assert(gl_get_error());
+
+		// treat all shader compilation failure as fatal
+		if (status == GL_FALSE)
+		{
+			glDeleteShader(shader);
+			exit(-2);
+		}
+
+		std::cerr << G_TERM_GREEN << "OK" << G_TERM_COLOR_OFF << std::endl;
+
+		return shader;
+	}
+
+	opengl_shader(const shader::description& desc)
+	{
+		id = glCreateProgram();
+		std::unordered_map<shader::program::type, GLuint> shaders;
+
+		for (auto& s : desc.shaders)
+		{
+			GLuint shader_id;
+			
+			std::cerr << "Compiling: " << s.path << "... ";
+
+			if (s.source.length() > 0)
+			{
+				shaders[s.type] = compile_shader(s.type, s.source.c_str(), s.source.length());
+			}
+			else
+			{
+				auto fd = ::open(s.path.c_str(), O_RDONLY);
+				auto size = ::lseek(fd, 0, SEEK_END);
+
+				if (fd < 0 || size <= 0)
+				{
+					std::cerr << G_TERM_RED << "Could not open: '" << path << "' file did not exist, or was empty" << std::endl;
+					throw std::runtime_error("shader file not found");
+				}
+
+				{ // read and compile the shader
+					GLchar* src = new GLchar[size];
+					::lseek(fd, 0, SEEK_SET);
+					size = ::read(fd, src, size);
+					auto src_str = shader_header + std::string(src, size);
+					shaders[s.type] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length() - 1);
+
+					::close(fd);
+					delete[] src;
+				}
+			}
+
+			glAttachShader(id, shader_id);
+			glDeleteShader(shader_id);
+		}
+
+		glLinkProgram(id);
+
+		int success;
+		char infoLog[512];
+		glGetProgramiv(id, GL_LINK_STATUS, &success);
+
+		if (!success)
+		{
+			glGetProgramInfoLog(id, 512, NULL, infoLog);
+			std::cerr << "Shader linking failed: " << infoLog << std::endl;
+			throw std::runtime_error("shader linking failed");
+		}
+	}
+
+	opengl_shader(const opengl_shader& other) = delete;
+
+	opengl_shader& operator=(const opengl_shader& other) = delete;
+
+	opengl_shader(opengl_shader&& other)
+	{
+		id = other.id;
+		other.id = 0;
+		uni_locs = std::move(other.uni_locs);
+	}
+
+	opengl_shader& operator=(opengl_shader&& other)
+	{
+		id = other.id;
+		other.id = 0;
+		uni_locs = std::move(other.uni_locs);
+		return *this;
+	}
+
+	bool is_initialized() const override
+	{
+		return id != 0;
+	}
+
+	void bind() const override
+	{
+		glUseProgram(id);
+	}
+
+	size_t vertex_size(const vertex::element* elements)
+	{
+		size_t size = 0;
+		for (unsigned i = 0; elements[i].name != nullptr; i++)
+		{
+			size += g::gfx::type_to_bytes(elements[i].type) * elements[i].count;
+		}
+
+		return size;
+	}
+
+	void attach_attributes(const vertex::element* elements) override
+	{
+		off_t pointer = 0;
+		size_t vert_size = vertex_size(elements);
+
+		for (unsigned i = 0; elements[i].name != nullptr; i++)
+		{
+			auto loc = glGetAttribLocation(id, elements[i].name);
+
+			if (loc > -1)
+			{
+				glEnableVertexAttribArray(loc);
+				glVertexAttribPointer(
+					loc, 
+					elements[i].count, 
+					gl_type(elements[i].type),
+					GL_FALSE, 
+					vert_size, // TODO: according to docs, 0 indicates tightly packed, but historically I've used sizeof(vertex)
+					(GLvoid*)pointer
+				);
+
+				pointer += g::gfx::type_to_bytes(elements[i].type) * elements[i].count;
+			}
+		}
+	}
+
+};
+
 g::gfx::api::opengl::opengl()
 {
 	// NOP
@@ -476,7 +658,7 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 		version.erase(version.find("."), 1);
 
 		g::gfx::shader_factory::shader_path = std::string("glsl/") + version + std::string("/");
-		g::gfx::shader_factory::shader_header = std::string("#version ") + version + std::string("\n");
+		opengl_shader::shader_header = std::string("#version ") + version + std::string("\n");
 	}
 	else
 	{
@@ -530,4 +712,9 @@ texture* g::gfx::api::opengl::make_texture(const texture::description& desc)
 framebuffer* g::gfx::api::opengl::make_framebuffer(texture* color, texture* depth)
 {
 	return new opengl_framebuffer((opengl_texture*)color, (opengl_texture*)depth);
+}
+
+shader* g::gfx::api::opengl::make_shader(const shader::description& desc)
+{
+	return new opengl_shader(desc);
 }

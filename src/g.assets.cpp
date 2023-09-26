@@ -28,7 +28,7 @@ g::asset::store::~store()
 
 	for (auto& s : shaders)
 	{
-		s.second.get().destroy();
+		delete s.second.get();
 	}
 
 	for (auto& f : fonts)
@@ -55,7 +55,7 @@ g::gfx::texture* g::asset::store::tex(const std::string& partial_path, bool make
 			// TODO:
 			auto tex = g::gfx::texture_factory(8, 8)
 			.components(3)
-			.type(texture::pixel_type::uint8)
+			.type(g::gfx::type::uint8)
 			.fill([](int x, int y, int z, unsigned char* pixel){
 				bool on_line = (x + y) & 0x1;
 				pixel[0] = !on_line * 255;
@@ -180,7 +180,7 @@ g::gfx::sprite& g::asset::store::sprite(const std::string& partial_path, bool ma
 }
 
 
-g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
+g::gfx::shader* g::asset::store::shader(const std::string& program_collection)
 {
 	auto itr = shaders.find(program_collection);
 	if (itr == shaders.end())
@@ -192,11 +192,11 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 
 			if (std::string::npos != shader_path.find(".vs"))
 			{
-				factory = factory.add<GL_VERTEX_SHADER>(path);
+				factory = factory.add(path, shader::program::type::vertex);
 			}
 			else if (std::string::npos != shader_path.find(".fs"))
 			{
-				factory = factory.add<GL_FRAGMENT_SHADER>(path);
+				factory = factory.add(path, shader::program::type::fragment);
 			}
 		}
 
@@ -224,7 +224,7 @@ g::gfx::shader& g::asset::store::shader(const std::string& program_collection)
 
 		if (do_reload)
 		{
-			itr->second.get().destroy();
+			delete itr->second.get();
 			shaders.erase(itr);
 			return this->shader(program_collection);
 		}

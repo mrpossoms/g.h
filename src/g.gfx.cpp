@@ -259,7 +259,7 @@ texture_factory& texture_factory::from_png(const std::string& path)
 
 	// TODO: this is stupid and naive
 	desc.usage = {.red=1, .green=1, .blue=1, .alpha=1};
-	desc.pixel_storage_type = texture::pixel_type::uint8;
+	desc.pixel_storage_type = g::gfx::type::uint8;
 
 	// switch(colortype)
 	// {
@@ -333,7 +333,7 @@ texture_factory& texture_factory::to_png(const std::string& path)
 	return *this;
 }
 
-texture_factory& texture_factory::type(texture::pixel_type t)
+texture_factory& texture_factory::type(g::gfx::type t)
 {
 	desc.pixel_storage_type = t;
 	return *this;
@@ -341,7 +341,7 @@ texture_factory& texture_factory::type(texture::pixel_type t)
 
 texture_factory& texture_factory::color()
 {
-	desc.pixel_storage_type = texture::pixel_type::uint8;
+	desc.pixel_storage_type = g::gfx::type::uint8;
 	desc.usage = {.red=1, .green=1, .blue=1, .alpha=1};
 	return *this;
 }
@@ -372,7 +372,7 @@ texture_factory& texture_factory::components(unsigned count)
 texture_factory& texture_factory::depth()
 {
 	desc.usage = { .depth = true };
-	desc.pixel_storage_type = texture::pixel_type::uint16;
+	desc.pixel_storage_type = g::gfx::type::uint16;
 	return *this;
 }
 
@@ -516,14 +516,14 @@ framebuffer* framebuffer_factory::create()
 
 
 
-shader& shader::bind() { glUseProgram(program); return *this; }
+// shader& shader::bind() { glUseProgram(program); return *this; }
 
-void shader::destroy()
-{	
-	glDeleteProgram(program);
-}
+// void shader::destroy()
+// {	
+// 	glDeleteProgram(program);
+// }
 
-shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
+shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ptr(ref)
 {
 	vertices = verts;
 	indices = inds;
@@ -533,10 +533,8 @@ shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
 
 shader::usage shader::usage::set_camera(const g::game::camera& cam)
 {
-	assert(gl_get_error());
 	this->set_uniform("u_view").mat4(cam.view());
 	this->set_uniform("u_proj").mat4(cam.projection().transpose());
-	assert(gl_get_error());
 	return *this;
 }
 
@@ -552,30 +550,30 @@ shader::usage shader::usage::set_sprite(const g::gfx::sprite::instance& sprite)
 }
 
 
-shader::parameter_usage shader::usage::set_uniform(const std::string& name)
-{
-	if (nullptr == shader_ref) { return {*this, 0xffffffff}; }
+// shader::parameter_usage shader::usage::set_uniform(const std::string& name)
+// {
+// 	if (nullptr == shader_ref) { return {*this, 0xffffffff}; }
 
-	GLint loc;
-	auto it = shader_ref->uni_locs.find(name);
-	if (it == shader_ref->uni_locs.end())
-	{
-		loc = glGetUniformLocation(shader_ref->program, name.c_str());
+// 	GLint loc;
+// 	auto it = shader_ref->uni_locs.find(name);
+// 	if (it == shader_ref->uni_locs.end())
+// 	{
+// 		loc = glGetUniformLocation(shader_ref->program, name.c_str());
 
-		if (loc < 0)
-		{
-			// TODO: handle the missing uniform better
-			std::cerr << "uniform '" << name << "' doesn't exist\n";
-			shader_ref->uni_locs[name] = loc;
-		}
-	}
-	else
-	{
-		loc = (*it).second;
-	}
+// 		if (loc < 0)
+// 		{
+// 			// TODO: handle the missing uniform better
+// 			std::cerr << "uniform '" << name << "' doesn't exist\n";
+// 			shader_ref->uni_locs[name] = loc;
+// 		}
+// 	}
+// 	else
+// 	{
+// 		loc = (*it).second;
+// 	}
 
-	return parameter_usage(*this, loc);
-}
+// 	return parameter_usage(*this, loc);
+// }
 
 shader::parameter_usage shader::usage::operator[](const std::string& name)
 {
@@ -734,90 +732,63 @@ shader::usage shader::parameter_usage::texture(const g::gfx::texture* tex)
 
 	std::string shader_factory::shader_path;
 
-GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
+// GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
+// {
+// 	// Create the GL shader and attempt to compile it
+// 	auto shader = glCreateShader(type);
+// 	glShaderSource(shader, 1, &src, &len);
+// 	glCompileShader(shader);
+
+// 	assert(gl_get_error());
+
+// 	// Check the compilation status
+// 	GLint status;
+// 	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+// 	if (status == GL_FALSE)
+// 	{
+// 		std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
+// 		std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
+// 	}
+// 	assert(gl_get_error());
+
+// 	// Print the compilation log if there's anything in there
+// 	GLint log_length;
+// 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
+// 	if (log_length > 0)
+// 	{
+// 		GLchar *log_str = (GLchar *)malloc(log_length);
+// 		glGetShaderInfoLog(shader, log_length, &log_length, log_str);
+// 		std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
+// 		free(log_str);
+// 	}
+// 	assert(gl_get_error());
+
+// 	// treat all shader compilation failure as fatal
+// 	if (status == GL_FALSE)
+// 	{
+// 		glDeleteShader(shader);
+// 		exit(-2);
+// 	}
+
+// 	std::cerr << G_TERM_GREEN << "OK" << G_TERM_COLOR_OFF << std::endl;
+
+// 	return shader;
+// }
+
+
+shader_factory& shader_factory::add(const std::string& path, shader::program::type type)
 {
-	// Create the GL shader and attempt to compile it
-	auto shader = glCreateShader(type);
-	glShaderSource(shader, 1, &src, &len);
-	glCompileShader(shader);
-
-	assert(gl_get_error());
-
-	// Check the compilation status
-	GLint status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	if (status == GL_FALSE)
-	{
-		std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
-		std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
-	}
-	assert(gl_get_error());
-
-	// Print the compilation log if there's anything in there
-	GLint log_length;
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
-	if (log_length > 0)
-	{
-		GLchar *log_str = (GLchar *)malloc(log_length);
-		glGetShaderInfoLog(shader, log_length, &log_length, log_str);
-		std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
-		free(log_str);
-	}
-	assert(gl_get_error());
-
-	// treat all shader compilation failure as fatal
-	if (status == GL_FALSE)
-	{
-		glDeleteShader(shader);
-		exit(-2);
-	}
-
-	std::cerr << G_TERM_GREEN << "OK" << G_TERM_COLOR_OFF << std::endl;
-
-	return shader;
+	desc.programs[type].path = path;
+	return *this;
 }
 
-
-shader shader_factory::create()
+shader_factory& shader_factory::add_src(const std::string& src, shader::program::type type)
 {
-	GLint status;
-	shader out;
-	out.program = glCreateProgram();
-
-	for (auto shader : shaders)
-	{
-		glAttachShader(out.program, shader.second);
-	}
-
-	assert(gl_get_error());
-	glLinkProgram(out.program);
-
-	glGetProgramiv(out.program, GL_LINK_STATUS, &status);
-	if (status == 0)
-	{
-		GLint log_length;
-		glGetProgramiv(out.program, GL_INFO_LOG_LENGTH, &log_length);
-		if (log_length > 0)
-		{
-			GLchar *log_str = (GLchar *)malloc(log_length);
-			glGetProgramInfoLog(out.program, log_length, &log_length, log_str);
-			std::cerr << "Shader link log: " << log_length << std::endl << log_str << std::endl;
-			::write(1, log_str, log_length);
-			free(log_str);
-		}
-		exit(-1);
-	}
-
-	assert(gl_get_error());
-
-	// Detach all
-	for (auto shader : shaders)
-	{
-		glDetachShader(out.program, shader.second);
-	}
-
-	return out;
+	desc.programs[type].source = src;
+	return *this;
 }
+
+shader* shader_factory::create() { return g::gfx::api::instance->make_shader(desc); }
 
 
 #include <ft2build.h>
@@ -963,7 +934,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// using RGBA is totally excessive, but webgl
 	// seems to have issues with just GL_RED
 	font.face = texture_factory{col_pix, row_pix}
-	.type(g::gfx::texture::pixel_type::uint8)
+	.type(g::gfx::g::gfx::type::uint8)
 	.components(4)
 	.fill([&](int x, int y, int z, unsigned char* pixel){
 		pixel[0] = pixel[1] = pixel[2] = 0xff;
