@@ -527,7 +527,6 @@ shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ptr(ref)
 {
 	vertices = verts;
 	indices = inds;
-	texture_unit = 0;
 }
 
 
@@ -582,68 +581,68 @@ shader::parameter_usage shader::usage::operator[](const std::string& name)
 
 shader::usage& shader::usage::draw(g::gfx::primative prim)
 {
-	usage_impl->draw(prim);
+	// usage_impl->draw(prim); // see note in header
 	return *this;
 }
 
-shader::parameter_usage::parameter_usage(shader::usage& parent, parameter_usage_iface* param_usage) : 
+shader::parameter_usage::parameter_usage(shader::usage& parent, parameter_usage::interface& param_usage) : 
 parent_usage(parent), param_usage(param_usage) 
 {}
 
 
-shader::usage shader::parameter_usage::mat4 (const mat<4, 4>& m) { return mat4n(&m, 1); }
-shader::usage shader::parameter_usage::mat4n (const mat<4, 4>* m, size_t count)
+shader::usage shader::parameter_usage::mat4 (const mat<4, 4>& m) const { return mat4n(&m, 1); }
+shader::usage shader::parameter_usage::mat4n (const mat<4, 4>* m, size_t count) const
 {
-	param_usage->mat4n(m, count);
-	return usage_ref;
+	param_usage.mat4n(m, count);
+	return parent_usage;
 }
 
-shader::usage shader::parameter_usage::mat3 (const mat<3, 3>& m) { return mat3n(&m, 1); }
-shader::usage shader::parameter_usage::mat3n (const mat<3, 3>* m, size_t count)
+shader::usage shader::parameter_usage::mat3 (const mat<3, 3>& m) const { return mat3n(&m, 1); }
+shader::usage shader::parameter_usage::mat3n (const mat<3, 3>* m, size_t count) const
 {
-	param_usage->mat3n(m, count);
-	return usage_ref;
+	param_usage.mat3n(m, count);
+	return parent_usage;
 }
 
-shader::usage shader::parameter_usage::vec2 (const vec<2>& v) { return vec2n(&v, 1); }
-shader::usage shader::parameter_usage::vec2n (const vec<2>* v, size_t count)
+shader::usage shader::parameter_usage::vec2 (const vec<2>& v) const { return vec2n(&v, 1); }
+shader::usage shader::parameter_usage::vec2n (const vec<2>* v, size_t count) const
 {
-	param_usage->vec2n(v, count);
-	return usage_ref;
+	param_usage.vec2n(v, count);
+	return parent_usage;
 }
 
-shader::usage shader::parameter_usage::vec3 (const vec<3>& v) { return vec3n(&v, 1); }
-shader::usage shader::parameter_usage::vec3n (const vec<3>* v, size_t count)
+shader::usage shader::parameter_usage::vec3 (const vec<3>& v) const { return vec3n(&v, 1); }
+shader::usage shader::parameter_usage::vec3n (const vec<3>* v, size_t count) const
 {
-	param_usage->vec3n(v, count);
-	return usage_ref;	
+	param_usage.vec3n(v, count);
+	return parent_usage;	
 }
 
-shader::usage shader::parameter_usage::vec4(const vec<4>& v) { return vec4n(&v, 1); }
-shader::usage shader::parameter_usage::vec4n(vec<4>* v, size_t count)
+shader::usage shader::parameter_usage::vec4(const vec<4>& v) const { return vec4n(&v, 1); }
+shader::usage shader::parameter_usage::vec4n(const vec<4>* v, size_t count) const
 {
-	param_usage->vec4n(v, 1);
-	return usage_ref;
+	param_usage.vec4n(v, 1);
+	return parent_usage;
 }
 
-shader::usage shader::parameter_usage::flt(float f) { return fltn(&f, 1); }
-shader::usage shader::parameter_usage::fltn(float* f, size_t count)
+shader::usage shader::parameter_usage::flt(float f) const { return fltn(&f, 1); }
+shader::usage shader::parameter_usage::fltn(float* f, size_t count) const
 {
-	param_usage->fltn(f, count);
-	return param_usage;
+	param_usage.fltn(f, count);
+	return parent_usage;
 }
 
-shader::usage shader::parameter_usage::int1(const int i) { return intn(&i, 1); }
-shader::usage shader::parameter_usage::intn(const int* i, size_t count)
+shader::usage shader::parameter_usage::int1(const int i) const { return intn(&i, 1); }
+shader::usage shader::parameter_usage::intn(const int* i, size_t count) const
 {
-	param_usage->intn(i, count);
-	return usage_ref;
+	param_usage.intn(i, count);
+	return parent_usage;
 }
 
-shader::usage shader::parameter_usage::texture(const g::gfx::texture* tex)
+shader::usage shader::parameter_usage::texture(const g::gfx::texture* tex) const
 {
-	param_usage->texture(tex);
-	return usage_ref;
+	param_usage.texture(tex);
+	return parent_usage;
 }
 
 // shader::usage shader::parameter_usage::mat4 (const mat<4, 4>& m)
@@ -724,13 +723,13 @@ shader::usage shader::parameter_usage::texture(const g::gfx::texture* tex)
 // 	return parent_usage;
 // }
 
-#ifdef __EMSCRIPTEN__
-	std::string shader_factory::shader_header = "#version 300 es\n";
-#else
-	std::string shader_factory::shader_header = "#version 410\n";
-#endif
+// #ifdef __EMSCRIPTEN__
+// 	std::string shader_factory::shader_header = "#version 300 es\n";
+// #else
+// 	std::string shader_factory::shader_header = "#version 410\n";
+// #endif
 
-	std::string shader_factory::shader_path;
+// 	std::string shader_factory::shader_path;
 
 // GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
 // {
@@ -934,7 +933,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// using RGBA is totally excessive, but webgl
 	// seems to have issues with just GL_RED
 	font.face = texture_factory{col_pix, row_pix}
-	.type(g::gfx::g::gfx::type::uint8)
+	.type(g::gfx::type::uint8)
 	.components(4)
 	.fill([&](int x, int y, int z, unsigned char* pixel){
 		pixel[0] = pixel[1] = pixel[2] = 0xff;

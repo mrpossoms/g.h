@@ -360,6 +360,8 @@ struct sprite
 
 struct shader
 {
+	struct usage;
+
 	struct program
 	{
 		enum type
@@ -388,46 +390,74 @@ struct shader
 
 	virtual shader* bind() = 0;
 
-	struct usage;
 
-	struct parameter_usage_iface
+	/**
+	 * @brief      Offers interaction with the uniforms defined for a given shader
+	 */
+	struct parameter_usage
 	{
-		virtual usage mat4n (const mat<4, 4>* m, size_t count) = 0;
+		struct interface
+		{
+			virtual usage mat4n (const mat<4, 4>* m, size_t count) const = 0;
 
-		virtual usage mat3n (const mat<3, 3>* m, size_t count) = 0;
+			virtual usage mat3n (const mat<3, 3>* m, size_t count) const = 0;
 
-		virtual usage vec2n (const vec<2>* v, size_t count) = 0;
+			virtual usage vec2n (const vec<2>* v, size_t count) const = 0;
 
-		virtual usage vec3n (const vec<3>* v, size_t count) = 0;
+			virtual usage vec3n (const vec<3>* v, size_t count) const = 0;
 
-		virtual usage vec4n(const vec<4>* v, size_t count) = 0;
+			virtual usage vec4n(const vec<4>* v, size_t count) const = 0;
 
-		virtual usage fltn(const float* f, size_t count) = 0;
+			virtual usage fltn(const float* f, size_t count) const = 0;
 
-		virtual usage intn(const int* i, size_t count) = 0;
+			virtual usage intn(const int* i, size_t count) const = 0;
 
-		virtual usage texture(const texture* tex) = 0;
+			virtual usage texture(const texture* tex) const = 0;
+		};
+
+		usage& parent_usage;
+		parameter_usage::interface& param_usage;
+
+		parameter_usage(usage& parent, parameter_usage::interface& param_usage);
+
+		usage mat4 (const mat<4, 4>& m) const;
+		usage mat4n (const mat<4, 4>* m, size_t count) const;
+
+		usage mat3 (const mat<3, 3>& m) const;
+		usage mat3n (const mat<3, 3>* m, size_t count) const;
+
+		usage vec2 (const vec<2>& v) const;
+		usage vec2n (const vec<2>* v, size_t count) const;
+
+		usage vec3 (const vec<3>& v) const;
+		usage vec3n (const vec<3>* v, size_t count) const;
+
+		usage vec4(const vec<4>& v) const;
+		usage vec4n(const vec<4>* v, size_t count) const;
+
+		usage flt(float f) const;
+		usage fltn(float* f, size_t count) const;
+
+		usage int1(const int i) const;
+		usage intn(const int* i, size_t count) const;
+
+		usage texture(const texture* tex) const;
 	};
 
-	struct usage_iface
-	{
-		virtual parameter_usage_iface* set_uniform(const std::string& name) = 0;
+	virtual parameter_usage::interface& set_uniform(const std::string& name) = 0;
 
-		virtual usage_iface* draw(g::gfx::primative prim) = 0;
-	};
-
-	struct parameter_usage;
+	// virtual shader* draw(g::gfx::primative prim) = 0;
 	/**
 	 * @brief      shader::usage type represents the start of some invocation
 	 * of an interaction with a shader.
 	 */
 	struct usage
 	{
-		usage_iface* usage_impl;
 		shader* shader_ptr;
+		size_t vertices = 0, indices = 0;
 
 		usage() = default;
-		usage (shader* shader, size_t verts, size_t inds);
+		usage (shader* shader, size_t verts=0, size_t inds=0);
 
 		usage attach_attributes(const vertex::element* elements)
 		{
@@ -441,49 +471,22 @@ struct shader
 
 		usage set_sprite(const g::gfx::sprite::instance& sprite);
 
-		parameter_usage operator[](const std::string& name) { return set_uniform(name); }
+		parameter_usage operator[](const std::string& name);
 
 		parameter_usage set_uniform(const std::string& name) 
 		{
-			return { *this, usage_impl->set_uniform(name) };
+			return { *this, shader_ptr->set_uniform(name) };
 		};
 
+		// TODO: draw really shouldn't belong to the shader, it should
+		// belong to the geometry. That way there is no need for this
+		// usage instance to carry vertex and index information and
+		// the shader implementation doesn't need to know about how to
+		// invoke draw commands for the geometry. Using RAII for some kind
+		// of "draw" object would be cleaner.
 		usage& draw(g::gfx::primative prim);
 	};
 
-	/**
-	 * @brief      Offers interaction with the uniforms defined for a given shader
-	 */
-	struct parameter_usage
-	{
-		usage& usage_ref;
-		parameter_usage_iface* param_usage;
-
-		parameter_usage(usage& parent, parameter_usage_iface* param_usage);
-
-		usage mat4 (const mat<4, 4>& m);
-		usage mat4n (const mat<4, 4>* m, size_t count);
-
-		usage mat3 (const mat<3, 3>& m);
-		usage mat3n (const mat<3, 3>* m, size_t count);
-
-		usage vec2 (const vec<2>& v);
-		usage vec2n (const vec<2>* v, size_t count);
-
-		usage vec3 (const vec<3>& v);
-		usage vec3n (const vec<3>* v, size_t count);
-
-		usage vec4(const vec<4>& v);
-		usage vec4n(vec<4>* v, size_t count);
-
-		usage flt(float f);
-		usage fltn(float* f, size_t count);
-
-		usage int1(const int i);
-		usage intn(const int* i, size_t count);
-
-		usage texture(const texture* tex);
-	};
 };
 
 // struct parameter_usage;
@@ -825,14 +828,6 @@ namespace vertex
 	{
 		vec<3> position;
 
-		// static void attributes(const g::gfx::shader& shader)
-		// {
-		// f	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-
-		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
-		// }
-
 		static const element* layout()
 		{
 			const pos v;
@@ -849,19 +844,6 @@ namespace vertex
 		vec<3> position;
 		vec<2> uv;
 
-		// static void attributes(const g::gfx::shader& shader)
-		// {
-		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-		// 	auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
-
-		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-		// 	if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
-
-		// 	auto p_size = sizeof(position);
-
-		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv), (void*)0);
-		// 	if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv), (void*)p_size);
-		// }
 		static const element* layout()
 		{
 			const pos_uv v;
@@ -878,20 +860,6 @@ namespace vertex
 	{
 		vec<3> position;
 		vec<3> normal;
-
-		// static void attributes(const g::gfx::shader& shader)
-		// {
-		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-		// 	auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
-
-		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-		// 	if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-
-		// 	auto p_size = sizeof(position);
-
-		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)0);
-		// 	if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)(p_size));
-		// }
 
 		static const element* layout()
 		{
@@ -910,24 +878,6 @@ namespace vertex
 		vec<3> position;
 		vec<2> uv;
 		vec<3> normal;
-
-		// static void attributes(const g::gfx::shader& shader)
-		// {
-		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-		// 	auto uv_loc = glGetAttribLocation(shader.program, "a_uv");
-		// 	auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
-
-		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-		// 	if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
-		// 	if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-
-		// 	auto p_size = sizeof(position);
-		// 	auto uv_size = sizeof(uv);
-
-		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)0);
-		// 	if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)p_size);
-		// 	if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)(p_size + uv_size));
-		// }
 
 		static const element* layout()
 		{
@@ -948,23 +898,6 @@ namespace vertex
 		vec<3> normal;
 		vec<3> tangent;
 
-		// static void attributes(const g::gfx::shader& shader)
-		// {
-		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-		// 	auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
-		// 	auto tan_loc = glGetAttribLocation(shader.program, "a_tangent");
-
-		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-		// 	if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-		// 	if (tan_loc > -1) glEnableVertexAttribArray(tan_loc);
-
-		// 	auto p_size = sizeof(position);
-		// 	auto norm_size = sizeof(normal);
-
-		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)0);
-		// 	if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)p_size);
-		// 	if (tan_loc > -1) glVertexAttribPointer(tan_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)(p_size + norm_size));
-		// }
 		static const element* layout()
 		{
 			const pos_norm_tan v;
@@ -983,24 +916,6 @@ namespace vertex
 		vec<3> position;
 		vec<3> normal;
 		vec<4, uint8_t> color;
-
-		// static void attributes(const g::gfx::shader& shader)
-		// {
-		// 	auto pos_loc = glGetAttribLocation(shader.program, "a_position");
-		// 	auto norm_loc = glGetAttribLocation(shader.program, "a_normal");
-		// 	auto color_loc = glGetAttribLocation(shader.program, "a_color");
-
-		// 	if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-		// 	if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-		// 	if (color_loc > -1) glEnableVertexAttribArray(color_loc);
-
-		// 	auto p_size = sizeof(position);
-		// 	auto n_size = sizeof(normal);
-
-		// 	if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)0);
-		// 	if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)(p_size));
-		// 	if (color_loc > -1) glVertexAttribPointer(color_loc, 4, GL_UNSIGNED_BYTE, false, sizeof(pos_norm_color), (void*)(p_size + n_size));
-		// }
 
 		static const element* layout()
 		{
@@ -1086,7 +1001,7 @@ struct mesh
 		return *this;
 	}
 
-	shader::usage using_shader (shader& shader) const
+	shader::usage using_shader (shader* shader) const
 	{
 		assert(gl_get_error());
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -1098,8 +1013,8 @@ struct mesh
 			assert(gl_get_error());
 		}
 
-		shader.bind();
-		shader::usage usage = {&shader, vertex_count, index_count};
+		shader->bind();
+		shader::usage usage = {shader, vertex_count, index_count};
 
 		usage.attach_attributes(V::layout());
 
@@ -1905,7 +1820,7 @@ template <typename D>
 struct renderer
 {
 	virtual shader::usage using_shader(g::gfx::shader& shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
-	virtual void draw(g::gfx::shader& shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
+	virtual void draw(g::gfx::shader* shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
 
 
@@ -1920,7 +1835,7 @@ struct volume_slicer : public renderer<texture>
         slices = g::gfx::mesh_factory::slice_cube(num_slices);
 	}
 
-	shader::usage using_shader(g::gfx::shader& shader,
+	shader::usage using_shader(g::gfx::shader* shader,
 					  const g::gfx::texture* vox,
 			          g::game::camera& cam,
 			          const mat<4, 4>& model)
@@ -1967,7 +1882,7 @@ struct volume_slicer : public renderer<texture>
                ["u_voxels"].texture(vox);
 	}
 
-	void draw(g::gfx::shader& shader,
+	void draw(g::gfx::shader* shader,
 		      const g::gfx::texture* vox,
 			  g::game::camera& cam,
 			  const mat<4, 4>& model)
