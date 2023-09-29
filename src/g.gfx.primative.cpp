@@ -1,9 +1,9 @@
 #include "g.gfx.h"
 
 using namespace g::gfx;
-using namespace g::gfx::primative;
+using namespace g::gfx::rendering;
 
-g::gfx::mesh<vertex::pos_uv_norm> g::gfx::primative::text::plane;
+g::gfx::mesh<vertex::pos_uv_norm> g::gfx::rendering::text::plane;
 
 
 text::it::it(const std::string &str, g::gfx::font& f, size_t pos) : _str(str), _font(f)
@@ -59,7 +59,7 @@ text::text(g::gfx::font& f) : font(f)
 	}
 }
 
-shader::usage text::using_shader(g::gfx::shader& shader,
+shader::usage text::using_shader(g::gfx::shader* shader,
                                  const std::string& str,
                                  std::function<void(g::gfx::shader::usage&)> shader_config)
 {
@@ -118,7 +118,7 @@ shader::usage text::using_shader(g::gfx::shader& shader,
 	return usage;
 }
 
-shader::usage text::using_shader (g::gfx::shader& shader,
+shader::usage text::using_shader (g::gfx::shader* shader,
 	const std::string& str,
 	g::game::camera& cam,
 	const mat<4, 4>& model)
@@ -131,7 +131,7 @@ shader::usage text::using_shader (g::gfx::shader& shader,
 	});
 }
 
-void text::draw(g::gfx::shader& shader,
+void text::draw(g::gfx::shader* shader,
 	  const std::string& str,
       g::game::camera& cam,
       const mat<4, 4>& model)

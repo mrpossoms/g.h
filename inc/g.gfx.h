@@ -1735,76 +1735,76 @@ void shadow_0(const mesh<V>& m, const framebuffer& shadow_map, game::camera& lig
     // TODO: the assumption that the appropriate textel in depth_map can be
     // sampled to look up a uv is not correct. I think the correct approach is
     // to involve the vertex shader like it has been done traditionally
-	static shader shadow_shader;
-    static std::string shadow_map_vs_src =
-    "in vec3 a_position;"
-    "uniform mat4 u_model;"
-    "uniform mat4 u_view;"
-    "uniform mat4 u_proj;"
-    "uniform mat4 u_light_view;"
-    "uniform mat4 u_light_proj;"
-    "out vec4 v_light_proj_pos;"
-    "void main (void)"
-    "{"
-    "   vec4 v_world_pos = u_model * vec4(a_position, 1.0);"
-    "   gl_Position = u_proj * u_view * v_world_pos;"
-    "   v_light_proj_pos = u_light_proj * u_light_view * v_world_pos;"
-    "   v_light_proj_pos /= v_light_proj_pos.w;"
-    "   v_light_proj_pos = (v_light_proj_pos + 1.0) / 2.0;"
-    "}";
+	// static shader shadow_shader;
+    // static std::string shadow_map_vs_src =
+    // "in vec3 a_position;"
+    // "uniform mat4 u_model;"
+    // "uniform mat4 u_view;"
+    // "uniform mat4 u_proj;"
+    // "uniform mat4 u_light_view;"
+    // "uniform mat4 u_light_proj;"
+    // "out vec4 v_light_proj_pos;"
+    // "void main (void)"
+    // "{"
+    // "   vec4 v_world_pos = u_model * vec4(a_position, 1.0);"
+    // "   gl_Position = u_proj * u_view * v_world_pos;"
+    // "   v_light_proj_pos = u_light_proj * u_light_view * v_world_pos;"
+    // "   v_light_proj_pos /= v_light_proj_pos.w;"
+    // "   v_light_proj_pos = (v_light_proj_pos + 1.0) / 2.0;"
+    // "}";
 
-    static std::string shadow_map_fs_src =
-    "in vec4 v_light_proj_pos;"
-    "uniform sampler2D u_shadow_map;"
-    "out vec4 color;"
-    "void main (void)"
-    "{"
-    "   float bias = 0.00006;"
-    "   float depth = v_light_proj_pos.z - bias;"
-    "   float shadowing = 0.0;"
-    "   for(float y = -2.0; y <= 2.0; y++)"
-    "   for(float x = -2.0; x <= 2.0; x++)"
-    "   {"
-    "       float sampled_depth = texture(u_shadow_map, v_light_proj_pos.xy + (vec2(x, y) * 0.0005)).r;"
-    "       if (depth <= sampled_depth)"
-    "       {"
-    "           shadowing += 1.0 / 25.0;"
-    "       }"
-    "   }"
-    "   color = vec4(vec3(shadowing + 0.1), 1.0);"
-    "}";
+    // static std::string shadow_map_fs_src =
+    // "in vec4 v_light_proj_pos;"
+    // "uniform sampler2D u_shadow_map;"
+    // "out vec4 color;"
+    // "void main (void)"
+    // "{"
+    // "   float bias = 0.00006;"
+    // "   float depth = v_light_proj_pos.z - bias;"
+    // "   float shadowing = 0.0;"
+    // "   for(float y = -2.0; y <= 2.0; y++)"
+    // "   for(float x = -2.0; x <= 2.0; x++)"
+    // "   {"
+    // "       float sampled_depth = texture(u_shadow_map, v_light_proj_pos.xy + (vec2(x, y) * 0.0005)).r;"
+    // "       if (depth <= sampled_depth)"
+    // "       {"
+    // "           shadowing += 1.0 / 25.0;"
+    // "       }"
+    // "   }"
+    // "   color = vec4(vec3(shadowing + 0.1), 1.0);"
+    // "}";
 
 
-    if (!shadow_shader.is_initialized())
-    {
-        shadow_shader = shader_factory{}
-            .add_src(shadow_map_vs_src, shader::program::type::vertex)
-            .add_src(shadow_map_fs_src, shader::program::type::fragment)
-            .create();
-    }
+    // if (!shadow_shader.is_initialized())
+    // {
+    //     shadow_shader = shader_factory{}
+    //         .add_src(shadow_map_vs_src, shader::program::type::vertex)
+    //         .add_src(shadow_map_fs_src, shader::program::type::fragment)
+    //         .create();
+    // }
 
-    // TODO: set appropriate blending
+    // // TODO: set appropriate blending
 
-    auto model = mat<4, 4>::I();
+    // auto model = mat<4, 4>::I();
 
-	glEnable( GL_POLYGON_OFFSET_FILL );
-	glPolygonOffset( 0, -1.0 );
-    glBlendFunc(GL_ZERO, GL_SRC_COLOR);
-    // glClear(GL_DEPTH_BUFFER_BIT);
+	// glEnable( GL_POLYGON_OFFSET_FILL );
+	// glPolygonOffset( 0, -1.0 );
+    // glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+    // // glClear(GL_DEPTH_BUFFER_BIT);
 
-    auto chain = m.using_shader(shadow_shader)
-    .set_camera(cam)
-    ["u_shadow_map"].texture(shadow_map.depth)
-    ["u_model"].mat4(model)
-    ["u_light_view"].mat4(light.view())
-    ["u_light_proj"].mat4(light.projection());
+    // auto chain = m.using_shader(shadow_shader)
+    // .set_camera(cam)
+    // ["u_shadow_map"].texture(shadow_map.depth)
+    // ["u_model"].mat4(model)
+    // ["u_light_view"].mat4(light.view())
+    // ["u_light_proj"].mat4(light.projection());
 
-    if (draw_config) { draw_config(chain); }
+    // if (draw_config) { draw_config(chain); }
 
-    chain.draw(g::gfx::primative::triangles);
+    // chain.draw(g::gfx::primative::triangles);
 
-	glPolygonOffset( 0, 0 );
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// glPolygonOffset( 0, 0 );
+	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void shadow(framebuffer* shadow_map, framebuffer* camera_fb, game::camera& light, game::camera& cam);
