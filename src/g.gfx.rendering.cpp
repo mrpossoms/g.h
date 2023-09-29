@@ -136,7 +136,7 @@ void text::draw(g::gfx::shader* shader,
       g::game::camera& cam,
       const mat<4, 4>& model)
 {
-	using_shader(shader, str, cam, model).draw<GL_TRIANGLES>();//.draw_tri_fan();
+	using_shader(shader, str, cam, model).draw(g::gfx::primative::triangles);//.draw_tri_fan();
 }
 
 

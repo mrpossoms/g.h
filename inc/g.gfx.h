@@ -653,11 +653,6 @@ struct shader
 
 namespace api {
 
-enum class render_api
-{
-	OPEN_GL,
-};
-
 struct render_api_version
 {
 	unsigned int major, minor;
@@ -683,32 +678,34 @@ struct interface {
 	virtual texture* make_texture(const texture::description& desc) = 0;
 	virtual framebuffer* make_framebuffer(texture* color, texture* depth) = 0;
 	virtual shader* make_shader(const shader::description& desc) = 0;
-};
 
-struct opengl final : public interface
-{
-	opengl();
-	~opengl();
+	struct print
+	{
+		vec<4> cur_color;
+		g::game::camera* cur_cam;
+		g::gfx::texture* cur_tex;
+		mat<4, 4> cur_model = mat<4, 4>::I();
 
-	void initialize(const options& opts, const char* name=nullptr) override;
-	void pre_draw() override;
-	void post_draw() override;
+		print(g::game::camera* cam);
+		print(g::game::camera& cam);
 
-	size_t width() override;
-	size_t height() override;
-	float aspect() override;
+		print& color(const vec<4>& c);
 
-	texture* make_texture(const texture::description& desc) override;
-	framebuffer* make_framebuffer(texture* color, texture* depth) override;
-	shader* make_shader(const shader::description& desc) override;
+		print& model(const mat<4, 4>& m);
 
+		// TODO
+		// print& texture(const g::gfx::texture& t);
 
-private:
-	GLFWwindow* win;
-	struct {
-		int width;
-		int height;
-	} frame;
+		virtual void ray(const vec<2>& o, const vec<2>& d) = 0;
+
+		virtual void ray(const vec<3>& o, const vec<3>& d) = 0;
+
+		virtual void point(const vec<2>& o) = 0;
+
+		virtual void point(const vec<3>& o) = 0;
+
+		virtual void box(const vec<3> corners[2]) = 0;
+	};
 };
 
 extern std::unique_ptr<interface> instance;
@@ -1819,7 +1816,7 @@ namespace rendering
 template <typename D>
 struct renderer
 {
-	virtual shader::usage using_shader(g::gfx::shader& shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
+	virtual shader::usage using_shader(g::gfx::shader* shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
 	virtual void draw(g::gfx::shader* shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
 
@@ -1926,16 +1923,16 @@ struct text : public renderer<std::string>
 
 	text(g::gfx::font& f);
 
-	shader::usage using_shader(g::gfx::shader& shader,
+	shader::usage using_shader(g::gfx::shader* shader,
 		const std::string& str,
 		std::function<void(g::gfx::shader::usage&)> shader_config);
 
-	shader::usage using_shader(g::gfx::shader& shader,
+	shader::usage using_shader(g::gfx::shader* shader,
 		const std::string& str,
 		g::game::camera& cam,
 		const mat<4, 4>& model);
 
-	void draw(g::gfx::shader& shader,
+	void draw(g::gfx::shader* shader,
 		  const std::string& str,
 	      g::game::camera& cam,
 	      const mat<4, 4>& model);

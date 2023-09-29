@@ -2,6 +2,7 @@
 
 using namespace g::gfx;
 
+/* TODO: relocate debug rendering stuff to api impl files
 static g::gfx::shader debug_shader;
 static g::gfx::mesh<vertex::pos> debug_mesh;
 
@@ -128,3 +129,4 @@ void debug::print::box(const vec<3> corners[2])
 	          .draw<GL_LINES>();
 	assert(gl_get_error());
 }
+*/
