@@ -1,4 +1,5 @@
 #pragma once
+#define XMTYPE float
 #include "xmath.h"
 #include <string.h>
 #include <stddef.h>

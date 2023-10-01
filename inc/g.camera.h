@@ -8,67 +8,23 @@ namespace game {
 
 struct camera : public pose
 {
-	quat<float>& d_pitch(float delta)
-	{
-		auto dq = quat<float>::from_axis_angle({1, 0, 0}, delta);
-		return orientation *= dq;
-	}
+	quat<float>& d_pitch(float delta);
 
-	quat<float>& d_yaw(float delta)
-	{
-		auto dq = quat<float>::from_axis_angle({0, 1, 0}, -delta);
-		return orientation *= dq;
-	}
+	quat<float>& d_yaw(float delta);
 
-	quat<float>& d_roll(float delta)
-	{
-		auto dq = quat<float>::from_axis_angle({0, 0, 1}, -delta);
-		return orientation *= dq;
-	}
+	quat<float>& d_roll(float delta);
 
-	virtual vec<3> forward() const { return orientation.rotate({0, 0, -1}); }
+	virtual vec<3> forward() const;
 
-	virtual vec<3> left() const { return orientation.rotate({-1, 0, 0}); }
+	virtual vec<3> left() const;
 
-	virtual vec<3> up() const { return orientation.rotate({0, 1, 0}); }
+	virtual vec<3> up() const;
 
-	void look_at(const vec<3>& subject, const vec<3>& up={0, 1, 0})
-	{
-		auto forward = (position - subject).unit();
-		auto d = forward.dot({ 0, 0, 1 });
+	void look_at(const vec<3>& subject, vec<3> up={0, 1, 0});
 
-		if (fabsf(d + 1.f) < 0.000001f)
-		{
-			orientation = quat<>(0, 1, 0, M_PI);
-		}
-		else if (fabsf(d - 1.f) < 0.000001f)
-		{
-			orientation = quat<>{};
-		}
-		else
-		{
-			auto angle = acosf(d);
-			auto axis = vec<3>::cross({ 0, 0, 1 }, forward).unit();
+	void look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up);
 
-			orientation = quat<>::from_axis_angle(axis, angle);
-		}
-
-		//return _view = mat<4, 4>::look_at(position, (position - subject).unit(), up);
-	}
-
-	void look_at(const vec<3>& pos, const vec<3>& forward, const vec<3>& up)
-	{
-		_view = mat<4, 4>::look_at((position = pos), forward, up);
-	}
-
-	virtual mat<4, 4> view() const
-	{
-		if (_view[3][3] != 0)
-		{ 
-			return _view; 
-		}
-		return orientation.inverse().to_matrix() * mat<4, 4>::translation(position * -1);
-	}
+	virtual mat<4, 4> view() const;
 
 	virtual mat<4, 4> projection() const = 0;
 
