@@ -25,6 +25,7 @@
 
 #include "g.utils.h"
 #include "g.gfx.h"
+#include "g.gfx.api.opengl.h"
 #include "g.game.h"
 #include "g.game.object.h"
 #include "g.camera.h"

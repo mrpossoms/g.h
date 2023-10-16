@@ -201,167 +201,29 @@ float g::gfx::noise::value(const vec<3>& p, const std::vector<int8_t>& entropy)
 	return ya0 * (1 - w[0]) + yb0 * w[0];
 }
 
-void texture::release_bitmap()
-{
-	if (data)
-	{
-		free(data);
-		data = nullptr;
-	}
-}
-
-void texture::create(GLenum texture_type)
-{
-	type = texture_type;
-	glGenTextures(1, &this->hnd);
-	assert(gl_get_error());
-}
-
-void texture::destroy()
-{
-	glDeleteTextures(1, &hnd);
-	release_bitmap();
-}
-
-void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type, GLenum storage_type)
-{
-	size[0] = w;
-	size[1] = h;
-	size[2] = d;
-	this->data = data;
-
-	this->color_type = color_type;
-	this->storage_type = storage_type;
-
-	switch(storage_type)
-	{
-		case GL_UNSIGNED_BYTE:
-		case GL_BYTE:
-			this->bytes_per_component = 1;
-			break;
-
-		case GL_UNSIGNED_SHORT:
-		case GL_SHORT:
-			this->bytes_per_component = 2;
-			break;
-
-		case GL_UNSIGNED_INT:
-		case GL_INT:
-		case GL_FLOAT:
-			this->bytes_per_component = 4;
-			break;
-	}
-
-	switch(color_type)
-	{
-		case GL_RED:
-			this->component_count = 1;
-			break;
-		case GL_RG:
-			this->component_count = 2;
-			break;
-		case GL_RGB:
-			this->component_count = 3;
-			break;
-		case GL_RGBA:
-			this->component_count = 4;
-			break;
-	}
-
-	if (h > 1 && d > 1)
-	{
-		type = GL_TEXTURE_3D;
-		glTexImage3D(GL_TEXTURE_3D, 0, color_type, size[0], size[1], size[2], 0, color_type, storage_type, data);
-	}
-	else if (h >= 1)
-	{
-		type = GL_TEXTURE_2D;
-		if (storage_type == GL_FLOAT && color_type == GL_RGBA)
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage_type, data);
-		}
-		else
-		{
-			glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage_type, data);
-		}
-	}
-}
-
-size_t texture::bytes() const
-{
-	auto pixels = size[0] * size[1] * size[2];
-	return pixels * bytes_per_component * component_count;
-}
-
-
-void texture::get_pixels(unsigned char** data_out, size_t& data_out_size) const
-{
-	static GLuint pbo = 0;
-
-	if (pbo == 0)
-	{
-		glGenBuffers(1, &pbo);
-	}
-
-	assert(gl_get_error());
-	glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-	assert(gl_get_error());
-
-	auto new_data_out_size = size[0] * size[1] * size[2] * component_count * bytes_per_component;
-
-	if (data_out_size != new_data_out_size)
-	{
-		if (*data_out)
-		{
-			delete *data_out;
-		}
-
-		data_out_size = new_data_out_size;
-		*data_out = new unsigned char[data_out_size];
-	}
-
-	this->bind();
-	assert(gl_get_error());
-	glGetTexImage(type, 0, color_type, storage_type, *data_out);
-	assert(gl_get_error());
-}
-
-
-void texture::to_disk(const std::string& path) const
-{
-
-}
-
-void texture::bind() const { glBindTexture(type, hnd); }
-
-void texture::unbind() const { glBindTexture(type, 0); }
-
 texture_factory::texture_factory(unsigned w, unsigned h)
 {
 	data = nullptr;
-	texture_type = GL_TEXTURE_2D;
-	size[0] = w;
-	size[1] = h;
-	size[2] = 1;
+	desc.size[0] = w;
+	desc.size[1] = h;
+	desc.size[2] = 1;
 }
 
 texture_factory::texture_factory(unsigned w, unsigned h, unsigned d)
 {
 	data = nullptr;
-	texture_type = GL_TEXTURE_3D;
-	size[0] = w;
-	size[1] = h;
-	size[2] = d;
+	desc.size[0] = w;
+	desc.size[1] = h;
+	desc.size[2] = d;
 }
 
 texture_factory::texture_factory(texture* existing_texture)
 {
 	existing = existing_texture;
 	data = existing->data;
-	texture_type = existing->type;
-	size[0] = existing->size[0];
-	size[1] = existing->size[1];
-	size[2] = existing->size[2];
+	desc.size[0] = existing->desc.size[0];
+	desc.size[1] = existing->desc.size[1];
+	desc.size[2] = existing->desc.size[2];
 }
 
 void texture_factory::abort(std::string message)
@@ -385,7 +247,7 @@ texture_factory& texture_factory::from_png(const std::string& path)
 
 	// TODO: use a more robust lodepng_decode call which can handle textures of various channels and bit depths
 	// unsigned error = lodepng_decode_file((unsigned char**)&data, size[0], size[1], path.c_str());
-	unsigned error = lodepng_decode32_file((unsigned char**)&data, size + 0, size + 1, path.c_str());
+	unsigned error = lodepng_decode32_file((unsigned char**)&data, desc.size + 0, desc.size + 1, path.c_str());
 
 
 	// If there's an error, display it.
@@ -395,10 +257,9 @@ texture_factory& texture_factory::from_png(const std::string& path)
 	  exit(-1);
 	}
 
-	// a png is a 2D matrix of pixels
-	texture_type = GL_TEXTURE_2D;
-	color_type = GL_RGBA;
-	storage_type = GL_UNSIGNED_BYTE;
+	// TODO: this is stupid and naive
+	desc.usage = {.red=1, .green=1, .blue=1, .alpha=1};
+	desc.pixel_storage_type = g::gfx::type::uint8;
 
 	// switch(colortype)
 	// {
@@ -428,31 +289,36 @@ texture_factory& texture_factory::to_png(const std::string& path)
 	std::cerr << "writing texture '" <<  path << "'... ";
 
 	LodePNGColorType color_type = LCT_RGB;
+	size_t bits_per_pixel = 0;
 
-	switch(component_count)
+	switch(desc.components())
 	{
 		case 1:
 			color_type = LCT_GREY;
+			bits_per_pixel = 8;
 			break;
 		case 2:
 			color_type = LCT_GREY_ALPHA;
+			bits_per_pixel = 16;
 			break;
 		case 3:
 			color_type = LCT_RGB;
+			bits_per_pixel = 24;
 			break;
 		case 4:
 			color_type = LCT_RGBA;
+			bits_per_pixel = 32;
 			break;
 		default:
-			std::cerr << G_TERM_RED << "Invalid component count: '" <<  component_count << G_TERM_COLOR_OFF << std::endl;
+			std::cerr << G_TERM_RED << "Unsupported component count: '" <<  desc.components() << G_TERM_COLOR_OFF << std::endl;
 	}
 
 	auto error = lodepng_encode_file(
 		path.c_str(),
 		(const unsigned char*)data,
-		size[0], size[1],
+		desc.size[0], desc.size[1],
 		color_type,
-		bytes_per_component * 8
+		bits_per_pixel
 	);
 
 	// If there's an error, display it.
@@ -467,54 +333,34 @@ texture_factory& texture_factory::to_png(const std::string& path)
 	return *this;
 }
 
-texture_factory& texture_factory::type(GLenum t)
+texture_factory& texture_factory::type(g::gfx::type t)
 {
-	storage_type = t;
-
-	switch(t)
-	{
-		case GL_UNSIGNED_BYTE:
-		case GL_BYTE:
-			bytes_per_component = 1;
-			break;
-
-		case GL_UNSIGNED_SHORT:
-		case GL_SHORT:
-			bytes_per_component = 2;
-			break;
-
-		case GL_UNSIGNED_INT:
-		case GL_INT:
-		case GL_FLOAT:
-			bytes_per_component = 4;
-			break;
-	}
-
+	desc.pixel_storage_type = t;
 	return *this;
 }
 
 texture_factory& texture_factory::color()
 {
-	color_type = GL_RGBA;
-	storage_type = GL_UNSIGNED_BYTE;
+	desc.pixel_storage_type = g::gfx::type::uint8;
+	desc.usage = {.red=1, .green=1, .blue=1, .alpha=1};
 	return *this;
 }
 
 texture_factory& texture_factory::components(unsigned count)
 {
-	switch(component_count = count)
+	switch(count)
 	{
 		case 1:
-			color_type = GL_RED;
+			desc.usage = {.red=1, .green=0, .blue=0, .alpha=0};
 			break;
 		case 2:
-			color_type = GL_RG;
+			desc.usage = {.red=1, .green=1, .blue=0, .alpha=0};
 			break;
 		case 3:
-			color_type = GL_RGB;
+			desc.usage = {.red=1, .green=1, .blue=1, .alpha=0};
 			break;
 		case 4:
-			color_type = GL_RGBA;
+			desc.usage = {.red=1, .green=1, .blue=1, .alpha=1};
 			break;
 		default:
 			std::cerr << "Invalid number of components: " << count << std::endl;
@@ -525,38 +371,40 @@ texture_factory& texture_factory::components(unsigned count)
 
 texture_factory& texture_factory::depth()
 {
-	color_type = GL_DEPTH_COMPONENT;
-	storage_type = GL_UNSIGNED_SHORT;
+	desc.usage = { .depth = true };
+	desc.pixel_storage_type = g::gfx::type::uint16;
 	return *this;
 }
 
 texture_factory& texture_factory::pixelated()
 {
-	min_filter = mag_filter = GL_NEAREST;
+	desc.filter = texture::filter::nearest;
+
 	return *this;
 }
 
 texture_factory& texture_factory::smooth()
 {
-	min_filter = mag_filter = GL_LINEAR;
+	desc.filter = texture::filter::linear;
+
 	return *this;
 }
 
 texture_factory& texture_factory::clamped()
 {
-	wrap_s = wrap_t = wrap_r = GL_CLAMP_TO_EDGE;
+	desc.wrap = texture::wrap::clamp_to_edge;
 	return *this;
 }
 
 texture_factory& texture_factory::clamped_to_border()
 {
-	wrap_s = wrap_t = wrap_r = GL_CLAMP_TO_BORDER;
+	desc.wrap = texture::wrap::clamp_to_border;
 	return *this;
 }
 
 texture_factory& texture_factory::repeating()
 {
-	wrap_s = wrap_t = wrap_r = GL_REPEAT;
+	desc.wrap = texture::wrap::repeat;
 	return *this;
 }
 
@@ -565,16 +413,16 @@ texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, u
 {
 	// void* pixels;
 
-	auto bytes_per_textel = bytes_per_component * component_count;
-	auto textels_per_row = size[2];
-	auto textels_per_plane = size[1] * size[2];
-	data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
+	auto bytes_per_textel = desc.bytes_per_pixel();
+	auto textels_per_row = desc.size[2];
+	auto textels_per_plane = desc.size[1] * desc.size[2];
+	data = new unsigned char[desc.bytes()];
 
-	for (unsigned i = 0; i < size[0]; i++)
+	for (unsigned i = 0; i < desc.size[0]; i++)
 	{
-		for (unsigned j = 0; j < size[1]; j++)
+		for (unsigned j = 0; j < desc.size[1]; j++)
 		{
-			for (unsigned k = 0; k < size[2]; k++)
+			for (unsigned k = 0; k < desc.size[2]; k++)
 			{
 				// unsigned vi = i * textels_per_plane + ((((j * size[2]) + k) * bytes_per_pixel));
 				// unsigned vi = (i * textels_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
@@ -593,37 +441,37 @@ texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, u
 texture_factory& texture_factory::fill(unsigned char* buffer)
 {
 	data = buffer;
-
 	return *this;
 }
 
 
-texture texture_factory::create()
+texture* texture_factory::create()
 {
-	texture out;
+	texture* out;
 
 	if (existing)
 	{
-		out = *existing;
+		out = existing;
 	}
 	else
 	{
-		out.create(texture_type);		
+		out = g::gfx::api::instance->make_texture(desc);
 	}
 
-	out.bind();
+	out->bind();
 
 	assert(gl_get_error());
-	out.set_pixels(size[0], size[1], size[2], data, color_type, storage_type);
+	out->set_pixels(desc, data);
 	assert(gl_get_error());
-
-
-	glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
-	glTexParameteri(texture_type, GL_TEXTURE_WRAP_T, wrap_t);
-	glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
-	glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
-	glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
+	out->set_wrapping(desc.wrap);
 	assert(gl_get_error());
+	out->set_filtering(desc.filter);
+	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_S, wrap_s);
+	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_T, wrap_t);
+	// glTexParameteri(texture_type, GL_TEXTURE_WRAP_R, wrap_r);
+	// glTexParameteri(texture_type, GL_TEXTURE_MAG_FILTER, mag_filter);
+	// glTexParameteri(texture_type, GL_TEXTURE_MIN_FILTER, min_filter);
+	
 	// glGenerateMipmap(GL_TEXTURE_2D);
 	assert(gl_get_error());
 
@@ -631,17 +479,17 @@ texture texture_factory::create()
 }
 
 
-framebuffer_factory::framebuffer_factory(unsigned w, unsigned h)
+framebuffer_factory::framebuffer_factory(unsigned w, unsigned h, unsigned d)
 {
 	size[0] = w;
 	size[1] = h;
 }
 
-framebuffer_factory::framebuffer_factory(texture& dst)
+framebuffer_factory::framebuffer_factory(texture* dst)
 {
 	color_tex = dst;
-	size[0] = color_tex.size[0];
-	size[1] = color_tex.size[1];
+	size[0] = color_tex->desc.size[0];
+	size[1] = color_tex->desc.size[1];
 }
 
 framebuffer_factory& framebuffer_factory::color()
@@ -661,100 +509,38 @@ framebuffer_factory& framebuffer_factory::shadow_map()
 	return depth();
 }
 
-framebuffer framebuffer_factory::create()
+framebuffer* framebuffer_factory::create()
 {
-	framebuffer fb;
-
-	fb.size[0] = size[0];
-	fb.size[1] = size[1];
-	fb.color = color_tex;
-	fb.depth = depth_tex;
-	glGenFramebuffers(1, &fb.fbo);
-	glBindFramebuffer(GL_FRAMEBUFFER, fb.fbo);
-	assert(gl_get_error());
-
-	if (color_tex.hnd != (GLuint)-1)
-	{
-		color_tex.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex.hnd, 0);
-	}
-
-	if (depth_tex.hnd != (GLuint)-1)
-	{
-		depth_tex.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tex.hnd, 0);
-	}
-
-	auto fb_stat = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-	switch(fb_stat)
-	{
-		case GL_FRAMEBUFFER_UNDEFINED:
-			std::cerr << "Target is the default framebuffer, but the default framebuffer does not exist.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-			std::cerr << "One or more of the framebuffer attachment points are framebuffer incomplete.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-			std::cerr << "The framebuffer does not have at least one image attached to it.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
-			std::cerr << "the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for any color attachment point(s) named by GL_DRAWBUFFERi.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
-			std::cerr << "GL_READ_BUFFER is not GL_NONE and the value of GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is GL_NONE for the color attachment point named by GL_READ_BUFFER.\n";
-			break;
-		case GL_FRAMEBUFFER_UNSUPPORTED:
-			std::cerr << "The combination of internal formats of the attached images violates an implementation-dependent set of restrictions.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
-			std::cerr << "the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not the same for all attached textures; or, if the attached images are a mix of renderbuffers and textures, the value of GL_TEXTURE_FIXED_SAMPLE_LOCATIONS is not GL_TRUE for all attached textures.\n";
-			break;
-		case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
-			std::cerr << "framebuffer attachment is layered, and any populated attachment is not layered, or if all populated color attachments are not from textures of the same target.\n";
-			break;
-		default:
-			std::cerr << "An unknown error ocurred.\n";
-			break;
-	}
-
-	assert(fb_stat == GL_FRAMEBUFFER_COMPLETE);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	return fb;
+	return g::gfx::api::instance->make_framebuffer(color_tex, depth_tex);
 }
 
 
 
-shader& shader::bind() { glUseProgram(program); return *this; }
+// shader& shader::bind() { glUseProgram(program); return *this; }
 
-void shader::destroy()
-{	
-	glDeleteProgram(program);
-}
+// void shader::destroy()
+// {	
+// 	glDeleteProgram(program);
+// }
 
-shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ref(ref)
+shader::usage::usage (shader* ref, size_t verts, size_t inds) : shader_ptr(ref)
 {
 	vertices = verts;
 	indices = inds;
-	texture_unit = 0;
 }
 
 
 shader::usage shader::usage::set_camera(const g::game::camera& cam)
 {
-	assert(gl_get_error());
 	this->set_uniform("u_view").mat4(cam.view());
 	this->set_uniform("u_proj").mat4(cam.projection().transpose());
-	assert(gl_get_error());
 	return *this;
 }
 
 
 shader::usage shader::usage::set_sprite(const g::gfx::sprite::instance& sprite)
 {
-	this->set_uniform("u_sprite_sheet").texture(*sprite.sheet->texture);
+	this->set_uniform("u_sprite_sheet").texture(sprite.sheet->texture);
 	this->set_uniform("u_sprite_sheet_size").vec2(sprite.sheet->sheet_size);
 	this->set_uniform("u_sprite_sheet_frame_pos").vec2(sprite.current_frame().position);
 	this->set_uniform("u_sprite_sheet_frame_size").vec2(sprite.current_frame().size);
@@ -763,209 +549,245 @@ shader::usage shader::usage::set_sprite(const g::gfx::sprite::instance& sprite)
 }
 
 
-shader::uniform_usage shader::usage::set_uniform(const std::string& name)
-{
-	if (nullptr == shader_ref) { return {*this, 0xffffffff}; }
+// shader::parameter_usage shader::usage::set_uniform(const std::string& name)
+// {
+// 	if (nullptr == shader_ref) { return {*this, 0xffffffff}; }
 
-	GLint loc;
-	auto it = shader_ref->uni_locs.find(name);
-	if (it == shader_ref->uni_locs.end())
-	{
-		loc = glGetUniformLocation(shader_ref->program, name.c_str());
+// 	GLint loc;
+// 	auto it = shader_ref->uni_locs.find(name);
+// 	if (it == shader_ref->uni_locs.end())
+// 	{
+// 		loc = glGetUniformLocation(shader_ref->program, name.c_str());
 
-		if (loc < 0)
-		{
-			// TODO: handle the missing uniform better
-			std::cerr << "uniform '" << name << "' doesn't exist\n";
-			shader_ref->uni_locs[name] = loc;
-		}
-	}
-	else
-	{
-		loc = (*it).second;
-	}
+// 		if (loc < 0)
+// 		{
+// 			// TODO: handle the missing uniform better
+// 			std::cerr << "uniform '" << name << "' doesn't exist\n";
+// 			shader_ref->uni_locs[name] = loc;
+// 		}
+// 	}
+// 	else
+// 	{
+// 		loc = (*it).second;
+// 	}
 
-	return uniform_usage(*this, loc);
-}
+// 	return parameter_usage(*this, loc);
+// }
 
-shader::uniform_usage shader::usage::operator[](const std::string& name)
+shader::parameter_usage shader::usage::operator[](const std::string& name)
 {
 	return set_uniform(name);
 }
 
-
-shader::uniform_usage::uniform_usage(shader::usage& parent, GLuint loc) : parent_usage(parent) { uni_loc = loc; }
-
-shader::usage shader::uniform_usage::mat4 (const mat<4, 4>& m)
+shader::usage& shader::usage::draw(g::gfx::primative prim)
 {
-	glUniformMatrix4fv(uni_loc, 1, true, m.ptr());
+	// usage_impl->draw(prim); // see note in header
+	return *this;
+}
 
+shader::parameter_usage::parameter_usage(shader::usage& parent, parameter_usage::interface& param_usage) : 
+parent_usage(parent), param_usage(param_usage) 
+{}
+
+
+shader::usage shader::parameter_usage::mat4 (const mat<4, 4>& m) const { return mat4n(&m, 1); }
+shader::usage shader::parameter_usage::mat4n (const mat<4, 4>* m, size_t count) const
+{
+	param_usage.mat4n(m, count);
 	return parent_usage;
 }
 
-shader::usage shader::uniform_usage::mat3 (const mat<3, 3>& m)
+shader::usage shader::parameter_usage::mat3 (const mat<3, 3>& m) const { return mat3n(&m, 1); }
+shader::usage shader::parameter_usage::mat3n (const mat<3, 3>* m, size_t count) const
 {
-	glUniformMatrix3fv(uni_loc, 1, true, m.ptr());
-
+	param_usage.mat3n(m, count);
 	return parent_usage;
 }
 
-shader::usage shader::uniform_usage::vec2 (const vec<2>& v)
+shader::usage shader::parameter_usage::vec2 (const vec<2>& v) const { return vec2n(&v, 1); }
+shader::usage shader::parameter_usage::vec2n (const vec<2>* v, size_t count) const
 {
-	glUniform2fv(uni_loc, 1, v.v);
-
+	param_usage.vec2n(v, count);
 	return parent_usage;
 }
 
-shader::usage shader::uniform_usage::vec2n (const vec<2>* v, size_t count)
+shader::usage shader::parameter_usage::vec3 (const vec<3>& v) const { return vec3n(&v, 1); }
+shader::usage shader::parameter_usage::vec3n (const vec<3>* v, size_t count) const
 {
-	glUniform2fv(uni_loc, count, (const float*)v);
+	param_usage.vec3n(v, count);
+	return parent_usage;	
+}
 
+shader::usage shader::parameter_usage::vec4(const vec<4>& v) const { return vec4n(&v, 1); }
+shader::usage shader::parameter_usage::vec4n(const vec<4>* v, size_t count) const
+{
+	param_usage.vec4n(v, 1);
 	return parent_usage;
 }
 
-shader::usage shader::uniform_usage::vec3 (const vec<3>& v)
+shader::usage shader::parameter_usage::flt(float f) const { return fltn(&f, 1); }
+shader::usage shader::parameter_usage::fltn(float* f, size_t count) const
 {
-	glUniform3fv(uni_loc, 1, v.v);
-
+	param_usage.fltn(f, count);
 	return parent_usage;
 }
 
-shader::usage shader::uniform_usage::vec3n (const vec<3>* v, size_t count)
+shader::usage shader::parameter_usage::int1(const int i) const { return intn(&i, 1); }
+shader::usage shader::parameter_usage::intn(const int* i, size_t count) const
 {
-	glUniform3fv(uni_loc, count, (const float *)v);
-
+	param_usage.intn(i, count);
 	return parent_usage;
 }
 
-shader::usage shader::uniform_usage::vec4(const vec<4>& v)
+shader::usage shader::parameter_usage::texture(const g::gfx::texture* tex) const
 {
-	glUniform4fv(uni_loc, 1, v.v);
-
+	param_usage.texture(tex);
 	return parent_usage;
 }
 
-shader::usage shader::uniform_usage::flt (float f)
-{
-	glUniform1f(uni_loc, f);
+// shader::usage shader::parameter_usage::mat4 (const mat<4, 4>& m)
+// {
+// 	glUniformMatrix4fv(uni_loc, 1, true, m.ptr());
 
-	return parent_usage;
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::mat3 (const mat<3, 3>& m)
+// {
+// 	glUniformMatrix3fv(uni_loc, 1, true, m.ptr());
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec2 (const vec<2>& v)
+// {
+// 	glUniform2fv(uni_loc, 1, v.v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec2n (const vec<2>* v, size_t count)
+// {
+// 	glUniform2fv(uni_loc, count, (const float*)v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec3 (const vec<3>& v)
+// {
+// 	glUniform3fv(uni_loc, 1, v.v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec3n (const vec<3>* v, size_t count)
+// {
+// 	glUniform3fv(uni_loc, count, (const float *)v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::vec4(const vec<4>& v)
+// {
+// 	glUniform4fv(uni_loc, 1, v.v);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::flt (float f)
+// {
+// 	glUniform1f(uni_loc, f);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::fltn (float* f, size_t count)
+// {
+// 	glUniform1fv(uni_loc, count, (const float *)f);
+
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::int1(const int i)
+// {
+// 	glUniform1i(uni_loc, i);
+// 	return parent_usage;
+// }
+
+// shader::usage shader::parameter_usage::texture(const g::gfx::texture* tex)
+// {
+// 	glActiveTexture(GL_TEXTURE0 + parent_usage.texture_unit);
+// 	tex->bind();
+// 	glUniform1i(uni_loc, parent_usage.texture_unit);
+// 	parent_usage.texture_unit++;
+// 	return parent_usage;
+// }
+
+// #ifdef __EMSCRIPTEN__
+// 	std::string shader_factory::shader_header = "#version 300 es\n";
+// #else
+// 	std::string shader_factory::shader_header = "#version 410\n";
+// #endif
+
+// 	std::string shader_factory::shader_path;
+
+// GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
+// {
+// 	// Create the GL shader and attempt to compile it
+// 	auto shader = glCreateShader(type);
+// 	glShaderSource(shader, 1, &src, &len);
+// 	glCompileShader(shader);
+
+// 	assert(gl_get_error());
+
+// 	// Check the compilation status
+// 	GLint status;
+// 	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+// 	if (status == GL_FALSE)
+// 	{
+// 		std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
+// 		std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
+// 	}
+// 	assert(gl_get_error());
+
+// 	// Print the compilation log if there's anything in there
+// 	GLint log_length;
+// 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
+// 	if (log_length > 0)
+// 	{
+// 		GLchar *log_str = (GLchar *)malloc(log_length);
+// 		glGetShaderInfoLog(shader, log_length, &log_length, log_str);
+// 		std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
+// 		free(log_str);
+// 	}
+// 	assert(gl_get_error());
+
+// 	// treat all shader compilation failure as fatal
+// 	if (status == GL_FALSE)
+// 	{
+// 		glDeleteShader(shader);
+// 		exit(-2);
+// 	}
+
+// 	std::cerr << G_TERM_GREEN << "OK" << G_TERM_COLOR_OFF << std::endl;
+
+// 	return shader;
+// }
+
+
+shader_factory& shader_factory::add(const std::string& path, shader::program::type type)
+{
+	desc.programs[type].path = path;
+	return *this;
 }
 
-shader::usage shader::uniform_usage::fltn (float* f, size_t count)
+shader_factory& shader_factory::add_src(const std::string& src, shader::program::type type)
 {
-	glUniform1fv(uni_loc, count, (const float *)f);
-
-	return parent_usage;
+	desc.programs[type].source = src;
+	return *this;
 }
 
-shader::usage shader::uniform_usage::int1(const int i)
-{
-	glUniform1i(uni_loc, i);
-	return parent_usage;
-}
-
-shader::usage shader::uniform_usage::texture(const g::gfx::texture& tex)
-{
-	glActiveTexture(GL_TEXTURE0 + parent_usage.texture_unit);
-	tex.bind();
-	glUniform1i(uni_loc, parent_usage.texture_unit);
-	parent_usage.texture_unit++;
-	return parent_usage;
-}
-
-#ifdef __EMSCRIPTEN__
-	std::string shader_factory::shader_header = "#version 300 es\n";
-#else
-	std::string shader_factory::shader_header = "#version 410\n";
-#endif
-
-	std::string shader_factory::shader_path;
-
-GLuint shader_factory::compile_shader (GLenum type, const GLchar* src, GLsizei len)
-{
-	// Create the GL shader and attempt to compile it
-	auto shader = glCreateShader(type);
-	glShaderSource(shader, 1, &src, &len);
-	glCompileShader(shader);
-
-	assert(gl_get_error());
-
-	// Check the compilation status
-	GLint status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	if (status == GL_FALSE)
-	{
-		std::cerr << G_TERM_RED << "FAILED " << status << G_TERM_COLOR_OFF << std::endl;
-		std::cerr << G_TERM_YELLOW << src << G_TERM_COLOR_OFF << std::endl;
-	}
-	assert(gl_get_error());
-
-	// Print the compilation log if there's anything in there
-	GLint log_length;
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
-	if (log_length > 0)
-	{
-		GLchar *log_str = (GLchar *)malloc(log_length);
-		glGetShaderInfoLog(shader, log_length, &log_length, log_str);
-		std::cerr << G_TERM_RED << "Shader compile log: " << log_length << std::endl << log_str << G_TERM_COLOR_OFF << std::endl;
-		free(log_str);
-	}
-	assert(gl_get_error());
-
-	// treat all shader compilation failure as fatal
-	if (status == GL_FALSE)
-	{
-		glDeleteShader(shader);
-		exit(-2);
-	}
-
-	std::cerr << G_TERM_GREEN << "OK" << G_TERM_COLOR_OFF << std::endl;
-
-	return shader;
-}
-
-
-shader shader_factory::create()
-{
-	GLint status;
-	shader out;
-	out.program = glCreateProgram();
-
-	for (auto shader : shaders)
-	{
-		glAttachShader(out.program, shader.second);
-	}
-
-	assert(gl_get_error());
-	glLinkProgram(out.program);
-
-	glGetProgramiv(out.program, GL_LINK_STATUS, &status);
-	if (status == 0)
-	{
-		GLint log_length;
-		glGetProgramiv(out.program, GL_INFO_LOG_LENGTH, &log_length);
-		if (log_length > 0)
-		{
-			GLchar *log_str = (GLchar *)malloc(log_length);
-			glGetProgramInfoLog(out.program, log_length, &log_length, log_str);
-			std::cerr << "Shader link log: " << log_length << std::endl << log_str << std::endl;
-			::write(1, log_str, log_length);
-			free(log_str);
-		}
-		exit(-1);
-	}
-
-	assert(gl_get_error());
-
-	// Detach all
-	for (auto shader : shaders)
-	{
-		glDetachShader(out.program, shader.second);
-	}
-
-	return out;
-}
+shader* shader_factory::create() { return g::gfx::api::instance->make_shader(desc); }
 
 
 #include <ft2build.h>
@@ -1111,7 +933,7 @@ font font_factory::from_true_type(const std::string& path, unsigned point)
 	// using RGBA is totally excessive, but webgl
 	// seems to have issues with just GL_RED
 	font.face = texture_factory{col_pix, row_pix}
-	.type(GL_UNSIGNED_BYTE)
+	.type(g::gfx::type::uint8)
 	.components(4)
 	.fill([&](int x, int y, int z, unsigned char* pixel){
 		pixel[0] = pixel[1] = pixel[2] = 0xff;

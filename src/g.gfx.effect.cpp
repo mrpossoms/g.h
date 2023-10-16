@@ -27,7 +27,7 @@ mesh<vertex::pos_uv_norm>& effect::fullscreen_quad()
 }
 
 
-void effect::blit(const framebuffer& fb)
+void effect::blit(framebuffer* fb)
 {
     static shader blit_shader;
     static std::string blit_fs_src =
@@ -49,12 +49,12 @@ void effect::blit(const framebuffer& fb)
     }
 
     fullscreen_quad().using_shader(blit_shader)
-    ["u_texture"].texture(fb.color)
+    ["u_texture"].texture(fb->color())
     .draw<GL_TRIANGLE_FAN>();
 }
 
 
-void effect::shadow(const framebuffer& light_depth, const framebuffer& camera_depth, game::camera& light, game::camera& cam)
+void effect::shadow(framebuffer* light_depth, framebuffer* camera_depth, game::camera& light, game::camera& cam)
 {
     static shader shadow_shader;
     static std::string light_depth_fs_src =
@@ -130,7 +130,7 @@ void effect::shadow(const framebuffer& light_depth, const framebuffer& camera_de
     ["u_light_view"].mat4(light.view())
     ["u_light_proj"].mat4(light.projection())
     ["u_cam_pos"].vec3(cam.position)
-    ["u_light_depth"].texture(light_depth.depth)
-    ["u_camera_depth"].texture(camera_depth.depth)
+    ["u_light_depth"].texture(light_depth->depth())
+    ["u_camera_depth"].texture(camera_depth->depth())
     .draw<GL_TRIANGLE_FAN>();
 }

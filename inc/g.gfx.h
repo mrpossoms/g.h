@@ -62,60 +62,6 @@ using namespace xmath;
 namespace g {
 namespace gfx {
 
-namespace api {
-
-enum class render_api
-{
-	OPEN_GL,
-};
-
-struct render_api_version
-{
-	unsigned int major, minor;
-};
-
-struct options
-{
-	bool display = true;
-	size_t width = 640;
-	size_t height = 480;
-	bool fullscreen = false;
-	render_api_version api_version = { 4, 1 };
-};
-
-struct interface {
-	virtual void initialize(const options& opts, const char* name=nullptr) = 0;
-	virtual void pre_draw() = 0;
-	virtual void post_draw() = 0;
-	virtual size_t width() = 0;
-	virtual size_t height() = 0;
-	virtual float aspect() = 0;
-};
-
-struct opengl final : public interface
-{
-	opengl();
-	~opengl();
-
-	void initialize(const options& opts, const char* name=nullptr) override;
-	void pre_draw() override;
-	void post_draw() override;
-
-	size_t width() override;
-	size_t height() override;
-	float aspect() override;
-private:
-	GLFWwindow* win;
-	struct {
-		int width;
-		int height;
-	} framebuffer;
-};
-
-extern std::unique_ptr<interface> instance;
-
-} // namespace api
-
 static const char* gl_error_to_str(GLenum err)
 {
 	const static char* msg_table[] = {
@@ -152,129 +98,178 @@ static bool gl_get_error()
 	return good;
 }
 
-extern GLFWwindow* GLFW_WIN;
-
-bool has_graphics();
-
-size_t width();
-
-size_t height();
-
-float aspect();
-
-namespace noise
+enum type
 {
+	unspecified = 0,
+	uint8,
+	int8,
+	uint16,
+	int16,
+	uint32,
+	int32,
+	float16,
+	float32,
+};
 
-float perlin(const vec<3>& p, const std::vector<int8_t>& entropy);
+static size_t type_to_bytes(type t)
+{
+	static const size_t size_map[] = {
+		0, // unspecified
+		1, // uint8
+		1, // int8
+		2, // uint16
+		2, // int16
+		4, // uint32
+		4, // int32
+		2, // float16
+		4, // float32
+	};
 
-float value(const vec<3>& p, const std::vector<int8_t>& entropy);
+	return size_map[static_cast<size_t>(t)];
+}
 
-} // namespace noise
+enum primative
+{
+	points,
+	lines,
+	triangles,
+	triangle_fan,
+};
 
 struct texture
 {
-	GLenum type = 0;
-	GLenum color_type = 0;
-	GLenum storage_type = 0;
-	unsigned component_count = 0;
-	unsigned bytes_per_component = 0;
-	unsigned size[3] = { 1, 1, 1 };
-	GLuint hnd = -1;
+
+	struct usage
+	{
+		unsigned red : 1;
+		unsigned green : 1;
+		unsigned blue : 1;
+		unsigned alpha : 1;
+		unsigned depth : 1;
+	};
+
+	// TODO: think, even though opengl associates
+	// filtering and wrapping with the texture, it's not
+	// really a property of the texture, but of the sampling technique
+	enum filter
+	{
+		nearest = 0,
+		linear,
+	};
+
+	enum wrap
+	{				
+		clamp_to_edge = 0,
+		clamp_to_border,
+		repeat,
+		repeat_mirrored,
+	};
+
+	struct description
+	{
+		unsigned size[3] = { 1, 1, 1 };
+		type            pixel_storage_type = type::uint8;
+		texture::usage  usage = { .red=1, .green=1, .blue=1, .alpha=1 };
+		texture::filter filter = texture::filter::linear;
+		texture::wrap   wrap = texture::wrap::repeat;
+
+		unsigned components() const { return usage.red + usage.green + usage.blue + usage.alpha + usage.depth; }
+		size_t bytes_per_component() const { return type_to_bytes(pixel_storage_type); }
+		size_t bytes_per_pixel() const { return bytes_per_component() * components(); }
+		size_t bytes() const { return size[0] * size[1] * size[2] * bytes_per_pixel(); }
+	};
+
 	unsigned char* data = nullptr;
-
-	inline bool is_initialized() const { return hnd != (unsigned)-1; }
-
-	void release_bitmap();
-
-	void create(GLenum texture_type);
-
-	void destroy();
-
-	void set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLenum color_type=GL_RGBA, GLenum storage_type=GL_UNSIGNED_BYTE);
+	texture::description desc;
 
 	unsigned char* sample(unsigned x, unsigned y=0, unsigned z=0) const
 	{
-		const unsigned textel_stride = bytes_per_component * component_count;
+		const unsigned textel_stride = desc.bytes_per_pixel();
 
 		const unsigned x_stride = 1;
-		const unsigned y_stride = size[0];
-		const unsigned z_stride = size[0] * size[1];
+		const unsigned y_stride = desc.size[0];
+		const unsigned z_stride = desc.size[0] * desc.size[1];
 
 		return &data[(x * x_stride + y * y_stride + z * z_stride) * textel_stride];
 	}
 
-	inline bool is_1D() const { return size[0] > 1 && size[1] == 1 && size[2] == 1; }
-	inline bool is_2D() const { return size[0] > 1 && size[1] > 1 && size[2] == 1; }
-	inline bool is_3D() const { return size[0] > 1 && size[1] > 1 && size[2] > 1; }
+	// texture() = default;
 
-	void to_disk(const std::string& path) const;
+	virtual ~texture() {}
 
-	size_t bytes() const;
+	virtual inline bool is_initialized() const = 0;
 
-	void get_pixels(unsigned char** data_out, size_t& data_out_size) const;
+	virtual void release_bitmap() = 0;
 
-	void bind() const;
+	virtual void set_pixels(const texture::description& description, unsigned char* data) = 0;
 
-	void unbind() const;
+	virtual void get_pixels(unsigned char** data_out, size_t& data_out_size) const = 0;
 
-	float aspect() const
-	{
-		return size[0] / (float)size[1];
+	virtual void to_disk(const std::string& path) const = 0;
+
+	virtual void set_filtering(texture::filter filter) = 0;
+
+	virtual void set_wrapping(texture::wrap wrap) = 0;
+
+	virtual void bind() const = 0;
+
+	virtual void unbind() const = 0;
+
+	size_t dimensions() const
+	{ 
+		auto d = static_cast<size_t>(desc.size[0] > 1) + static_cast<size_t>(desc.size[1] > 1) + static_cast<size_t>(desc.size[2] > 1);
+		return d;
 	}
+	size_t bytes() const { return desc.bytes(); }
+	inline bool is_1D() const { return desc.size[0] > 1 && desc.size[1] == 1 && desc.size[2] == 1; }
+	inline bool is_2D() const { return desc.size[0] > 1 && desc.size[1] > 1 && desc.size[2] == 1; }
+	inline bool is_3D() const { return desc.size[0] > 1 && desc.size[1] > 1 && desc.size[2] > 1; }
+	inline float aspect_ratio() const { return desc.size[0] / (float)desc.size[1]; }
 };
 
-
-struct texture_factory
+struct framebuffer
 {
-	texture* existing = nullptr;
-	unsigned size[3] = {1, 1, 1};
-	unsigned char* data = nullptr;
-	GLenum texture_type;
-	GLenum min_filter = GL_LINEAR, mag_filter = GL_LINEAR;
-	GLenum wrap_s = GL_CLAMP_TO_EDGE, wrap_t = GL_CLAMP_TO_EDGE, wrap_r = GL_CLAMP_TO_EDGE;
-	GLenum color_type = GL_RGBA;
-	GLenum storage_type = GL_UNSIGNED_BYTE;
-	unsigned component_count = 0;
-	unsigned bytes_per_component = 0;
+	struct scoped_draw
+	{
+		framebuffer* fb_ref;
 
-	explicit texture_factory() = default;
+		scoped_draw(framebuffer* fb) : fb_ref(fb) { fb_ref->bind_as_target(); }
+		
+		scoped_draw(framebuffer* fb, 
+		            const vec<2, unsigned>& upper_left,
+		            const vec<2, unsigned>& lower_right) : fb_ref(fb) 
+		{ 
+			fb_ref->bind_as_target(upper_left, lower_right); 
+		}
 
-	explicit texture_factory(unsigned w, unsigned h);
+		~scoped_draw() { fb_ref->unbind_as_target(); }
 
-	explicit texture_factory(unsigned w, unsigned h, unsigned d);
+		scoped_draw(const scoped_draw&) = delete;
+		scoped_draw(scoped_draw&&) = delete;
+		scoped_draw& operator=(const scoped_draw&) = delete;
+		scoped_draw& operator=(scoped_draw&&) = delete;
+	};
 
-	explicit texture_factory(texture* existing_texture);
+	vec<2> draw_region[2];
 
-	void abort(std::string message);
+	virtual ~framebuffer() {}
 
-	texture_factory& from_png(const std::string& path);
+	virtual unsigned* size() = 0;
 
-	texture_factory& to_png(const std::string& path);
+	virtual texture* color(texture* tex=nullptr) = 0;
 
-	texture_factory& type(GLenum t);
+	virtual texture* depth(texture* tex=nullptr) = 0;
 
-	texture_factory& components(unsigned count);
+	virtual float aspect() const = 0;
 
-	texture_factory& color();
+	virtual void bind_as_target() = 0;
 
-	texture_factory& depth();
+	virtual void bind_as_target(const vec<2, unsigned>& upper_left, const vec<2, unsigned>& lower_right) = 0;
 
-	texture_factory& pixelated();
-
-	texture_factory& smooth();
-
-	texture_factory& clamped();
-
-	texture_factory& clamped_to_border();
-
-	texture_factory& repeating();
-
-	texture_factory& fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler);
-
-	texture_factory& fill(unsigned char* buffer);
-
-	texture create();
+	virtual void unbind_as_target() = 0;
 };
+
+namespace vertex { struct element; };
 
 struct sprite
 {
@@ -363,77 +358,434 @@ struct sprite
 	}
 };
 
-struct framebuffer
+struct shader
 {
-	struct scoped_draw
+	struct usage;
+
+	struct program
 	{
-		framebuffer& fb_ref;
+		enum type
+		{
+			unspecified = 0,
+			vertex,
+			fragment,
+			geometry,
+			compute,
+		};
 
-		scoped_draw(framebuffer& fb) : fb_ref(fb) { fb_ref.bind_as_target(); }
-		
-		scoped_draw(framebuffer& fb, 
-		            const vec<2, unsigned>& upper_left,
-		            const vec<2, unsigned>& lower_right) : fb_ref(fb) 
-		{ 
-			fb_ref.bind_as_target(upper_left, lower_right); 
-		}
-
-		~scoped_draw() { fb_ref.unbind_as_target(); }
-
-		scoped_draw(const scoped_draw&) = delete;
-		scoped_draw(scoped_draw&&) = delete;
-		scoped_draw& operator=(const scoped_draw&) = delete;
-		scoped_draw& operator=(scoped_draw&&) = delete;
+		std::string path;
+		std::string source;
 	};
 
-	GLuint fbo;
-	unsigned size[3];
-	vec<2> draw_region[2];
-	texture color;
-	texture depth;
-
-	void bind_as_target()
+	struct description
 	{
-		glViewport(0, 0, size[0], size[1]);
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		assert(gl_get_error());
-	}
+		std::unordered_map<program::type, shader::program> programs;
+	};
 
-	void bind_as_target(const vec<2, unsigned>& upper_left, const vec<2, unsigned>& lower_right)
-	{
-		auto w = lower_right[0] - upper_left[0], h = lower_right[1] - upper_left[1];
-		glViewport(upper_left[0], upper_left[1], w, h);
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		assert(gl_get_error());
-	}
+	virtual ~shader() {}
 
-	void unbind_as_target()
+	virtual bool is_initialized() const = 0;
+
+	virtual void attach_attributes(const vertex::element* elements) {};
+
+	virtual shader* bind() = 0;
+
+
+	/**
+	 * @brief      Offers interaction with the uniforms defined for a given shader
+	 */
+	struct parameter_usage
 	{
-		if (color.hnd != (GLuint)-1)
+		struct interface
 		{
-			color.bind();
-			glGenerateMipmap(GL_TEXTURE_2D);
+			virtual usage mat4n (const mat<4, 4>* m, size_t count) const = 0;
+
+			virtual usage mat3n (const mat<3, 3>* m, size_t count) const = 0;
+
+			virtual usage vec2n (const vec<2>* v, size_t count) const = 0;
+
+			virtual usage vec3n (const vec<3>* v, size_t count) const = 0;
+
+			virtual usage vec4n(const vec<4>* v, size_t count) const = 0;
+
+			virtual usage fltn(const float* f, size_t count) const = 0;
+
+			virtual usage intn(const int* i, size_t count) const = 0;
+
+			virtual usage texture(const texture* tex) const = 0;
+		};
+
+		usage& parent_usage;
+		parameter_usage::interface& param_usage;
+
+		parameter_usage(usage& parent, parameter_usage::interface& param_usage);
+
+		usage mat4 (const mat<4, 4>& m) const;
+		usage mat4n (const mat<4, 4>* m, size_t count) const;
+
+		usage mat3 (const mat<3, 3>& m) const;
+		usage mat3n (const mat<3, 3>* m, size_t count) const;
+
+		usage vec2 (const vec<2>& v) const;
+		usage vec2n (const vec<2>* v, size_t count) const;
+
+		usage vec3 (const vec<3>& v) const;
+		usage vec3n (const vec<3>* v, size_t count) const;
+
+		usage vec4(const vec<4>& v) const;
+		usage vec4n(const vec<4>* v, size_t count) const;
+
+		usage flt(float f) const;
+		usage fltn(float* f, size_t count) const;
+
+		usage int1(const int i) const;
+		usage intn(const int* i, size_t count) const;
+
+		usage texture(const texture* tex) const;
+	};
+
+	virtual parameter_usage::interface& set_uniform(const std::string& name) = 0;
+
+	// virtual shader* draw(g::gfx::primative prim) = 0;
+	/**
+	 * @brief      shader::usage type represents the start of some invocation
+	 * of an interaction with a shader.
+	 */
+	struct usage
+	{
+		shader* shader_ptr;
+		size_t vertices = 0, indices = 0;
+
+		usage() = default;
+		usage (shader* shader, size_t verts=0, size_t inds=0);
+
+		usage attach_attributes(const vertex::element* elements)
+		{
+			//assert(gl_get_error());
+			shader_ptr->attach_attributes(elements);
+			//assert(gl_get_error());
+			return *this;
 		}
 
-		glViewport(0, 0, g::gfx::width(), g::gfx::height());
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
+		usage set_camera(const g::game::camera& cam);
 
-	float aspect() const
-	{
-		return size[0] / (float)size[1];
-	}
+		usage set_sprite(const g::gfx::sprite::instance& sprite);
+
+		parameter_usage operator[](const std::string& name);
+
+		parameter_usage set_uniform(const std::string& name) 
+		{
+			return { *this, shader_ptr->set_uniform(name) };
+		};
+
+		// TODO: draw really shouldn't belong to the shader, it should
+		// belong to the geometry. That way there is no need for this
+		// usage instance to carry vertex and index information and
+		// the shader implementation doesn't need to know about how to
+		// invoke draw commands for the geometry. Using RAII for some kind
+		// of "draw" object would be cleaner.
+		usage& draw(g::gfx::primative prim);
+	};
+
 };
 
+// struct parameter_usage;
+// /**
+//  * @brief      shader::usage type represents the start of some invocation
+//  * of an interaction with a shader.
+//  */
+// struct usage
+// {
+// 	shader* shader_ref = nullptr;
+// 	size_t vertices = 0, indices = 0;
+	
+// 	usage() = default;
+// 	usage (shader* ref, size_t verts, size_t inds);
+
+// 	template<typename MV>
+// 	usage attach_attributes(const shader& shader)
+// 	{
+// 		assert(gl_get_error());
+// 		MV::attributes(shader);
+// 		assert(gl_get_error());
+// 		return *this;
+// 	}
+
+// 	usage set_camera(const g::game::camera& cam);
+
+// 	usage set_sprite(const g::gfx::sprite::instance& sprite);
+
+// 	parameter_usage set_uniform(const std::string& name);
+
+// 	parameter_usage operator[](const std::string& name);
+
+// 	template<GLenum PRIM>
+// 	usage& draw()
+// 	{
+// 		assert(gl_get_error());
+// 		if (indices > 0)
+// 		{
+// 			glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
+// 			assert(gl_get_error());
+// 		}
+// 		else
+// 		{
+// 			glDrawArrays(PRIM, 0, vertices);
+// 			assert(gl_get_error());
+// 		}
+
+// 		return *this;
+// 	}
+
+// 	usage& draw_tri_fan()
+// 	{
+// 		return draw<GL_TRIANGLE_FAN>();
+// 	}
+// };
+
+
+// struct shader
+// {
+
+// 	virtual bool is_initialized() const = 0;
+
+// 	virtual shader& bind() = 0;
+
+// 	struct parameter_usage;
+// 	/**
+// 	 * @brief      shader::usage type represents the start of some invocation
+// 	 * of an interaction with a shader.
+// 	 */
+// 	struct usage
+// 	{
+// 		shader* shader_ref = nullptr;
+// 		size_t vertices = 0, indices = 0;
+// 		int texture_unit = 0;
+
+// 		usage() = default;
+// 		usage (shader* ref, size_t verts, size_t inds);
+
+// 		template<typename MV>
+// 		usage attach_attributes(const shader& shader)
+// 		{
+// 			//assert(gl_get_error());
+// 			MV::attributes(shader);
+// 			//assert(gl_get_error());
+// 			return *this;
+// 		}
+
+// 		usage set_camera(const g::game::camera& cam);
+
+// 		usage set_sprite(const g::gfx::sprite::instance& sprite);
+
+// 		parameter_usage set_uniform(const std::string& name);
+
+// 		parameter_usage operator[](const std::string& name);
+
+// 		template<GLenum PRIM>
+// 		usage& draw()
+// 		{
+// 			//assert(gl_get_error());
+// 			if (indices > 0)
+// 			{
+// 				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
+// 				//assert(gl_get_error());
+// 			}
+// 			else
+// 			{
+// 				glDrawArrays(PRIM, 0, vertices);
+// 				//assert(gl_get_error());
+// 			}
+
+// 			return *this;
+// 		}
+
+// 		usage& draw_tri_fan()
+// 		{
+// 			return draw<GL_TRIANGLE_FAN>();
+// 		}
+// 	};
+
+// 	/**
+// 	 * @brief      Offers interaction with the uniforms defined for a given shader
+// 	 */
+// 	struct parameter_usage
+// 	{
+// 		GLuint uni_loc;
+// 		usage& parent_usage;
+
+// 		parameter_usage(usage& parent, GLuint loc);
+
+// 		usage mat4 (const mat<4, 4>& m);
+
+// 		usage mat3 (const mat<3, 3>& m);
+
+// 		usage vec2 (const vec<2>& v);
+// 		usage vec2n (const vec<2>* v, size_t count);
+
+// 		usage vec3 (const vec<3>& v);
+// 		usage vec3n (const vec<3>* v, size_t count);
+
+// 		usage vec4(const vec<4>& v);
+
+// 		usage flt(float f);
+// 		usage fltn(float* f, size_t count);
+
+// 		usage int1(const int i);
+
+// 		usage texture(const texture* tex);
+
+// 		// virtual operator() (const mat<4, 4>& m) = 0;
+// 		// virtual operator() (const mat<3, 3>& m) = 0;
+// 		// virtual operator() (const vec<2>& v) = 0;
+// 		// virtual operator() (const std::vector<vec<2>>& v) = 0;
+// 		// virtual operator() (const vec<3>& v) = 0;
+// 		// virtual operator() (const std::vector<vec<3>>& v) = 0;
+// 		// virtual operator() (const vec<4>& v) = 0;
+// 		// virtual operator() (const std::vector<vec<4>>& v) = 0;
+// 		// virtual operator() (float f) = 0;
+// 		// virtual operator() (const std::vector<float>& f) = 0;
+// 		// virtual operator() (int32_t i) = 0;
+// 		// virtual operator() (const std::vector<int32_t>& i) = 0;
+// 		// virtual operator() (const texture& tex) = 0;
+// 	};
+// };
+
+namespace api {
+
+struct render_api_version
+{
+	unsigned int major, minor;
+};
+
+struct options
+{
+	bool display = true;
+	size_t width = 640;
+	size_t height = 480;
+	bool fullscreen = false;
+	render_api_version api_version = { 4, 1 };
+};
+
+struct interface {
+	virtual void initialize(const options& opts, const char* name=nullptr) = 0;
+	virtual void pre_draw() = 0;
+	virtual void post_draw() = 0;
+	virtual size_t width() = 0;
+	virtual size_t height() = 0;
+	virtual float aspect() = 0;
+
+	virtual texture* make_texture(const texture::description& desc) = 0;
+	virtual framebuffer* make_framebuffer(texture* color, texture* depth) = 0;
+	virtual shader* make_shader(const shader::description& desc) = 0;
+
+	struct print
+	{
+		vec<4> cur_color;
+		g::game::camera* cur_cam;
+		g::gfx::texture* cur_tex;
+		mat<4, 4> cur_model = mat<4, 4>::I();
+
+		print(g::game::camera* cam);
+		print(g::game::camera& cam);
+
+		print& color(const vec<4>& c);
+
+		print& model(const mat<4, 4>& m);
+
+		// TODO
+		// print& texture(const g::gfx::texture& t);
+
+		virtual void ray(const vec<2>& o, const vec<2>& d) = 0;
+
+		virtual void ray(const vec<3>& o, const vec<3>& d) = 0;
+
+		virtual void point(const vec<2>& o) = 0;
+
+		virtual void point(const vec<3>& o) = 0;
+
+		virtual void box(const vec<3> corners[2]) = 0;
+	};
+};
+
+extern std::unique_ptr<interface> instance;
+
+} // namespace api
+
+extern GLFWwindow* GLFW_WIN;
+
+bool has_graphics();
+
+size_t width();
+
+size_t height();
+
+float aspect();
+
+namespace noise
+{
+
+float perlin(const vec<3>& p, const std::vector<int8_t>& entropy);
+
+float value(const vec<3>& p, const std::vector<int8_t>& entropy);
+
+} // namespace noise
+
+
+struct texture_factory
+{
+	texture* existing = nullptr;
+	unsigned char* data = nullptr;
+	texture::description desc;
+
+	explicit texture_factory() = default;
+
+	explicit texture_factory(unsigned w, unsigned h);
+
+	explicit texture_factory(unsigned w, unsigned h, unsigned d);
+
+	explicit texture_factory(texture* existing_texture);
+
+	void abort(std::string message);
+
+	texture_factory& from_png(const std::string& path);
+
+	texture_factory& to_png(const std::string& path);
+
+	texture_factory& type(g::gfx::type t);
+
+	texture_factory& components(unsigned count);
+
+	texture_factory& color();
+
+	texture_factory& depth();
+
+	texture_factory& pixelated();
+
+	texture_factory& smooth();
+
+	texture_factory& clamped();
+
+	texture_factory& clamped_to_border();
+
+	texture_factory& repeating();
+
+	texture_factory& fill(std::function<void(int x, int y, int z, unsigned char* pixel)> filler);
+
+	texture_factory& fill(unsigned char* buffer);
+
+	texture* create();
+};
 
 struct framebuffer_factory
 {
 	unsigned size[2] = {1, 1};
-	texture color_tex, depth_tex;
+	texture* color_tex;
+	texture* depth_tex;
 
-	framebuffer_factory(unsigned w, unsigned h);
+	framebuffer_factory(unsigned w, unsigned h, unsigned d=1);
 
-	framebuffer_factory(texture& dst);
+	framebuffer_factory(texture* dst);
 
 	framebuffer_factory();
 
@@ -443,175 +795,44 @@ struct framebuffer_factory
 
 	framebuffer_factory& shadow_map();
 
-	framebuffer create();
+	framebuffer* create();
 };
-
-/**
- * @brief      { struct_description }
- */
-struct shader
-{
-	GLuint program = 0;
-	std::unordered_map<std::string, GLint> uni_locs;
-
-	inline bool is_initialized() const { return program != 0; }
-
-	void destroy();
-
-	shader& bind();
-
-	struct uniform_usage;
-	/**
-	 * @brief      shader::usage type represents the start of some invocation
-	 * of an interaction with a shader.
-	 */
-	struct usage
-	{
-		shader* shader_ref = nullptr;
-		size_t vertices = 0, indices = 0;
-		int texture_unit = 0;
-
-		usage() = default;
-		usage (shader* ref, size_t verts, size_t inds);
-
-		template<typename MV>
-		usage attach_attributes(const shader& shader)
-		{
-			assert(gl_get_error());
-			MV::attributes(shader.program);
-			assert(gl_get_error());
-			return *this;
-		}
-
-		usage set_camera(const g::game::camera& cam);
-
-		usage set_sprite(const g::gfx::sprite::instance& sprite);
-
-		uniform_usage set_uniform(const std::string& name);
-
-		uniform_usage operator[](const std::string& name);
-
-		template<GLenum PRIM>
-		usage& draw()
-		{
-			assert(gl_get_error());
-			if (indices > 0)
-			{
-				glDrawElements(PRIM, indices, GL_UNSIGNED_INT, NULL);
-				assert(gl_get_error());
-			}
-			else
-			{
-				glDrawArrays(PRIM, 0, vertices);
-				assert(gl_get_error());
-			}
-
-			return *this;
-		}
-
-		usage& draw_tri_fan()
-		{
-			return draw<GL_TRIANGLE_FAN>();
-		}
-	};
-
-	/**
-	 * @brief      Offers interaction with the uniforms defined for a given shader
-	 */
-	struct uniform_usage
-	{
-		GLuint uni_loc;
-		usage& parent_usage;
-
-		uniform_usage(usage& parent, GLuint loc);
-
-		usage mat4 (const mat<4, 4>& m);
-
-		usage mat3 (const mat<3, 3>& m);
-
-		usage vec2 (const vec<2>& v);
-		usage vec2n (const vec<2>* v, size_t count);
-
-		usage vec3 (const vec<3>& v);
-		usage vec3n (const vec<3>* v, size_t count);
-
-		usage vec4(const vec<4>& v);
-
-		usage flt(float f);
-		usage fltn(float* f, size_t count);
-
-		usage int1(const int i);
-
-		usage texture(const texture& tex);
-	};
-};
-
 
 struct shader_factory
 {
-	std::unordered_map<GLenum, GLuint> shaders;
-
-	static std::string shader_header;
 	static std::string shader_path;
+	shader::description desc;
 
-	static GLuint compile_shader (GLenum type, const GLchar* src, GLsizei len);
+	shader_factory& add(const std::string& path, shader::program::type type);
 
-	template<GLenum ST>
-	shader_factory add(const std::string& path)
-	{
-		auto fd = ::open(path.c_str(), O_RDONLY);
-		auto size = ::lseek(fd, 0, SEEK_END);
+	shader_factory& add_src(const std::string& src, shader::program::type type);
 
-		if (fd < 0 || size <= 0)
-		{
-			std::cerr << G_TERM_RED << "Could not open: '" << path << "' file did not exist, or was empty" << std::endl;
-			return *this;
-		}
-
-		{ // read and compile the shader
-			GLchar* src = new GLchar[size];
-			::lseek(fd, 0, SEEK_SET);
-			size = ::read(fd, src, size);
-
-			std::cerr << "Compiling: " << path << "... ";
-
-			auto src_str = shader_header + std::string(src, size);
-			shaders[ST] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length() - 1);
-
-			::close(fd);
-			delete[] src;
-		}
-
-		return *this;
-	}
-
-	template<GLenum ST>
-	shader_factory add_src(const std::string& src)
-	{
-		{ // read and compile the shader
-			auto src_str = shader_header + src;
-			shaders[ST] = compile_shader(ST, src_str.c_str(), (GLsizei)src_str.length());
-		}
-
-		return *this;
-	}
-
-	shader create();
+	shader* create();
 };
-
 
 namespace vertex
 {
+	#define COMPONENT_COUNT(e) (sizeof(e) / sizeof(e[0]))
+
+	struct element
+	{
+		const char* name = nullptr;
+		type        component_type = type::unspecified;
+		unsigned    components;
+	};
+
 	struct pos
 	{
 		vec<3> position;
 
-		static void attributes(GLuint prog)
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos), (void*)0);
+			const pos v;
+			static const vertex::element elements[] = {
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -620,18 +841,15 @@ namespace vertex
 		vec<3> position;
 		vec<2> uv;
 
-		static void attributes(GLuint prog)
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto uv_loc = glGetAttribLocation(prog, "a_uv");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
-
-			auto p_size = sizeof(position);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv), (void*)0);
-			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv), (void*)p_size);
+			const pos_uv v;
+			static const element elements[] = {
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_uv", type::float32, COMPONENT_COUNT(v.uv) },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -640,18 +858,15 @@ namespace vertex
 		vec<3> position;
 		vec<3> normal;
 
-		static void attributes(GLuint prog)
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto norm_loc = glGetAttribLocation(prog, "a_normal");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-
-			auto p_size = sizeof(position);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)0);
-			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm), (void*)(p_size));
+			const pos_norm v;
+			static const element elements[] = {
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_normal", type::float32, COMPONENT_COUNT(v.normal) },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -661,22 +876,16 @@ namespace vertex
 		vec<2> uv;
 		vec<3> normal;
 
-		static void attributes(GLuint prog)
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto uv_loc = glGetAttribLocation(prog, "a_uv");
-			auto norm_loc = glGetAttribLocation(prog, "a_normal");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (uv_loc > -1) glEnableVertexAttribArray(uv_loc);
-			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-
-			auto p_size = sizeof(position);
-			auto uv_size = sizeof(uv);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)0);
-			if (uv_loc > -1) glVertexAttribPointer(uv_loc, 2, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)p_size);
-			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_uv_norm), (void*)(p_size + uv_size));
+			const pos_uv_norm v;
+			static const element elements[] = {
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_uv", type::float32, COMPONENT_COUNT(v.uv) },
+				{"a_normal", type::float32, COMPONENT_COUNT(v.normal) },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -686,22 +895,16 @@ namespace vertex
 		vec<3> normal;
 		vec<3> tangent;
 
-		static void attributes(GLuint prog)
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto norm_loc = glGetAttribLocation(prog, "a_normal");
-			auto tan_loc = glGetAttribLocation(prog, "a_tangent");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-			if (tan_loc > -1) glEnableVertexAttribArray(tan_loc);
-
-			auto p_size = sizeof(position);
-			auto norm_size = sizeof(normal);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)0);
-			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)p_size);
-			if (tan_loc > -1) glVertexAttribPointer(tan_loc, 3, GL_FLOAT, false, sizeof(pos_norm_tan), (void*)(p_size + norm_size));
+			const pos_norm_tan v;
+			static const element elements[] = {
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_normal", type::float32, COMPONENT_COUNT(v.normal) },
+				{"a_tangent", type::float32, COMPONENT_COUNT(v.tangent) },
+				{},
+			};
+			return elements;
 		}
 	};
 
@@ -711,22 +914,16 @@ namespace vertex
 		vec<3> normal;
 		vec<4, uint8_t> color;
 
-		static void attributes(GLuint prog)
+		static const element* layout()
 		{
-			auto pos_loc = glGetAttribLocation(prog, "a_position");
-			auto norm_loc = glGetAttribLocation(prog, "a_normal");
-			auto color_loc = glGetAttribLocation(prog, "a_color");
-
-			if (pos_loc > -1) glEnableVertexAttribArray(pos_loc);
-			if (norm_loc > -1) glEnableVertexAttribArray(norm_loc);
-			if (color_loc > -1) glEnableVertexAttribArray(color_loc);
-
-			auto p_size = sizeof(position);
-			auto n_size = sizeof(normal);
-
-			if (pos_loc > -1) glVertexAttribPointer(pos_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)0);
-			if (norm_loc > -1) glVertexAttribPointer(norm_loc, 3, GL_FLOAT, false, sizeof(pos_norm_color), (void*)(p_size));
-			if (color_loc > -1) glVertexAttribPointer(color_loc, 4, GL_UNSIGNED_BYTE, false, sizeof(pos_norm_color), (void*)(p_size + n_size));
+			const pos_norm_color v;
+			static const element elements[] = {
+				{"a_position", type::float32, COMPONENT_COUNT(v.position) },
+				{"a_normal", type::float32, COMPONENT_COUNT(v.normal) },
+				{"a_color", type::uint8, COMPONENT_COUNT(v.color) },
+				{},
+			};
+			return elements;
 		}
 	};
 }
@@ -801,7 +998,7 @@ struct mesh
 		return *this;
 	}
 
-	shader::usage using_shader (shader& shader) const
+	shader::usage using_shader (shader* shader) const
 	{
 		assert(gl_get_error());
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -813,9 +1010,10 @@ struct mesh
 			assert(gl_get_error());
 		}
 
-		shader.bind();
-		shader::usage usage = {&shader, vertex_count, index_count};
-		usage.attach_attributes<V>(shader);
+		shader->bind();
+		shader::usage usage = {shader, vertex_count, index_count};
+
+		usage.attach_attributes(V::layout());
 
 		// unbind any previously bound textures to prevent
 		// unexpected behavior
@@ -1217,7 +1415,7 @@ struct mesh_factory
 	}
 
 	template<typename VERT>
-	static mesh<VERT> from_heightmap(const texture& tex, std::function<VERT(const texture& tex, int x, int y)> generator)
+	static mesh<VERT> from_heightmap(const texture* tex, std::function<VERT(const texture* tex, int x, int y)> generator)
 	{
 		mesh<VERT> m;
 
@@ -1228,17 +1426,17 @@ struct mesh_factory
 		std::vector<VERT> vertices;
 		std::vector<uint32_t> indices;
 
-		for (unsigned i = 0; i < tex.size[0]; i++)
-		for (unsigned j = 0; j < tex.size[1]; j++)
+		for (unsigned i = 0; i < tex->desc.size[0]; i++)
+		for (unsigned j = 0; j < tex->desc.size[1]; j++)
 		{
 			vertices.push_back(generator(tex, i, j));
 		}
 
-		for (unsigned y = 0; y < tex.size[0] - 1; y++)
-		for (unsigned x = 0; x < tex.size[1] - 1; x++)
+		for (unsigned y = 0; y < tex->desc.size[0] - 1; y++)
+		for (unsigned x = 0; x < tex->desc.size[1] - 1; x++)
 		{
-			unsigned i = x + y * (tex.size[0]);
-			unsigned j = x + (y + 1) * (tex.size[0]);
+			unsigned i = x + y * (tex->desc.size[0]);
+			unsigned j = x + (y + 1) * (tex->desc.size[0]);
 			
 			indices.push_back(i);
 			indices.push_back(i + 1);
@@ -1256,22 +1454,22 @@ struct mesh_factory
 		return m;
 	}
 
-	static mesh<vertex::pos_uv_norm> from_heightmap(const texture& tex)
+	static mesh<vertex::pos_uv_norm> from_heightmap(const texture* tex)
 	{
 
 
-		return from_heightmap<vertex::pos_uv_norm>(tex, [](const texture& tex, int x, int y) -> vertex::pos_uv_norm {
+		return from_heightmap<vertex::pos_uv_norm>(tex, [](const texture* tex, int x, int y) -> vertex::pos_uv_norm {
 			return {
 				// position
 				{
-					x - tex.size[0] * 0.5f,
-					static_cast<float>(tex.sample(x, y)[0] * 0.25f),
-					y - tex.size[1] * 0.5f,
+					x - tex->desc.size[0] * 0.5f,
+					static_cast<float>(tex->sample(x, y)[0] * 0.25f),
+					y - tex->desc.size[1] * 0.5f,
 				},
 				// uv
 				{
-					x / (float)tex.size[0],
-					y / (float)tex.size[1],
+					x / (float)tex->desc.size[0],
+					y / (float)tex->desc.size[1],
 				},
 				// normal
 				{ 0, 1, 0 }
@@ -1315,7 +1513,7 @@ struct font
 		vec<2> advance;
 	};
 	unsigned point;
-	texture face; /**< Texture containing all characters of the font face */
+	texture* face; /**< Texture containing all characters of the font face */
 	std::unordered_map<unsigned char, glyph> char_map; /**< associates string characters with their corresponding glyph */
 	std::unordered_map<unsigned char, std::unordered_map<unsigned char, vec<2>>> kerning_map;
 };
@@ -1514,7 +1712,7 @@ struct density_volume
 
             if (draw_config) { draw_config(chain); }
 
-            chain.template draw<GL_TRIANGLES>();
+            chain.draw(g::gfx::primative::triangles);
 
 #ifdef G_GFX_DENSITY_VOLUME_DEBUG
            g::gfx::debug::print{&cam}.color({1, 1, 1, 1}).box(block.bounding_box);
@@ -1532,94 +1730,94 @@ template<typename V>
 void shadow_0(const mesh<V>& m, const framebuffer& shadow_map, game::camera& light, game::camera& cam, std::function<void(g::gfx::shader::usage&)> draw_config=nullptr)
 {
     // TODO: the assumption that the appropriate textel in depth_map can be
-    // sampled to loop up a uv is not correct. I think the correct approach is
+    // sampled to look up a uv is not correct. I think the correct approach is
     // to involve the vertex shader like it has been done traditionally
-	static shader shadow_shader;
-    static std::string shadow_map_vs_src =
-    "in vec3 a_position;"
-    "uniform mat4 u_model;"
-    "uniform mat4 u_view;"
-    "uniform mat4 u_proj;"
-    "uniform mat4 u_light_view;"
-    "uniform mat4 u_light_proj;"
-    "out vec4 v_light_proj_pos;"
-    "void main (void)"
-    "{"
-    "   vec4 v_world_pos = u_model * vec4(a_position, 1.0);"
-    "   gl_Position = u_proj * u_view * v_world_pos;"
-    "   v_light_proj_pos = u_light_proj * u_light_view * v_world_pos;"
-    "   v_light_proj_pos /= v_light_proj_pos.w;"
-    "   v_light_proj_pos = (v_light_proj_pos + 1.0) / 2.0;"
-    "}";
+	// static shader shadow_shader;
+    // static std::string shadow_map_vs_src =
+    // "in vec3 a_position;"
+    // "uniform mat4 u_model;"
+    // "uniform mat4 u_view;"
+    // "uniform mat4 u_proj;"
+    // "uniform mat4 u_light_view;"
+    // "uniform mat4 u_light_proj;"
+    // "out vec4 v_light_proj_pos;"
+    // "void main (void)"
+    // "{"
+    // "   vec4 v_world_pos = u_model * vec4(a_position, 1.0);"
+    // "   gl_Position = u_proj * u_view * v_world_pos;"
+    // "   v_light_proj_pos = u_light_proj * u_light_view * v_world_pos;"
+    // "   v_light_proj_pos /= v_light_proj_pos.w;"
+    // "   v_light_proj_pos = (v_light_proj_pos + 1.0) / 2.0;"
+    // "}";
 
-    static std::string shadow_map_fs_src =
-    "in vec4 v_light_proj_pos;"
-    "uniform sampler2D u_shadow_map;"
-    "out vec4 color;"
-    "void main (void)"
-    "{"
-    "   float bias = 0.00006;"
-    "   float depth = v_light_proj_pos.z - bias;"
-    "   float shadowing = 0.0;"
-    "   for(float y = -2.0; y <= 2.0; y++)"
-    "   for(float x = -2.0; x <= 2.0; x++)"
-    "   {"
-    "       float sampled_depth = texture(u_shadow_map, v_light_proj_pos.xy + (vec2(x, y) * 0.0005)).r;"
-    "       if (depth <= sampled_depth)"
-    "       {"
-    "           shadowing += 1.0 / 25.0;"
-    "       }"
-    "   }"
-    "   color = vec4(vec3(shadowing + 0.1), 1.0);"
-    "}";
+    // static std::string shadow_map_fs_src =
+    // "in vec4 v_light_proj_pos;"
+    // "uniform sampler2D u_shadow_map;"
+    // "out vec4 color;"
+    // "void main (void)"
+    // "{"
+    // "   float bias = 0.00006;"
+    // "   float depth = v_light_proj_pos.z - bias;"
+    // "   float shadowing = 0.0;"
+    // "   for(float y = -2.0; y <= 2.0; y++)"
+    // "   for(float x = -2.0; x <= 2.0; x++)"
+    // "   {"
+    // "       float sampled_depth = texture(u_shadow_map, v_light_proj_pos.xy + (vec2(x, y) * 0.0005)).r;"
+    // "       if (depth <= sampled_depth)"
+    // "       {"
+    // "           shadowing += 1.0 / 25.0;"
+    // "       }"
+    // "   }"
+    // "   color = vec4(vec3(shadowing + 0.1), 1.0);"
+    // "}";
 
 
-    if (!shadow_shader.is_initialized())
-    {
-        shadow_shader = shader_factory{}
-            .add_src<GL_VERTEX_SHADER>(shadow_map_vs_src)
-            .add_src<GL_FRAGMENT_SHADER>(shadow_map_fs_src)
-            .create();
-    }
+    // if (!shadow_shader.is_initialized())
+    // {
+    //     shadow_shader = shader_factory{}
+    //         .add_src(shadow_map_vs_src, shader::program::type::vertex)
+    //         .add_src(shadow_map_fs_src, shader::program::type::fragment)
+    //         .create();
+    // }
 
-    // TODO: set appropriate blending
+    // // TODO: set appropriate blending
 
-    auto model = mat<4, 4>::I();
+    // auto model = mat<4, 4>::I();
 
-	glEnable( GL_POLYGON_OFFSET_FILL );
-	glPolygonOffset( 0, -1.0 );
-    glBlendFunc(GL_ZERO, GL_SRC_COLOR);
-    // glClear(GL_DEPTH_BUFFER_BIT);
+	// glEnable( GL_POLYGON_OFFSET_FILL );
+	// glPolygonOffset( 0, -1.0 );
+    // glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+    // // glClear(GL_DEPTH_BUFFER_BIT);
 
-    auto chain = m.using_shader(shadow_shader)
-    .set_camera(cam)
-    ["u_shadow_map"].texture(shadow_map.depth)
-    ["u_model"].mat4(model)
-    ["u_light_view"].mat4(light.view())
-    ["u_light_proj"].mat4(light.projection());
+    // auto chain = m.using_shader(shadow_shader)
+    // .set_camera(cam)
+    // ["u_shadow_map"].texture(shadow_map.depth)
+    // ["u_model"].mat4(model)
+    // ["u_light_view"].mat4(light.view())
+    // ["u_light_proj"].mat4(light.projection());
 
-    if (draw_config) { draw_config(chain); }
+    // if (draw_config) { draw_config(chain); }
 
-    chain.template draw<GL_TRIANGLES>();
+    // chain.draw(g::gfx::primative::triangles);
 
-	glPolygonOffset( 0, 0 );
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// glPolygonOffset( 0, 0 );
+	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
-void shadow(const framebuffer& shadow_map, const framebuffer& camera_fb, game::camera& light, game::camera& cam);
+void shadow(framebuffer* shadow_map, framebuffer* camera_fb, game::camera& light, game::camera& cam);
 
-void blit(const framebuffer& fb);
+void blit(framebuffer* fb);
 
 } // end namespace effect
 
-namespace primative
+namespace rendering
 {
 
 template <typename D>
 struct renderer
 {
-	virtual shader::usage using_shader(g::gfx::shader& shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
-	virtual void draw(g::gfx::shader& shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
+	virtual shader::usage using_shader(g::gfx::shader* shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
+	virtual void draw(g::gfx::shader* shader, const D& data, g::game::camera& cam, const mat<4, 4>& model) = 0;
 };
 
 
@@ -1634,12 +1832,12 @@ struct volume_slicer : public renderer<texture>
         slices = g::gfx::mesh_factory::slice_cube(num_slices);
 	}
 
-	shader::usage using_shader(g::gfx::shader& shader,
-					  const g::gfx::texture& vox,
+	shader::usage using_shader(g::gfx::shader* shader,
+					  const g::gfx::texture* vox,
 			          g::game::camera& cam,
 			          const mat<4, 4>& model)
 	{
-		assert(vox.is_3D());
+		assert(vox->is_3D());
 
         // rotate volume slices to align with camera view
         // create a rotation matrix to represente this
@@ -1671,7 +1869,7 @@ struct volume_slicer : public renderer<texture>
         	{     0,     0,     0,              1 }
         };
 
-        const vec<3> delta = { 1.f/(float)vox.size[0], 1.f/(float)vox.size[1], 1.f/(float)vox.size[2] };
+        const vec<3> delta = { 1.f/(float)vox->desc.size[0], 1.f/(float)vox->desc.size[1], 1.f/(float)vox->desc.size[2] };
 
         return slices.using_shader(shader)
                .set_camera(cam)
@@ -1681,12 +1879,12 @@ struct volume_slicer : public renderer<texture>
                ["u_voxels"].texture(vox);
 	}
 
-	void draw(g::gfx::shader& shader,
-		      const g::gfx::texture& vox,
+	void draw(g::gfx::shader* shader,
+		      const g::gfx::texture* vox,
 			  g::game::camera& cam,
 			  const mat<4, 4>& model)
 	{
-		using_shader(shader, vox, cam, model).draw<GL_TRIANGLES>();
+		using_shader(shader, vox, cam, model).draw(g::gfx::primative::triangles);
 	}
 };
 
@@ -1725,16 +1923,16 @@ struct text : public renderer<std::string>
 
 	text(g::gfx::font& f);
 
-	shader::usage using_shader(g::gfx::shader& shader,
+	shader::usage using_shader(g::gfx::shader* shader,
 		const std::string& str,
 		std::function<void(g::gfx::shader::usage&)> shader_config);
 
-	shader::usage using_shader(g::gfx::shader& shader,
+	shader::usage using_shader(g::gfx::shader* shader,
 		const std::string& str,
 		g::game::camera& cam,
 		const mat<4, 4>& model);
 
-	void draw(g::gfx::shader& shader,
+	void draw(g::gfx::shader* shader,
 		  const std::string& str,
 	      g::game::camera& cam,
 	      const mat<4, 4>& model);
@@ -1742,6 +1940,6 @@ struct text : public renderer<std::string>
 	void measure(const std::string& str, vec<2>& dims_out, vec<2>& offset_out);
 };
 
-}; // end namespace primative
+}; // end namespace rendering
 }; // end namespace gfx
 }; // end namespace g

@@ -187,7 +187,7 @@ struct object
 		}
 	}
 
-	g::gfx::texture& texture(const std::string& name)
+	g::gfx::texture* texture(const std::string& name)
 	{
 		load_if_newer();
 

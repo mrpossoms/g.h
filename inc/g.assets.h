@@ -41,10 +41,10 @@ struct store
 {
 	private: std::string root;
 	private: bool hot_reload;
-	private: std::unordered_map<std::string, kind<g::gfx::texture>> textures;
+	private: std::unordered_map<std::string, kind<g::gfx::texture*>> textures;
 	private: std::unordered_map<std::string, kind<g::gfx::sprite>> sprites;
 	private: std::unordered_map<std::string, kind<g::game::vox_scene>> voxels;
-	private: std::unordered_map<std::string, kind<g::gfx::shader>> shaders;
+	private: std::unordered_map<std::string, kind<g::gfx::shader*>> shaders;
 	private: std::unordered_map<std::string, kind<g::gfx::font>> fonts;
 	private: std::unordered_map<std::string, kind<g::gfx::mesh<g::gfx::vertex::pos_uv_norm>>> geos;
 	private: std::unordered_map<std::string, kind<g::snd::track>> sounds;
@@ -53,11 +53,11 @@ struct store
 
 	~store();
 
-	g::gfx::texture& tex(const std::string& partial_path, bool make_if_missing = false);
+	g::gfx::texture* tex(const std::string& partial_path, bool make_if_missing = false);
 
 	g::gfx::sprite& sprite(const std::string& partial_path, bool make_if_missing = false);
 
-	g::gfx::shader& shader(const std::string& program_collection);
+	g::gfx::shader* shader(const std::string& program_collection);
 
 	g::gfx::font& font(const std::string& partial_path, bool make_if_missing = false);
 

@@ -26,6 +26,16 @@ static std::string executable_path()
 		return "";
 	}
 	return std::filesystem::path(path_buf).remove_filename().string();
+#elif defined(__APPLE__)
+	char path_buf[PATH_MAX] = {};
+	uint32_t size = PATH_MAX;
+	if (_NSGetExecutablePath(path_buf, &size) != 0) {
+	{
+		std::cerr << G_TERM_RED << "_NSGetExecutablePath: failed" << G_TERM_COLOR_OFF << std::endl;
+		return "";
+	}
+#else
+#error "Unsupported OS"
 #endif
 }
 

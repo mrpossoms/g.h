@@ -33,7 +33,7 @@ struct my_core : public g::core
 {
 	g::gfx::shader basic_shader;
 	g::gfx::mesh<g::gfx::vertex::pos_uv_norm> plane;
-	g::gfx::texture grid_tex;
+	g::gfx::texture* grid_tex;
 	g::asset::store assets;
 
 	virtual bool initialize()

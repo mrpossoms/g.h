@@ -185,10 +185,10 @@ struct my_core : public g::core
 
 
         // grab textures for terrain
-        auto& wall = assets.tex("rock_wall.repeating.png");
-        auto& ground = assets.tex("sand.repeating.png");
-        auto& wall_normal = assets.tex("rock_wall_normal.repeating.png");
-        auto& ground_normal = assets.tex("sand_normal.repeating.png");
+        auto wall = assets.tex("rock_wall.repeating.png");
+        auto ground = assets.tex("sand.repeating.png");
+        auto wall_normal = assets.tex("rock_wall_normal.repeating.png");
+        auto ground_normal = assets.tex("sand_normal.repeating.png");
         auto model = mat4::I();
 
         // draw terrain
