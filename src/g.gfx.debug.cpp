@@ -79,6 +79,24 @@ void debug::print::ray(const vec<3>& o, const vec<3>& d)
 	assert(gl_get_error());
 }
 
+void debug::print::line(const vec<3>& p0, const vec<3>& p1)
+{
+	vertex::pos verts[2] = {
+		{ p0 },
+		{ p1 },
+	};
+
+	assert(gl_get_error());
+	debug_mesh.set_vertices(verts, 2);
+	assert(gl_get_error());
+	debug_mesh.using_shader(debug_shader)
+	          .set_camera(*cur_cam)
+	          .set_uniform("u_color").vec4(cur_color)
+	          .set_uniform("u_model").mat4(cur_model)
+	          .draw<GL_LINES>();
+	assert(gl_get_error());	
+}
+
 void debug::print::point(const vec<2>& o)
 {
 	point(vec<3>{o[0], o[1], 0});

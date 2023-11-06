@@ -1350,6 +1350,8 @@ namespace debug
 
 		void ray(const vec<3>& o, const vec<3>& d);
 
+		void line(const vec<3>& p0, const vec<3>& p1);
+
 		void point(const vec<2>& o);
 
 		void point(const vec<3>& o);

@@ -9,6 +9,10 @@
 #define EGL_EGLEXT_PROTOTYPES
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 GLFWwindow* g::gfx::GLFW_WIN = nullptr;
 
 
@@ -17,7 +21,15 @@ static std::string executable_path()
 #if defined(_WIN32)
 	WCHAR path_buf[MAX_PATH] = {};
 	GetModuleFileNameW(NULL, path_buf, MAX_PATH);
-	return std::filesystem::path(path_buf).remove_filename().string();
+#elif defined(__APPLE__)
+	char path_buf[PATH_MAX] = {};
+	uint32_t size = PATH_MAX;
+
+	if (_NSGetExecutablePath(path_buf, &size) != 0) 
+	{
+		std::cerr << G_TERM_RED << "_NSGetExecutablePath failed: " << G_TERM_COLOR_OFF << std::endl;
+		return "";
+	}
 #elif defined(__linux__)
 	char path_buf[PATH_MAX] = {};
 	if (readlink("/proc/self/exe", path_buf, sizeof(path_buf) - 1) <= 0)
@@ -25,8 +37,9 @@ static std::string executable_path()
 		std::cerr << G_TERM_RED << "reading exe path link failed: " << std::string(strerror(errno)) << G_TERM_COLOR_OFF << std::endl;
 		return "";
 	}
-	return std::filesystem::path(path_buf).remove_filename().string();
 #endif
+
+	return std::filesystem::path(path_buf).remove_filename().string();
 }
 
 void g::core::tick()
