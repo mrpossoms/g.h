@@ -246,7 +246,41 @@ struct collider
      *
      * @return     { description_of_the_return_value }
      */
-    virtual const std::vector<intersection>& intersections(collider& other, float max_t=std::numeric_limits<float>::infinity()) = 0;
+    virtual const std::vector<intersection>& intersections(collider& other, float max_t=std::numeric_limits<float>::infinity())
+    {
+        assert(this->generates_rays() || other.generates_rays());
+
+        collider* ray_generator;
+        collider* ray_receiver;
+
+        if (this->generates_rays())
+        {
+            ray_generator = this;
+            ray_receiver = &other;
+        }
+        else
+        {
+            ray_generator = &other;
+            ray_receiver = this;
+        }
+
+        intersection_list.clear();
+
+        for (const auto& r : ray_generator->rays())
+        {
+            auto mag = r.direction.magnitude();
+
+            if (mag == 0) { return intersection_list; }
+
+            auto i = ray_receiver->ray_intersects(r);
+            if (i && i.time < max_t) { intersection_list.push_back(i); }
+        }
+
+        return intersection_list;
+    }
+
+protected:
+    std::vector<intersection> intersection_list;
 };
 
 struct ray_collider : public collider
