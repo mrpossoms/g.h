@@ -276,13 +276,14 @@ void texture::set_pixels(size_t w, size_t h, size_t d, unsigned char* data, GLen
 	else if (h >= 1)
 	{
 		type = GL_TEXTURE_2D;
+		GLenum internal_format = color_type;
 		if (storage_type == GL_FLOAT && color_type == GL_RGBA)
 		{
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size[0], size[1], 0, color_type, storage_type, data);
 		}
 		else
 		{
-			glTexImage2D(GL_TEXTURE_2D, 0, color_type, size[0], size[1], 0, color_type, storage_type, data);
+			glTexImage2D(GL_TEXTURE_2D, 0, internal_format, size[0], size[1], 0, color_type, storage_type, data);
 		}
 	}
 }
@@ -565,10 +566,11 @@ texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, u
 {
 	// void* pixels;
 
-	auto bytes_per_textel = bytes_per_component * component_count;
-	auto textels_per_row = size[2];
-	auto textels_per_plane = size[1] * size[2];
-	data = new unsigned char[bytes_per_textel * size[0] * size[1] * size[2]];
+	const unsigned textel_stride = bytes_per_component * component_count;
+	const unsigned x_stride = 1;
+	const unsigned y_stride = size[0];
+	const unsigned z_stride = size[0] * size[1];
+	data = new unsigned char[textel_stride * size[0] * size[1] * size[2]];
 
 	for (unsigned i = 0; i < size[0]; i++)
 	{
@@ -580,7 +582,10 @@ texture_factory& texture_factory::fill(std::function<void(int x, int y, int z, u
 				// unsigned vi = (i * textels_per_plane) + (j * bytes_per_row) + (k * bytes_per_pixel);
 				// filler(i, j, k, data + vi);
 
-	            unsigned vi = ((i * textels_per_plane) + (j * textels_per_row) + k) * bytes_per_textel;
+	            // unsigned vi = ((j * textels_per_plane) + (i * textels_per_row) + k) * bytes_per_textel;
+
+
+				unsigned vi = (i * x_stride + j * y_stride + k * z_stride) * textel_stride;
 
 	            filler(i, j, k, data + vi);
 			}
