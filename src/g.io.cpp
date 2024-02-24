@@ -13,9 +13,15 @@
 #include <sys/stat.h>
 #include <linux/limits.h>
 #include <string.h>
+#include <dirent.h>
 #elif _WIN32
 #include <io.h>
 #include <direct.h>
+#ifndef _S_ISTYPE
+#define _S_ISTYPE(mode, mask)  (((mode) & _S_IFMT) == (mask))
+#define S_ISREG(mode) _S_ISTYPE((mode), _S_IFREG)
+#define S_ISDIR(mode) _S_ISTYPE((mode), _S_IFDIR)
+#endif
 #define open _open
 #define lseek _lseek
 #define mkdir _mkdir
@@ -157,7 +163,94 @@ struct g::io::file::impl
 
 	bool exists() { return fd >= 0; }
 
+	bool is_directory() const
+	{
+		struct stat stat_buf = {};
+		fstat(fd, &stat_buf);
+
+	
+		return S_ISDIR(stat_buf.st_mode);
+	}
+
 	int get_fd() const { return fd; }
+};
+
+struct g::io::file::itr::impl
+{
+	impl(const file& f)
+	{
+		if (f.file_impl->is_directory())
+		{
+#if defined(__linux__) || defined(__APPLE__) 
+			dir = opendir(f.file_impl->path.c_str());
+#endif
+			if (dir != nullptr)
+			{
+				operator++();
+			}
+		}
+	}
+
+	~impl()
+	{
+		if (dir != nullptr)
+		{
+			closedir(dir);
+		}
+	}
+
+	file& operator*()
+	{
+		return cur_file;
+	}
+
+	file* operator->()
+	{
+		return &cur_file;
+	}
+
+	itr& operator++();
+	{
+		if (dir != nullptr)
+		{
+			cur_ent = readdir(dir);
+			cur_file = file(cur_ent->d_name);
+		}
+
+		return *this;
+	}
+
+	itr operator++(int)
+	{
+		itr temp = *this;
+		operator++();
+		return temp;
+	}
+
+	bool operator==(const itr& o)
+	{
+		if (dir == nullptr && o.dir == nullptr)
+		{
+			return true;
+		}
+
+		return cur_ent.d_ino == o.cur_ent.d_ino;
+	}
+
+	bool operator!=(const itr& o)
+	{
+		if ((cur_ent == nullptr) ^ (cur_ent == nullptr))
+		{
+			return true;
+		}
+
+		return cur_ent.d_ino != o.cur_ent.d_ino;
+	}
+
+protected:
+	DIR* dir;
+	file cur_file;
+	struct dirent* cur_ent;
 };
 
 g::io::file::file(const std::string& path, const mode& mode)
@@ -235,6 +328,9 @@ void g::io::file::on_changed(std::function<void(g::io::file&)> callback)
 
 bool g::io::file::exists() const { return file_impl->exists(); }
 
+bool g::io::file::is_directory() const { return file_impl->is_directory(); }
+
 int g::io::file::get_fd() const { return file_impl->get_fd(); }
 
 void g::io::file::make_path(const char* path) { g::io::file::impl::make_path(path); }
+

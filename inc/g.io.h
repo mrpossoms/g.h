@@ -34,6 +34,26 @@ struct file
 		static mode write_only() { return file::mode{}.write(true); }
 	};
 
+	struct itr
+	{
+		struct impl;
+
+		itr(file& f);
+		~itr();
+
+		file& operator*();
+		file* operator->();
+
+		itr& operator++();
+		itr operator++(int);
+
+		bool operator==(const itr& o);
+		bool operator!=(const itr& o);
+
+	private:
+		std::unique_ptr<impl> itr_impl;
+	};
+
 	file(const std::string& path, const mode& mode=mode::read_only());
 	file(const char* path, const mode& mode=mode::read_only());
 	~file();
@@ -58,9 +78,14 @@ struct file
 
 	bool exists() const;
 
+	bool is_directory() const;
+
 	static void make_path(const char* path);
 
 	int get_fd() const;
+
+	itr begin();
+	itr end();
 private:
 	std::unique_ptr<impl> file_impl;
 };

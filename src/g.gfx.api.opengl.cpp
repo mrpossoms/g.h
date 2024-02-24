@@ -1,7 +1,8 @@
 #include "g.gfx.h"
+#include "g.io.h"
 
 #include <regex>
-
+#include <filesystem>
 
 using namespace g::gfx;
 
@@ -18,6 +19,48 @@ g::gfx::api::opengl::~opengl()
 static void error_callback(int error, const char* description)
 {
 	std::cerr << description << std::endl;
+}
+
+const std::string& shader_path(const std::string& root_path)
+{
+	static std::string path;
+
+	if (path.empty())
+	{
+		int version = gladLoadGL(glfwGetProcAddress);
+		if (version == 0)
+		{
+			std::cerr << "Failed to initialize OpenGL context" << std::endl;
+			throw std::runtime_error("glad runtime error");
+		}
+
+		auto glsl_ver_str = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+		std::cerr << "GL renderer: " << glGetString(GL_VERSION) << std::endl;
+		std::cerr << "GLSL version: " << glsl_ver_str << std::endl;
+
+		for (auto version_dir : g::io::file{ root_path + "/shader/" })
+		{
+
+		}
+
+		// set the correct glsl shader header based on the version we found
+		std::cmatch m;
+		std::regex re("[0-9]+[.][0-9]+");
+		if (std::regex_search(glsl_ver_str, m, re))
+		{
+			std::string version = m[0];
+			version.erase(version.find("."), 1);
+
+			g::gfx::shader_factory::shader_path = std::string("glsl/") + version + std::string("/");
+			g::gfx::shader_factory::shader_header = std::string("#version ") + version + std::string("\n");
+		}
+		else
+		{
+			std::cerr << "Couldn't identify glsl version" << std::endl;
+		}
+	}
+
+	return path;
 }
 
 void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
@@ -64,12 +107,14 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 	g::gfx::GLFW_WIN = win;
 
 	GLuint vao;
+	/*
 	int version = gladLoadGL(glfwGetProcAddress);
 	if (version == 0)
 	{
 		std::cerr << "Failed to initialize OpenGL context" << std::endl;
 		throw std::runtime_error("glad runtime error");
 	}
+
 
 	auto glsl_ver_str = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 	std::cerr << "GL renderer: " << glGetString(GL_VERSION) << std::endl;
@@ -90,6 +135,7 @@ void g::gfx::api::opengl::initialize(const api::options& gfx, const char* name)
 	{
 		std::cerr << "Couldn't identify glsl version" << std::endl;
 	}
+	*/
 
 	// Hack, webgl related IIRC
 	glGenVertexArrays(1, &vao);
