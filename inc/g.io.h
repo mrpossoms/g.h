@@ -13,10 +13,29 @@ namespace g
 namespace io
 {
 
-
-struct file
+struct path
 {
 	struct impl;
+
+	struct itr
+	{
+		struct impl;
+
+		itr(const path& p);
+		~itr();
+
+		path& operator*();
+		path* operator->();
+
+		itr& operator++();
+		itr operator++(int);
+
+		bool operator==(const itr& o);
+		bool operator!=(const itr& o);
+
+	private:
+		std::unique_ptr<impl> itr_impl;
+	};
 
 	struct mode
 	{
@@ -34,30 +53,28 @@ struct file
 		static mode write_only() { return file::mode{}.write(true); }
 	};
 
-	struct itr
-	{
-		struct impl;
+	path(const path& path);
+	path(const char* path, const mode& mode = mode::read_only);
+	path(const std::string& path, const mode& mode = mode::read_only());
 
-		itr(file& f);
-		~itr();
+	const std::string& str() const;
 
-		file& operator*();
-		file* operator->();
+	itr begin();
+	itr end();
 
-		itr& operator++();
-		itr operator++(int);
+private:
+	std::unique_ptr<impl> path_impl;
+};
 
-		bool operator==(const itr& o);
-		bool operator!=(const itr& o);
-
-	private:
-		std::unique_ptr<impl> itr_impl;
-	};
+struct file : public path
+{
+	struct impl;
 
 	file(const std::string& path, const mode& mode=mode::read_only());
 	file(const char* path, const mode& mode=mode::read_only());
 	~file();
 
+	file(file& o) noexcept;
 	file(file&& o) noexcept;
 	file& operator=(file&& o);
 
@@ -83,9 +100,6 @@ struct file
 	static void make_path(const char* path);
 
 	int get_fd() const;
-
-	itr begin();
-	itr end();
 private:
 	std::unique_ptr<impl> file_impl;
 };

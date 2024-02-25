@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
+#include <filesystem>
 
 #ifdef __APPLE__
 #include <CoreServices/CoreServices.h>
@@ -30,48 +31,121 @@
 #include <emscripten.h>
 #endif
 
+struct g::io::path::itr::impl
+{
+	impl(const g::io::path::impl& p) : internal_itr{p.path}
+	{ }
+
+	~impl()
+	{
+
+	}
+
+	g::io::path& operator*()
+	{
+		return curr_path;
+	}
+
+	g::io::path* operator->()
+	{
+		return &curr_path;
+	}
+
+	impl& operator++()
+	{
+		auto dir = *internal_itr;
+		// TODO: deal with modes
+		curr_path = g::io::path{ dir.path().generic_string() };
+		internal_itr++;
+		return *this;
+	}
+	impl& operator++(int)
+	{
+		internal_itr++;
+		auto dir = *internal_itr;
+		// TODO: deal with modes
+		curr_path = g::io::path{ dir.path().generic_string() };
+		return *this;
+	}
+
+	bool operator==(const impl& o)
+	{
+		return internal_itr == o.internal_itr;
+	}
+
+	bool operator!=(const impl& o)
+	{
+		return internal_itr != o.internal_itr;
+	}
+
+protected:
+	g::io::path curr_path;
+	std::filesystem::directory_iterator internal_itr;
+};
+
+struct g::io::path::impl
+{
+	impl() = default;
+
+	impl(const char* path, const mode& mode) : path(path), path_mode(mode)
+	{
+
+	}
+
+	impl(const std::string& path, const mode& mode) : path(path), path_mode(mode)
+	{
+
+	}
+
+private:
+	mode path_mode;
+	std::filesystem::path path;
+
+	friend class g::io::path::itr::impl;
+};
+
+g::io::path::path(const char* path, const mode& mode = mode::read_only)
+{
+
+}
+
+g::io::path::path(const std::string& path, const mode& mode = mode::read_only())
+{
+
+}
+
+const std::string& g::io::path::str() const
+{
+
+}
+
+g::io::path::itr g::io::path::begin()
+{
+
+}
+
+g::io::path::itr g::io::path::end()
+{
+
+}
 
 struct g::io::file::impl
 {
 	static int in_fd; // inotify instance file desc
+	std::string path_str;
+	mode file_mode;
 	int fd = -1;
 
-	impl(const char* path, const mode& mode)
+	impl(const char* path, const mode& mode) : path_str(path), file_mode(mode)
 	{
-		int flags = 0;
+		open_fds();
+	}
 
-		if (mode._write && mode._read)
-		{
-			flags |= O_RDWR;	
-		}
-		else if (mode._read)
-		{
-			flags |= O_RDONLY;
-		}
-		else if (mode._write)
-		{
-			flags |= O_WRONLY;
-		}
-
-		if (mode._write)
-		{
-			flags |= O_CREAT;
-
-			make_path(path);
-
-			if (mode._truncate)
-			{
-				flags |= O_TRUNC;
-			}
-			else
-			{
-				flags |= O_APPEND;
-			}
-
-
-		}
-
-		fd = open(path, flags, 0666);
+	impl(impl& o)
+	{
+		path_str = o.path_str;
+		file_mode = o.file_mode;
+		open_fds();
 	}
 
 	~impl()
@@ -173,14 +247,53 @@ struct g::io::file::impl
 	}
 
 	int get_fd() const { return fd; }
+
+private:
+
+	void open_fds()
+	{
+		int flags = 0;
+
+		if (file_mode._write && file_mode._read)
+		{
+			flags |= O_RDWR;
+		}
+		else if (file_mode._read)
+		{
+			flags |= O_RDONLY;
+		}
+		else if (file_mode._write)
+		{
+			flags |= O_WRONLY;
+		}
+
+		if (file_mode._write)
+		{
+			flags |= O_CREAT;
+
+			make_path(path_str.c_str());
+
+			if (file_mode._truncate)
+			{
+				flags |= O_TRUNC;
+			}
+			else
+			{
+				flags |= O_APPEND;
+			}
+		}
+
+		fd = open(path_str.c_str(), flags, 0666);
+	}
 };
 
 struct g::io::file::itr::impl
 {
-	impl(const file& f)
+	impl(const impl& f)
 	{
-		if (f.file_impl->is_directory())
+		if (f->is_directory())
 		{
+/*
 #if defined(__linux__) || defined(__APPLE__) 
 			dir = opendir(f.file_impl->path.c_str());
 #endif
@@ -188,6 +301,9 @@ struct g::io::file::itr::impl
 			{
 				operator++();
 			}
+*/
+			auto dir = std::filesystem::path{f.file_impl.}
+			_start
 		}
 	}
 
@@ -248,7 +364,9 @@ struct g::io::file::itr::impl
 	}
 
 protected:
-	DIR* dir;
+#if defined(__linux__) || defined(__APPLE__)
+	//DIR* dir;
+	std::filesystem::directory_iterator _start, _end;
 	file cur_file;
 	struct dirent* cur_ent;
 };
@@ -263,15 +381,11 @@ g::io::file::file(const char* path, const mode& mode)
 	file_impl = std::make_unique<g::io::file::impl>(path, mode);
 }
 
-g::io::file::~file()
-{
+g::io::file::~file() {}
 
-}
+g::io::file::file(file& o) noexcept : file_impl(o.file_impl) {}
 
-g::io::file::file(file&& o) noexcept : file_impl(std::move(o.file_impl))
-{
-
-}
+g::io::file::file(file&& o) noexcept : file_impl(std::move(o.file_impl)) {}
 
 g::io::file& g::io::file::operator=(file&& o)
 {
