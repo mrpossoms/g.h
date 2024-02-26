@@ -53,6 +53,7 @@ struct path
 		static mode write_only() { return file::mode{}.write(true); }
 	};
 
+	path() = default;
 	path(const path& path);
 	path(const char* path, const mode& mode = mode::read_only);
 	path(const std::string& path, const mode& mode = mode::read_only());

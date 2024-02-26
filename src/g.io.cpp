@@ -59,6 +59,7 @@ struct g::io::path::itr::impl
 		internal_itr++;
 		return *this;
 	}
+
 	impl& operator++(int)
 	{
 		internal_itr++;
@@ -78,24 +79,60 @@ struct g::io::path::itr::impl
 		return internal_itr != o.internal_itr;
 	}
 
+	impl& begin()
+	{
+		i.internal_itr = internal_itr.begin();
+		return i;
+	}
+
+	impl& end()
+	{
+		i.internal_itr = internal_itr.end();
+		return i;
+	}
+
 protected:
 	g::io::path curr_path;
 	std::filesystem::directory_iterator internal_itr;
 };
 
+g::io::path::itr::itr(const path& p);
+g::io::path::itr::~itr();
+
+path& g::io::path::itr::operator*();
+path* g::io::path::itr::operator->();
+
+itr& g::io::path::itr::operator++();
+itr g::io::path::itr::operator++(int);
+
+bool g::io::path::itr::operator==(const itr& o);
+bool g::io::path::itr::operator!=(const itr& o);
+
 struct g::io::path::impl
 {
 	impl() = default;
 
-	impl(const char* path, const mode& mode) : path(path), path_mode(mode)
+	impl(const impl& p) : path(p.path), path_mode(p.path_mode) {}
+
+	impl(const char* path, const mode& mode) : path(path), path_mode(mode) {}
+
+	impl(const std::string& path, const mode& mode) : path(path), path_mode(mode) {}
+
+	g::io::path::itr::impl begin()
 	{
 
 	}
 
-	impl(const std::string& path, const mode& mode) : path(path), path_mode(mode)
+	g::io::path::itr::impl end()
 	{
 
 	}
+
+	std::string path_str() const
+	{
+		return path.generic_string();
+	}
+
 
 private:
 	mode path_mode;
@@ -104,20 +141,22 @@ private:
 	friend class g::io::path::itr::impl;
 };
 
+g::io::path::path(const path& path)
+{
+	path_impl = std::make_unique<impl>(*path.path_impl);
+}
+
 g::io::path::path(const char* path, const mode& mode = mode::read_only)
 {
-
+	path_impl = std::make_unique<impl>(std::string{path}, mode);
 }
 
 g::io::path::path(const std::string& path, const mode& mode = mode::read_only())
 {
-
+	path_impl = std::make_unique<impl>(path, mode);
 }
 
-const std::string& g::io::path::str() const
-{
-
-}
+const std::string& g::io::path::str() const { return path_impl->path_str(); }
 
 g::io::path::itr g::io::path::begin()
 {
