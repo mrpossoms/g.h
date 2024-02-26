@@ -28,13 +28,15 @@ struct path
 		path* operator->();
 
 		itr& operator++();
-		itr operator++(int);
+		itr& operator++(int);
 
 		bool operator==(const itr& o);
 		bool operator!=(const itr& o);
 
+		itr begin();
+		itr end();
 	private:
-		std::unique_ptr<impl> itr_impl;
+		std::unique_ptr<itr::impl> itr_impl;
 	};
 
 	struct mode
@@ -49,14 +51,16 @@ struct path
 		mode& read(bool f) { _read = f; return *this; }
 		mode& truncate(bool f) { _truncate = f; return *this; }
 
-		static mode read_only() { return file::mode{}.read(true); }
-		static mode write_only() { return file::mode{}.write(true); }
+		static mode read_only() { return path::mode{}.read(true); }
+		static mode write_only() { return path::mode{}.write(true); }
 	};
 
 	path() = default;
 	path(const path& path);
-	path(const char* path, const mode& mode = mode::read_only);
+	path(const char* path, const mode& mode = mode::read_only());
 	path(const std::string& path, const mode& mode = mode::read_only());
+	path& operator=(const path& o);
+	path& operator=(path&& o);
 
 	const std::string& str() const;
 
@@ -65,6 +69,7 @@ struct path
 
 private:
 	std::unique_ptr<impl> path_impl;
+	friend struct path::itr;
 };
 
 struct file : public path
@@ -95,8 +100,6 @@ struct file : public path
 	void on_changed(std::function<void(file&)> callback);
 
 	bool exists() const;
-
-	bool is_directory() const;
 
 	static void make_path(const char* path);
 

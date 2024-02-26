@@ -38,7 +38,8 @@ const std::string& shader_path(const std::string& root_path)
 		std::cerr << "GL renderer: " << glGetString(GL_VERSION) << std::endl;
 		std::cerr << "GLSL version: " << glsl_ver_str << std::endl;
 
-		for (auto version_dir : g::io::file{ root_path + "/shader/" })
+		g::io::file shader_dir(root_path + "/shader/");
+		for (auto version_dir : shader_dir)
 		{
 
 		}

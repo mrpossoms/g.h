@@ -31,6 +31,45 @@
 #include <emscripten.h>
 #endif
 
+//-----------------------------------------------------------------------------
+
+struct g::io::path::impl
+{
+	impl() = delete;
+
+	~impl() = default;
+
+	impl(const impl& p) : path(p.path), path_mode(p.path_mode) {}
+
+	impl(const char* path, const mode& mode) : path(path), path_mode(mode) {}
+
+	impl(const std::string& path, const mode& mode) : path(path), path_mode(mode) {}
+
+	// g::io::path::itr begin()
+	// {
+	// 	return g::io::path::itr{this};
+	// }
+
+	// g::io::path::itr end()
+	// {
+	// 	return g::io::path::itr{this};
+	// }
+
+	std::string path_str() const
+	{
+		return path.generic_string();
+	}
+
+
+private:
+	mode path_mode = mode::read_only();
+	std::filesystem::path path;
+
+	friend class g::io::path::itr::impl;
+};
+
+//-----------------------------------------------------------------------------
+
 struct g::io::path::itr::impl
 {
 	impl(const g::io::path::impl& p) : internal_itr{p.path}
@@ -81,14 +120,14 @@ struct g::io::path::itr::impl
 
 	impl& begin()
 	{
-		i.internal_itr = internal_itr.begin();
-		return i;
+		internal_itr = std::filesystem::begin(internal_itr);
+		return *this;
 	}
 
 	impl& end()
 	{
-		i.internal_itr = internal_itr.end();
-		return i;
+		internal_itr = std::filesystem::end(internal_itr);
+		return *this;
 	}
 
 protected:
@@ -96,77 +135,83 @@ protected:
 	std::filesystem::directory_iterator internal_itr;
 };
 
-g::io::path::itr::itr(const path& p);
-g::io::path::itr::~itr();
+//-----------------------------------------------------------------------------
 
-path& g::io::path::itr::operator*();
-path* g::io::path::itr::operator->();
-
-itr& g::io::path::itr::operator++();
-itr g::io::path::itr::operator++(int);
-
-bool g::io::path::itr::operator==(const itr& o);
-bool g::io::path::itr::operator!=(const itr& o);
-
-struct g::io::path::impl
+g::io::path::itr::itr(const path& p)
 {
-	impl() = default;
+	itr_impl = std::make_unique<path::itr::impl>(p.path_impl);
+}
 
-	impl(const impl& p) : path(p.path), path_mode(p.path_mode) {}
+g::io::path::itr::~itr() {}
 
-	impl(const char* path, const mode& mode) : path(path), path_mode(mode) {}
+g::io::path& g::io::path::itr::operator*() { return itr_impl->operator*(); }
+g::io::path* g::io::path::itr::operator->() { return itr_impl->operator->(); }
 
-	impl(const std::string& path, const mode& mode) : path(path), path_mode(mode) {}
+g::io::path::itr& g::io::path::itr::operator++()
+{
+	itr_impl->operator++();
+	return *this;
+}
 
-	g::io::path::itr::impl begin()
-	{
+g::io::path::itr& g::io::path::itr::operator++(int)
+{
+	itr_impl->operator++(0);
+	return *this;
+}
 
-	}
+bool g::io::path::itr::operator==(const g::io::path::itr& o)
+{
+	return *itr_impl == *o.itr_impl;
+}
 
-	g::io::path::itr::impl end()
-	{
+bool g::io::path::itr::operator!=(const g::io::path::itr& o)
+{
+	return *itr_impl != *o.itr_impl;
+}
 
-	}
-
-	std::string path_str() const
-	{
-		return path.generic_string();
-	}
-
-
-private:
-	mode path_mode;
-	std::filesystem::path path;
-
-	friend class g::io::path::itr::impl;
-};
+//-----------------------------------------------------------------------------
 
 g::io::path::path(const path& path)
 {
 	path_impl = std::make_unique<impl>(*path.path_impl);
 }
 
-g::io::path::path(const char* path, const mode& mode = mode::read_only)
+g::io::path::path(const char* path, const mode& mode)
 {
 	path_impl = std::make_unique<impl>(std::string{path}, mode);
 }
 
-g::io::path::path(const std::string& path, const mode& mode = mode::read_only())
+g::io::path::path(const std::string& path, const mode& mode)
 {
 	path_impl = std::make_unique<impl>(path, mode);
+}
+
+g::io::path& g::io::path::operator=(const g::io::path& o)
+{
+	path_impl = std::make_unique<impl>(*o.path_impl);
+	return *this;
+}
+
+g::io::path& g::io::path::operator=(g::io::path&& o)
+{
+	path_impl = std::move(o.path_impl);
+	o.path_impl.reset();
+	return *this;
 }
 
 const std::string& g::io::path::str() const { return path_impl->path_str(); }
 
 g::io::path::itr g::io::path::begin()
 {
-
+	return g::io::path::itr{*this}.begin();
 }
 
 g::io::path::itr g::io::path::end()
 {
-
+	return g::io::path::itr{*this}.end();
 }
+
+//-----------------------------------------------------------------------------
 
 struct g::io::file::impl
 {
@@ -180,7 +225,7 @@ struct g::io::file::impl
 		open_fds();
 	}
 
-	impl(impl& o)
+	impl(const impl& o)
 	{
 		path_str = o.path_str;
 		file_mode = o.file_mode;
@@ -326,90 +371,6 @@ private:
 	}
 };
 
-struct g::io::file::itr::impl
-{
-	impl(const impl& f)
-	{
-		if (f->is_directory())
-		{
-/*
-#if defined(__linux__) || defined(__APPLE__) 
-			dir = opendir(f.file_impl->path.c_str());
-#endif
-			if (dir != nullptr)
-			{
-				operator++();
-			}
-*/
-			auto dir = std::filesystem::path{f.file_impl.}
-			_start
-		}
-	}
-
-	~impl()
-	{
-		if (dir != nullptr)
-		{
-			closedir(dir);
-		}
-	}
-
-	file& operator*()
-	{
-		return cur_file;
-	}
-
-	file* operator->()
-	{
-		return &cur_file;
-	}
-
-	itr& operator++();
-	{
-		if (dir != nullptr)
-		{
-			cur_ent = readdir(dir);
-			cur_file = file(cur_ent->d_name);
-		}
-
-		return *this;
-	}
-
-	itr operator++(int)
-	{
-		itr temp = *this;
-		operator++();
-		return temp;
-	}
-
-	bool operator==(const itr& o)
-	{
-		if (dir == nullptr && o.dir == nullptr)
-		{
-			return true;
-		}
-
-		return cur_ent.d_ino == o.cur_ent.d_ino;
-	}
-
-	bool operator!=(const itr& o)
-	{
-		if ((cur_ent == nullptr) ^ (cur_ent == nullptr))
-		{
-			return true;
-		}
-
-		return cur_ent.d_ino != o.cur_ent.d_ino;
-	}
-
-protected:
-#if defined(__linux__) || defined(__APPLE__)
-	//DIR* dir;
-	std::filesystem::directory_iterator _start, _end;
-	file cur_file;
-	struct dirent* cur_ent;
-};
-
 g::io::file::file(const std::string& path, const mode& mode)
 {
 	file_impl = std::make_unique<g::io::file::impl>(path.c_str(), mode);
@@ -480,8 +441,6 @@ void g::io::file::on_changed(std::function<void(g::io::file&)> callback)
 }
 
 bool g::io::file::exists() const { return file_impl->exists(); }
-
-bool g::io::file::is_directory() const { return file_impl->is_directory(); }
 
 int g::io::file::get_fd() const { return file_impl->get_fd(); }
 
